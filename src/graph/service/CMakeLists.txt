@@ -25,5 +25,6 @@ nebula_add_library(
     PermissionCheck.cpp
     PasswordAuthenticator.cpp
     CloudAuthenticator.cpp
+    LdapAuthenticator.cpp
 )
 

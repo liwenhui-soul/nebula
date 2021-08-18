@@ -14,6 +14,7 @@
 #include "graph/service/CloudAuthenticator.h"
 #include "graph/service/GraphFlags.h"
 #include "graph/service/PasswordAuthenticator.h"
+#include "graph/service/LdapAuthenticator.h"
 #include "graph/service/RequestContext.h"
 #include "graph/stats/StatsDef.h"
 #include "version/Version.h"
@@ -163,7 +164,11 @@ bool GraphService::auth(const std::string& username, const std::string& password
   } else if (FLAGS_auth_type == "cloud") {
     auto authenticator = std::make_unique<CloudAuthenticator>(queryEngine_->metaClient());
     return authenticator->auth(username, password);
+  } else if (FLAGS_auth_type == "ldap") {
+    auto authenticator = std::make_unique<LdapAuthenticator>(queryEngine_->metaClient());
+    return authenticator->auth(username, password);
   }
+
   LOG(WARNING) << "Unknown auth type: " << FLAGS_auth_type;
   return false;
 }

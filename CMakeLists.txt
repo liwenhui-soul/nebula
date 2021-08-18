@@ -13,10 +13,11 @@
 #   NEBULA_OTHER_ROOT               -- Specify the root directory for user build
 #                                   -- Split with ":", exp: DIR:DIR
 #
-#   ENABLE_JEMALLOC                -- Link jemalloc into all executables
-#   ENABLE_NATIVE                  -- Build native client
-#   ENABLE_TESTING                 -- Build unit test
-#   ENABLE_PACK_ONE                -- Package to one or multi packages
+#   ENABLE_JEMALLOC                 -- Link jemalloc into all executables
+#   ENABLE_NATIVE                   -- Build native client
+#   ENABLE_TESTING                  -- Build unit test
+#   ENABLE_PACK_ONE                 -- Package to one or multi packages
+#   ENABLE_LDAP                     -- Link ldap for ldap authentication
 
 # CMake version check
 cmake_minimum_required(VERSION 3.9.0)
