@@ -7,13 +7,13 @@
 #ifndef GRAPH_SERVICE_LDAPAUTHENTICATOR_H_
 #define GRAPH_SERVICE_LDAPAUTHENTICATOR_H_
 
-#include "common/base/Base.h"
-#include "common/base/StatusOr.h"
-#include "common/base/Status.h"
-#include "clients/meta/MetaClient.h"
-#include "graph/service/Authenticator.h"
-
 #include <ldap.h>
+
+#include "clients/meta/MetaClient.h"
+#include "common/base/Base.h"
+#include "common/base/Status.h"
+#include "common/base/StatusOr.h"
+#include "graph/service/Authenticator.h"
 
 namespace nebula {
 namespace graph {
@@ -40,63 +40,62 @@ namespace graph {
  * Disallow mixing the parameters of two modes.
  */
 class LdapAuthenticator final : public Authenticator {
-public:
-    explicit LdapAuthenticator(const meta::MetaClient* client);
+ public:
+  explicit LdapAuthenticator(const meta::MetaClient* client);
 
-    /**
-     * Execute LDAP authentication.
-     */
-    bool auth(const std::string &user, const std::string &password) override;
+  /**
+   * Execute LDAP authentication.
+   */
+  bool auth(const std::string& user, const std::string& password) override;
 
-private:
-    /**
-     * Check if LDAP authentication parameters are set legally.
-     */
-    Status prepare();
+ private:
+  /**
+   * Check if LDAP authentication parameters are set legally.
+   */
+  Status prepare();
 
-    /**
-     * Init LDAP connect to LADP server.
-     * FLAGS_ldap_server may be a comma-separated list of IP addresses.
-     */
-    Status initLDAPConnection();
+  /**
+   * Init LDAP connect to LADP server.
+   * FLAGS_ldap_server may be a comma-separated list of IP addresses.
+   */
+  Status initLDAPConnection();
 
-    /**
-     * Build the custom search filter.
-     * Replace all occurrences of the placeholder "$username" in FLAGS_ldap_searchfilter
-     * with variable userName_.
-     */
-    std::string buildSearchFilter();
+  /**
+   * Build the custom search filter.
+   * Replace all occurrences of the placeholder "$username" in FLAGS_ldap_searchfilter
+   * with variable userName_.
+   */
+  std::string buildSearchFilter();
 
-    /**
-     * Build the filter
-     * Either search filter, or attribute filter, or default value.
-     */
-    std::string buildFilter();
+  /**
+   * Build the filter
+   * Either search filter, or attribute filter, or default value.
+   */
+  std::string buildFilter();
 
-    /**
-     * Execute LDAP simple bind mode authentication
-     */
-    StatusOr<bool> simpleBindAuth();
+  /**
+   * Execute LDAP simple bind mode authentication
+   */
+  StatusOr<bool> simpleBindAuth();
 
-    /**
-     * Execute LDAP search bind mode authentication
-     */
-    StatusOr<bool> searchBindAuth();
+  /**
+   * Execute LDAP search bind mode authentication
+   */
+  StatusOr<bool> searchBindAuth();
 
-private:
-    const meta::MetaClient*    metaClient_;
+ private:
+  const meta::MetaClient* metaClient_;
 
-    LDAP*                      ldap_{nullptr};
+  LDAP* ldap_{nullptr};
 
-    // Default LDAP port
-    int                        ldapPort_{389};
+  // Default LDAP port
+  int ldapPort_{389};
 
-    std::string                userName_;
-    std::string                password_;
+  std::string userName_;
+  std::string password_;
 };
 
-}   // namespace graph
-}   // namespace nebula
+}  // namespace graph
+}  // namespace nebula
 
 #endif  // GRAPH_SERVICE_LDAPAUTHENTICATOR_H_
-
