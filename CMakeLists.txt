@@ -13,11 +13,10 @@
 #   NEBULA_OTHER_ROOT               -- Specify the root directory for user build
 #                                   -- Split with ":", exp: DIR:DIR
 #
-#   ENABLE_JEMALLOC                 -- Link jemalloc into all executables
-#   ENABLE_NATIVE                   -- Build native client
-#   ENABLE_TESTING                  -- Build unit test
-#   ENABLE_PACK_ONE                 -- Package to one or multi packages
-#   ENABLE_LDAP                     -- Link ldap for ldap authentication
+#   ENABLE_JEMALLOC                -- Link jemalloc into all executables
+#   ENABLE_NATIVE                  -- Build native client
+#   ENABLE_TESTING                 -- Build unit test
+#   ENABLE_PACK_ONE                -- Package to one or multi packages
 
 # CMake version check
 cmake_minimum_required(VERSION 3.9.0)
@@ -26,9 +25,7 @@ cmake_minimum_required(VERSION 3.9.0)
 project("Nebula Graph" C CXX)
 
 option(ENABLE_PACK_ONE "Whether to package into one" ON)
-option(ENABLE_MODULE_UPDATE "Automatically update module" OFF)
 option(ENABLE_VERBOSE_BISON "Enable Bison to report state" OFF)
-option(ENABLE_MODULE_FORCE_CHECKOUT "Whether checkout branch of module to same as graph." ON)
 
 add_definitions(-DNEBULA_HOME=${CMAKE_SOURCE_DIR})
 
