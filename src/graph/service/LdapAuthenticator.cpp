@@ -67,7 +67,8 @@ Status LdapAuthenticator::initLDAPConnection() {
   if (ldap_server.empty()) {
     return Status::Error("LDAP authentication ldap_server is illegal.");
   }
-  const char* host = ldap_server.str().c_str();
+  auto hostStr = ldap_server.str();
+  const char* host = hostStr.c_str();
   std::string uris("");
   do {
     auto size = std::strcspn(host, ",");
