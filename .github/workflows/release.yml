@@ -49,6 +49,9 @@ jobs:
           bucket: nebula-graph-ent
           asset-path: ${{ env.CPACK_DIR }}
           target-path: general/nebula-graph/${{ steps.tag.outputs.tag }}
+      - name: Cleanup
+        if: ${{ always() }}
+        run: rm -rf "$(pwd)"
 
   docker_build:
     name: docker-build
@@ -78,3 +81,6 @@ jobs:
           push: true
           build-args: |
             BRANCH=${{ steps.tagname.outputs.tag }}
+      - name: Cleanup
+        if: ${{ always() }}
+        run: rm -rf "$(pwd)"

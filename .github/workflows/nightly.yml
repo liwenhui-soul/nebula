@@ -52,6 +52,9 @@ jobs:
           bucket: nebula-graph-ent
           asset-path: pkg-build/cpack_output
           target-path: general/nebula-graph/nightly/${{ steps.vars.outputs.subdir }}
+      - name: Cleanup
+        if: ${{ always() }}
+        run: rm -rf "$(pwd)"
 
   docker:
     name: build docker image
@@ -77,3 +80,6 @@ jobs:
           tags: nightly
           cache_froms: ${{ secrets.HARBOR_REGISTRY }}/vesoft/nebula-dev:centos7
           add_git_labels: true
+      - name: Cleanup
+        if: ${{ always() }}
+        run: rm -rf "$(pwd)"
