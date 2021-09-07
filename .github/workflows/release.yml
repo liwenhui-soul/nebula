@@ -24,7 +24,7 @@ jobs:
           - centos7
           - centos8
     container:
-      image: vesoft/nebula-dev:${{ matrix.os }}
+      image: ${{ secrets.HARBOR_REGISTRY }}/vesoft/nebula-dev:${{ matrix.os }}
       env:
         BUILD_DIR: ./pkg-build
         CPACK_DIR: ./pkg-build/cpack_output
@@ -71,7 +71,7 @@ jobs:
       - uses: docker/build-push-action@v2
         with:
           file: ./docker/Dockerfile.${{ matrix.service }}
-          tags: vesoft-ent/nebula-${{ matrix.service }}:${{ steps.tagname.outputs.tag }}
+          tags: ${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-${{ matrix.service }}:${{ steps.tagname.outputs.tag }}
           push: true
           build-args: |
             BRANCH=${{ steps.tagname.outputs.tag }}

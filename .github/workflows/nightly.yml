@@ -23,7 +23,7 @@ jobs:
           - centos7
           - centos8
     container:
-      image: vesoft/nebula-dev:${{ matrix.os }}
+      image: ${{ secrets.HARBOR_REGISTRY }}/vesoft/nebula-dev:${{ matrix.os }}
     steps:
       - uses: actions/checkout@v1
       - name: package
@@ -68,9 +68,9 @@ jobs:
         with:
           username: ${{ secrets.HARBOR_USERNAME }}
           password: ${{ secrets.HARBOR_PASSWORD }}
-          repository: vesoft-ent/nebula-${{ matrix.service }}
+          repository: ${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-${{ matrix.service }}
           registry: ${{ secrets.HARBOR_REGISTRY }}
           dockerfile: docker/Dockerfile.${{ matrix.service }}
           tags: nightly
-          cache_froms: vesoft/nebula-dev:centos7
+          cache_froms: ${{ secrets.HARBOR_REGISTRY }}/vesoft/nebula-dev:centos7
           add_git_labels: true

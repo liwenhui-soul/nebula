@@ -1,4 +1,4 @@
-FROM vesoft/nebula-dev:centos7 as builder
+FROM reg.vesoft-inc.com/vesoft/nebula-dev:centos7 as builder
 
 ARG BRANCH=master
 

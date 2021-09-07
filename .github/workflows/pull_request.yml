@@ -58,7 +58,7 @@ jobs:
           - os: centos7
             compiler: clang-10
     container:
-      image: vesoft/nebula-dev:${{ matrix.os }}
+      image: ${{ secrets.HARBOR_REGISTRY }}/vesoft/nebula-dev:${{ matrix.os }}
       env:
         CCACHE_DIR: /tmp/ccache/nebula/${{ matrix.os }}-${{ matrix.compiler }}
         CCACHE_MAXSIZE: 8G
