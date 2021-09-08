@@ -69,6 +69,9 @@ jobs:
         - /tmp/ccache/nebula/${{ matrix.os }}-${{ matrix.compiler }}:/tmp/ccache/nebula/${{ matrix.os }}-${{ matrix.compiler }}
       options: --cap-add=SYS_PTRACE
     steps:
+      - uses: webiny/action-post-run@2.0.1
+        with:
+          run: sh -c "rm -rf $(pwd)/*"
       - uses: actions/checkout@v2
       - name: Prepare environment
         id: prepare
@@ -143,7 +146,7 @@ jobs:
         timeout-minutes: 60
       - name: Down cluster
         run: |
-          make down
+          make RM_DIR=false down
         working-directory: tests/
         timeout-minutes: 2
       - name: Sanitizer
@@ -156,6 +159,3 @@ jobs:
         with:
           name: ${{ matrix.os }}-${{ matrix.compiler }}-nebula-test-logs
           path:  build/server_*/logs/
-      - name: Cleanup
-        if: ${{ always() }}
-        run: rm -rf "$(pwd)"
