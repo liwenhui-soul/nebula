@@ -44,9 +44,9 @@ Status LdapAuthenticator::prepare() {
 
   /**
    * Search bind mode can either use FLAGS_ldap_searchattribute or
-   * FLAGS_ldap_searchfilter, but can't use both. FLAGS_Ldap_searchattribute
+   * FLAGS_ldap_searchfilter, but can't use both. FLAGS_ldap_searchattribute
    * default is "uid". FLAGS_Ldap_searchfilter is more flexible search filtes
-   * than FLAGS_Ldap_searchattribute.
+   * than FLAGS_ldap_searchattribute.
    */
   if (!FLAGS_ldap_searchattribute.empty() && !FLAGS_ldap_searchfilter.empty()) {
     return Status::Error(
@@ -208,9 +208,11 @@ StatusOr<bool> LdapAuthenticator::searchBindAuth() {
   }
   attributes[1] = nullptr;
 
+  std::string basedn =
+      folly::stringPrintf("uid=%s,%s", userName_.c_str(), FLAGS_ldap_basedn.c_str());
   // Initiate an ldap search, synchronize
   rc = ldap_search_ext_s(ldap_,
-                         FLAGS_ldap_basedn.c_str(),
+                         basedn.c_str(),
                          0,  // The search scope, use LDAP_SCOPE_BASE
                          filter.c_str(),
                          attributes,
@@ -292,7 +294,7 @@ StatusOr<bool> LdapAuthenticator::searchBindAuth() {
 }
 
 bool LdapAuthenticator::auth(const std::string& user, const std::string& password) {
-  // The shadow account on the nebula side has been created
+  // The shadow account on the nebula side has been created.
   // First, go to meta to check if the shadow account exists
   if (!metaClient_->checkShadowAccountFromCache(user)) {
     return false;

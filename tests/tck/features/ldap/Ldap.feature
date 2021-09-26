@@ -7,8 +7,8 @@
 Feature: ldap authentication-SimpleBindAuth
 
   Background:
-  # FLAGS_enable_authorize = true;
-  # FLAGS_auth_type = "password";
+  # FLAGS_enable_authorize=true;
+  # FLAGS_auth_type=password;
   # use username "root", password "nebula" to login, and execute:
   # CREATE SPACE space1(partition_num=1, replica_factor=1);
   # Create shadow account
@@ -17,12 +17,12 @@ Feature: ldap authentication-SimpleBindAuth
   # then signout.
   Scenario: SimpleBindAuth
     # modify the graph conf:
-    # FLAGS_auth_type = "ldap";
-    # FLAGS_ldap_server = "127.0.0.1";
-    # FLAGS_ldap_port = 389;
-    # FLAGS_ldap_scheme = "ldap";
-    # FLAGS_ldap_prefix = "uid=";
-    # FLAGS_ldap_suffix = ",ou=it,dc=sys,dc=com";
+    # FLAGS_auth_type=ldap;
+    # FLAGS_ldap_server=127.0.0.1;
+    # FLAGS_ldap_port=389;
+    # FLAGS_ldap_scheme=ldap;
+    # FLAGS_ldap_prefix=uid=;
+    # FLAGS_ldap_suffix=,ou=it,dc=sys,dc=com;
     When executing query:
       """
       # Ldap server contains corresponding records
@@ -43,7 +43,7 @@ Feature: ldap authentication-SimpleBindAuth
     Then the login should be failed
 
   # signout, and modify graph conf
-  # FLAGS_auth_type = "password";
+  # FLAGS_auth_type=password;
   # use username "root", password "nebula" to login, and execute:
   # When executing query:
   # """
@@ -52,13 +52,11 @@ Feature: ldap authentication-SimpleBindAuth
   # Then the login should be successful
   Scenario: SearchBindAuth
     # modify the graph conf:
-    # FLAGS_auth_type = "ldap";
-    # FLAGS_ldap_server = "127.0.0.1";
-    # FLAGS_ldap_port = 389;
-    # FLAGS_ldap_scheme = "ldap";
-    # FLAGS_ldap_prefix = "";
-    # FLAGS_ldap_suffix = "";
-    # FLAGS_ldap_basedn = "uid=test2,ou=it,dc=sys,dc=com";
+    # FLAGS_auth_type=ldap;
+    # FLAGS_ldap_server=127.0.0.1;
+    # FLAGS_ldap_port=389;
+    # FLAGS_ldap_scheme=ldap;
+    # FLAGS_ldap_basedn=ou=it,dc=sys,dc=com;
     When executing query:
       """
       # Ldap server contains corresponding records
@@ -78,7 +76,7 @@ Feature: ldap authentication-SimpleBindAuth
       """
     Then the login should be failed
     # signout, and modify graph conf
-    # FLAGS_auth_type = "password";
+    # FLAGS_auth_type=password;
     # use username "root", password "nebula" to login, and execute:
     When executing query:
       """
