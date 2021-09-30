@@ -7,8 +7,14 @@
 #include "common/thread/GenericWorker.h"
 
 #include <event2/event.h>
-#include <sys/eventfd.h>
 
+#include "common/base/CommonMacro.h"
+#ifndef PLATFORM_MACOS
+#include <sys/eventfd.h>
+#else
+#include <sys/socket.h>
+#include <sys/types.h>
+#endif
 #include "common/base/Base.h"
 
 namespace nebula {
@@ -27,9 +33,18 @@ GenericWorker::~GenericWorker() {
     event_base_free(evbase_);
     evbase_ = nullptr;
   }
+#ifndef PLATFORM_MACOS
   if (evfd_ >= 0) {
     ::close(evfd_);
   }
+#else
+  if (evfd_[0] >= 0) {
+    ::close(evfd_[0]);
+  }
+  if (evfd_[1] >= 0) {
+    ::close(evfd_[1]);
+  }
+#endif
 }
 
 bool GenericWorker::start(std::string name) {
@@ -43,12 +58,19 @@ bool GenericWorker::start(std::string name) {
   evbase_ = event_base_new();
   DCHECK(evbase_ != nullptr);
 
+#ifndef PLATFORM_MACOS
   // Create an eventfd for async notification
   evfd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
   if (evfd_ == -1) {
     LOG(ERROR) << "Create eventfd failed: " << ::strerror(errno);
     return false;
   }
+#else
+  if (::socketpair(AF_UNIX, SOCK_STREAM, 0, evfd_) < 0) {
+    LOG(ERROR) << "Create eventfd failed: " << ::strerror(errno);
+    return false;
+  }
+#endif
   auto cb = [](int fd, int16_t, void *arg) {
     auto val = 0UL;
     auto len = ::read(fd, &val, sizeof(val));
@@ -56,7 +78,11 @@ bool GenericWorker::start(std::string name) {
     reinterpret_cast<GenericWorker *>(arg)->onNotify();
   };
   auto events = EV_READ | EV_PERSIST;
+#ifndef PLATFORM_MACOS
   notifier_ = event_new(evbase_, evfd_, events, cb, this);
+#else
+  notifier_ = event_new(evbase_, evfd_[0], events, cb, this);
+#endif
   DCHECK(notifier_ != nullptr);
   event_add(notifier_, nullptr);
 
@@ -93,9 +119,15 @@ void GenericWorker::notify() {
   if (notifier_ == nullptr) {
     return;
   }
+#ifndef PLATFORM_MACOS
   DCHECK_NE(-1, evfd_);
   auto one = 1UL;
   auto len = ::write(evfd_, &one, sizeof(one));
+#else
+  DCHECK_NE(-1, evfd_[1]);
+  auto one = 1UL;
+  auto len = ::write(evfd_[1], &one, sizeof(one));
+#endif
   DCHECK(len == sizeof(one));
 }
 

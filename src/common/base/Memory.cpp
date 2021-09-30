@@ -18,13 +18,30 @@ StatusOr<std::unique_ptr<MemInfo>> MemInfo::make() {
   return mem;
 }
 
-MemInfo::MemInfo() noexcept { info_ = std::make_unique<struct sysinfo>(); }
+MemInfo::MemInfo() noexcept {
+#ifndef PLATFORM_MACOS
+  info_ = std::make_unique<struct sysinfo>();
+#else
+  vmStat_ = std::make_unique<vm_statistics64_data_t>();
+#endif
+}
 
 Status MemInfo::init() {
+#ifndef PLATFORM_MACOS
   if (sysinfo(info_.get()) == -1) {
     auto err = errno;
     return Status::Error("Fail to call sysinfo to get memory info, errno: %d", err);
   }
+#else
+  machPort_ = mach_host_self();
+  count_ = HOST_VM_INFO64_COUNT;
+  if (KERN_SUCCESS != host_page_size(machPort_, &pageSize_) ||
+      KERN_SUCCESS !=
+          host_statistics64(machPort_, HOST_VM_INFO64, (host_info64_t)vmStat_.get(), &count_)) {
+    auto err = errno;
+    return Status::Error("Fail to call sysinfo to get memory info, errno: %d", err);
+  }
+#endif
   return Status::OK();
 }
 

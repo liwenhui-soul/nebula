@@ -1,3 +1,6 @@
+if(APPLE)
+    add_compile_definitions(BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
+endif()
 nebula_add_library(
     storage_common_obj OBJECT
     StorageFlags.cpp

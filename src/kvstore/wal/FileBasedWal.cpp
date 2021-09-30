@@ -300,8 +300,12 @@ void FileBasedWal::prepareNewFile(LogID startLogId) {
   walFiles_.emplace(std::make_pair(startLogId, info));
 
   // Create the file for write
+#ifndef PLATFORM_MACOS
   currFd_ =
       open(info->path(), O_CREAT | O_EXCL | O_WRONLY | O_APPEND | O_CLOEXEC | O_LARGEFILE, 0644);
+#else
+  currFd_ = open(info->path(), O_CREAT | O_EXCL | O_WRONLY | O_APPEND | O_CLOEXEC, 0644);
+#endif
   if (currFd_ < 0) {
     LOG(FATAL) << "Failed to open file \"" << info->path() << "\" (errno: " << errno
                << "): " << strerror(errno);

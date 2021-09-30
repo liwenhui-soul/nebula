@@ -3,6 +3,10 @@
 # This source code is licensed under Apache 2.0 License,
 # attached with Common Clause Condition 1.0, found in the LICENSES directory.
 
+if(APPLE)
+    add_compile_definitions(BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
+endif()
+
 nebula_add_library(
     meta_service_handler OBJECT
     MetaServiceHandler.cpp

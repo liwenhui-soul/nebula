@@ -10,7 +10,13 @@
 #include <fnmatch.h>
 #include <limits.h>
 #include <stdlib.h>
+
+#include "common/base/CommonMacro.h"
+#ifndef PLATFORM_MACOS
 #include <sys/statfs.h>
+#else
+#include <sys/mount.h>
+#endif
 
 #include "common/base/Base.h"
 
@@ -188,7 +194,7 @@ FileType FileUtils::fileType(const char* path) {
   return FileType::UNKNOWN;
 }
 
-int64_t FileUtils::fileLastUpdateTime(const char* path) {
+time_t FileUtils::fileLastUpdateTime(const char* path) {
   struct stat st;
   if (lstat(path, &st)) {
     // Failed to get file stat

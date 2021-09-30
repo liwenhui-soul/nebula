@@ -13,10 +13,18 @@ fi
 
 # Original directory
 OLD_DIR=$(pwd)
-# Path to this script
-SCRIPT_PATH=$(readlink -f $0)
+abs_path() {
+    SOURCE="${BASH_SOURCE[0]}"
+    while [ -h "$SOURCE" ]; do
+        DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+        SOURCE="$(readlink "$SOURCE")"
+        [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+    done
+    echo "$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+}
+
 # Directory of this script
-SCRIPT_DIR=$(dirname ${SCRIPT_PATH})
+SCRIPT_DIR=`abs_path`
 # Installation directory, i.e. parent of SCRIPT_DIR
 # For now we assume that the directory hierachy of the nebula installation is:
 # root/bin, root/etc/, root/scripts, etc.

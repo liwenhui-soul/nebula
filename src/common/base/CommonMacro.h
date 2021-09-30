@@ -7,6 +7,10 @@
 #ifndef COMMON_BASE_MACOR_H_
 #define COMMON_BASE_MACOR_H_
 
+#if defined(__APPLE__) && defined(__MACH__)
+#define PLATFORM_MACOS
+#endif
+
 namespace nebula {
 
 // for fixed_string data type, maximum of 256 bytes are allowed in the index.

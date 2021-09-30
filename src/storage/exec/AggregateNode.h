@@ -21,8 +21,8 @@ struct PropStat {
   explicit PropStat(const cpp2::StatType& statType) : statType_(statType) {}
 
   cpp2::StatType statType_;
-  mutable Value sum_ = 0L;
-  mutable Value count_ = 0L;
+  mutable Value sum_ = int64_t(0);
+  mutable Value count_ = int64_t(0);
   mutable Value min_ = std::numeric_limits<int64_t>::max();
   mutable Value max_ = std::numeric_limits<int64_t>::min();
 };
