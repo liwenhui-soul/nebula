@@ -48,4 +48,21 @@ DECLARE_string(local_ip);
 
 DECLARE_bool(enable_experimental_feature);
 
+// LDAP authentication common parameters
+DECLARE_string(ldap_server);
+DECLARE_int32(ldap_port);
+DECLARE_string(ldap_scheme);
+DECLARE_bool(ldap_tls);
+
+// LDAP authentication simple bind mode parameters
+DECLARE_string(ldap_prefix);
+DECLARE_string(ldap_suffix);
+
+// LDAP authentication search bind mode parameters
+DECLARE_string(ldap_basedn);
+DECLARE_string(ldap_binddn);
+DECLARE_string(ldap_bindpasswd);
+DECLARE_string(ldap_searchattribute);
+DECLARE_string(ldap_searchfilter);
+
 #endif  // GRAPH_GRAPHFLAGS_H_
