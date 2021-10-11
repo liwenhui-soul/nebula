@@ -57,10 +57,9 @@ jobs:
           key-id: ${{ secrets.OSS_ID }}
           key-secret: ${{ secrets.OSS_SECRET }}
           endpoint: ${{ secrets.OSS_ENDPOINT }}
-          bucket: nebula-graph
+          bucket: nebula-graph-ent
           asset-path: ${{ env.SYMS_DIR }}
-          target-path: package/${{ steps.tag.outputs.tagnum }}/symbols
-
+          target-path: general/nebula-graph/${{ steps.tag.outputs.tagnum }}/symbols
 
   docker_build:
     name: docker-build
