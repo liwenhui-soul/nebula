@@ -104,6 +104,7 @@ macro(nebula_link_libraries target)
         -pthread
         z
         ${COVERAGES}
+        ${Breakpad_LIBRARY}
     )
 endmacro(nebula_link_libraries)
 
