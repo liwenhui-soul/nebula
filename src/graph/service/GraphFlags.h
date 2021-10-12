@@ -65,4 +65,6 @@ DECLARE_string(ldap_bindpasswd);
 DECLARE_string(ldap_searchattribute);
 DECLARE_string(ldap_searchfilter);
 
+DECLARE_bool(enable_client_white_list);
+DECLARE_string(client_white_list);
 #endif  // GRAPH_GRAPHFLAGS_H_

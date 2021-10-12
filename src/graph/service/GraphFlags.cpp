@@ -6,6 +6,8 @@
 
 #include "graph/service/GraphFlags.h"
 
+#include "version/Version.h"
+
 DEFINE_int32(port, 3699, "Nebula Graph daemon's listen port");
 DEFINE_int32(client_idle_timeout_secs,
              0,
@@ -100,3 +102,8 @@ DEFINE_string(ldap_bindpasswd,
               "to perform the search");
 DEFINE_string(ldap_searchattribute, "", "Attribute to match the user name in the search");
 DEFINE_string(ldap_searchfilter, "", "Use search filter, more flexible than searchattribut");
+
+DEFINE_bool(enable_client_white_list, true, "Turn on/off the client white list.");
+DEFINE_string(client_white_list,
+              nebula::getOriginVersion() + ":2.5.0:2.5.1:2.6.0",
+              "A white list for different client versions, seperate with colon.");
