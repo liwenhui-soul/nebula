@@ -175,7 +175,6 @@ jobs:
       #   with:
       #     files: fastcov.info
       #     fail_ci_if_error: false
-      
       - name: Sanitizer
         if: ${{ always() }}
         run: |
