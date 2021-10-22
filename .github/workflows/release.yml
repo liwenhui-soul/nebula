@@ -84,7 +84,7 @@ jobs:
           majorver=$(git tag -l --sort=v:refname | tail -n1 | cut -f1 -d".")
           tag=""
           if [[ $majorver == ${{ steps.tagname.outputs.majorver }} ]]; then
-            tag="vesoft/nebula-${{ matrix.service }}:latest"
+            tag="${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-${{ matrix.service }}:latest"
           fi
           echo "::set-output name=tag::$tag"
       - uses: docker/setup-buildx-action@v1
@@ -99,7 +99,7 @@ jobs:
           file: ./docker/Dockerfile.${{ matrix.service }}
           tags: |
             ${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-${{ matrix.service }}:${{ steps.tagname.outputs.tag }}
-            ${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-${{ matrix.service }}:latest
+            ${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-${{ matrix.service }}:${{ steps.tagname.outputs.majorver }}
             ${{ steps.docker.outputs.tag }}
           push: true
           build-args: |
