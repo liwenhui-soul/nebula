@@ -13,8 +13,8 @@
 #include "common/time/WallClock.h"
 #include "kvstore/KVStore.h"
 #include "meta/processors/admin/AdminClient.h"
-#include "meta/processors/admin/BalancePlan.h"
-#include "meta/processors/admin/BalanceTask.h"
+#include "meta/processors/job/BalancePlan.h"
+#include "meta/processors/job/BalanceTask.h"
 
 namespace nebula {
 namespace meta {

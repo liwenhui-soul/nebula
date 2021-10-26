@@ -265,14 +265,14 @@ class MetaKeyUtils final {
   static HostAddr deserializeHostAddr(folly::StringPiece str);
 
   static std::string balanceTaskKey(
-      BalanceID balanceId, GraphSpaceID spaceId, PartitionID partId, HostAddr src, HostAddr dst);
+      JobID jobId, GraphSpaceID spaceId, PartitionID partId, HostAddr src, HostAddr dst);
 
   static std::string balanceTaskVal(BalanceTaskStatus status,
                                     BalanceTaskResult retult,
                                     int64_t startTime,
                                     int64_t endTime);
 
-  static std::string balanceTaskPrefix(BalanceID balanceId);
+  static std::string balanceTaskPrefix(JobID jobId);
 
   static std::string balancePlanKey(BalanceID id);
 

@@ -125,6 +125,19 @@ class KVStore {
                                          std::unique_ptr<KVIterator>* iter,
                                          bool canReadFromFollower = false) = delete;
 
+  // Get all results with prefix for prev.
+  virtual nebula::cpp2::ErrorCode prefixReverse(GraphSpaceID spaceId,
+                                                PartitionID partId,
+                                                const std::string& prefix,
+                                                std::unique_ptr<KVIterator>* iter,
+                                                bool canReadFromFollower = false) = 0;
+
+  virtual nebula::cpp2::ErrorCode prefixReverse(GraphSpaceID spaceId,
+                                                PartitionID partId,
+                                                std::string&& prefix,
+                                                std::unique_ptr<KVIterator>* iter,
+                                                bool canReadFromFollower = false) = delete;
+
   // Get all results with prefix starting from start
   virtual nebula::cpp2::ErrorCode rangeWithPrefix(GraphSpaceID spaceId,
                                                   PartitionID partId,

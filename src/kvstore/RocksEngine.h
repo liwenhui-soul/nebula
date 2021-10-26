@@ -99,6 +99,34 @@ class RocksCommonIter : public KVIterator {
   std::unique_ptr<rocksdb::Iterator> iter_;
 };
 
+class RocksPrefixReverseIter : public KVIterator {
+ public:
+  RocksPrefixReverseIter(rocksdb::Iterator* iter, rocksdb::Slice prefix)
+      : iter_(iter), prefix_(prefix) {}
+
+  ~RocksPrefixReverseIter() = default;
+
+  bool valid() const override {
+    return !!iter_ && iter_->Valid() && (iter_->key().starts_with(prefix_));
+  }
+
+  void next() override { iter_->Prev(); }
+
+  void prev() override { iter_->Next(); }
+
+  folly::StringPiece key() const override {
+    return folly::StringPiece(iter_->key().data(), iter_->key().size());
+  }
+
+  folly::StringPiece val() const override {
+    return folly::StringPiece(iter_->value().data(), iter_->value().size());
+  }
+
+ protected:
+  std::unique_ptr<rocksdb::Iterator> iter_;
+  rocksdb::Slice prefix_;
+};
+
 /**************************************************************************
  *
  * An implementation of KVEngine based on Rocksdb
@@ -148,15 +176,20 @@ class RocksEngine : public KVEngine {
   nebula::cpp2::ErrorCode prefix(const std::string& prefix,
                                  std::unique_ptr<KVIterator>* iter) override;
 
+  nebula::cpp2::ErrorCode prefixReverse(const std::string& prefix,
+                                        std::unique_ptr<KVIterator>* iter) override;
+
   nebula::cpp2::ErrorCode rangeWithPrefix(const std::string& start,
                                           const std::string& prefix,
                                           std::unique_ptr<KVIterator>* iter) override;
 
   nebula::cpp2::ErrorCode prefixWithExtractor(const std::string& prefix,
-                                              std::unique_ptr<KVIterator>* storageIter);
+                                              std::unique_ptr<KVIterator>* storageIter,
+                                              bool reverse = false);
 
   nebula::cpp2::ErrorCode prefixWithoutExtractor(const std::string& prefix,
-                                                 std::unique_ptr<KVIterator>* storageIter);
+                                                 std::unique_ptr<KVIterator>* storageIter,
+                                                 bool reverse = false);
 
   nebula::cpp2::ErrorCode scan(std::unique_ptr<KVIterator>* storageIter) override;
   /*********************

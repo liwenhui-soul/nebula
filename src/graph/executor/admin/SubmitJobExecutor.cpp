@@ -62,7 +62,6 @@ StatusOr<DataSet> SubmitJobExecutor::buildResult(meta::cpp2::AdminJobOp jobOp,
       return v;
     }
     case meta::cpp2::AdminJobOp::SHOW: {
-      nebula::DataSet v({"Job Id(TaskId)", "Command(Dest)", "Status", "Start Time", "Stop Time"});
       DCHECK(resp.job_desc_ref().has_value());
       if (!resp.job_desc_ref().has_value()) {
         return Status::Error("Response unexpected.");
@@ -72,26 +71,7 @@ StatusOr<DataSet> SubmitJobExecutor::buildResult(meta::cpp2::AdminJobOp jobOp,
         return Status::Error("Response unexpected");
       }
       auto &jobDesc = *resp.job_desc_ref();
-      // job desc
-      v.emplace_back(nebula::Row({
-          jobDesc.front().get_id(),
-          apache::thrift::util::enumNameSafe(jobDesc.front().get_cmd()),
-          apache::thrift::util::enumNameSafe(jobDesc.front().get_status()),
-          convertJobTimestampToDateTime(jobDesc.front().get_start_time()),
-          convertJobTimestampToDateTime(jobDesc.front().get_stop_time()),
-      }));
-      // tasks desc
-      auto &tasksDesc = *resp.get_task_desc();
-      for (const auto &taskDesc : tasksDesc) {
-        v.emplace_back(nebula::Row({
-            taskDesc.get_task_id(),
-            taskDesc.get_host().host,
-            apache::thrift::util::enumNameSafe(taskDesc.get_status()),
-            convertJobTimestampToDateTime(taskDesc.get_start_time()),
-            convertJobTimestampToDateTime(taskDesc.get_stop_time()),
-        }));
-      }
-      return v;
+      return buildShowResultData(jobDesc.front(), *resp.get_task_desc());
     }
     case meta::cpp2::AdminJobOp::SHOW_All: {
       nebula::DataSet v({"Job Id", "Command", "Status", "Start Time", "Stop Time"});
@@ -125,6 +105,75 @@ StatusOr<DataSet> SubmitJobExecutor::buildResult(meta::cpp2::AdminJobOp jobOp,
 Value SubmitJobExecutor::convertJobTimestampToDateTime(int64_t timestamp) {
   return timestamp > 0 ? Value(time::TimeConversion::unixSecondsToDateTime(timestamp))
                        : Value::kEmpty;
+}
+
+nebula::DataSet SubmitJobExecutor::buildShowResultData(
+    const nebula::meta::cpp2::JobDesc &jd, const std::vector<nebula::meta::cpp2::TaskDesc> &td) {
+  if (jd.get_cmd() == meta::cpp2::AdminCmd::DATA_BALANCE) {
+    DataSet v({"balanceId, spaceId:partId, src->dst", "status"});
+    const auto &paras = jd.get_paras();
+    size_t index = std::stoul(paras.back());
+    uint32_t total = paras.size() - index - 1, succeeded = 0, failed = 0, inProgress = 0,
+             invalid = 0;
+    for (size_t i = index; i < paras.size() - 1; i++) {
+      meta::cpp2::BalanceTask tsk;
+      apache::thrift::CompactSerializer::deserialize(paras[i], tsk);
+      switch (tsk.get_result()) {
+        case meta::cpp2::TaskResult::FAILED:
+          ++failed;
+          break;
+        case meta::cpp2::TaskResult::IN_PROGRESS:
+          ++inProgress;
+          break;
+        case meta::cpp2::TaskResult::INVALID:
+          ++invalid;
+          break;
+        case meta::cpp2::TaskResult::SUCCEEDED:
+          ++succeeded;
+          break;
+      }
+      v.emplace_back(
+          Row({std::move(tsk).get_id(), apache::thrift::util::enumNameSafe(tsk.get_result())}));
+    }
+    double percentage = total == 0 ? 0 : static_cast<double>(succeeded) / total * 100;
+    v.emplace_back(Row({folly::sformat("Total:{}, Succeeded:{}, Failed:{}, "
+                                       "In Progress:{}, Invalid:{}",
+                                       total,
+                                       succeeded,
+                                       failed,
+                                       inProgress,
+                                       invalid),
+                        percentage}));
+    v.emplace_back(
+        Row({folly::sformat("Job Id: {}, Command: {}, Status: {}",
+                            jd.get_id(),
+                            apache::thrift::util::enumNameSafe(jd.get_cmd()),
+                            apache::thrift::util::enumNameSafe(jd.get_status())),
+             folly::sformat("Start Time: {}, Stop Time: {}",
+                            convertJobTimestampToDateTime(jd.get_start_time()).toString(),
+                            convertJobTimestampToDateTime(jd.get_stop_time()).toString())}));
+    return v;
+  } else {
+    nebula::DataSet v({"Job Id(TaskId)", "Command(Dest)", "Status", "Start Time", "Stop Time"});
+    v.emplace_back(nebula::Row({
+        jd.get_id(),
+        apache::thrift::util::enumNameSafe(jd.get_cmd()),
+        apache::thrift::util::enumNameSafe(jd.get_status()),
+        convertJobTimestampToDateTime(jd.get_start_time()),
+        convertJobTimestampToDateTime(jd.get_stop_time()),
+    }));
+    // tasks desc
+    for (const auto &taskDesc : td) {
+      v.emplace_back(nebula::Row({
+          taskDesc.get_task_id(),
+          taskDesc.get_host().host,
+          apache::thrift::util::enumNameSafe(taskDesc.get_status()),
+          convertJobTimestampToDateTime(taskDesc.get_start_time()),
+          convertJobTimestampToDateTime(taskDesc.get_stop_time()),
+      }));
+    }
+    return v;
+  }
 }
 }  // namespace graph
 }  // namespace nebula

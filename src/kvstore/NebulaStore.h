@@ -150,6 +150,18 @@ class NebulaStore : public KVStore, public Handler {
                                  std::unique_ptr<KVIterator>* iter,
                                  bool canReadFromFollower = false) override = delete;
 
+  nebula::cpp2::ErrorCode prefixReverse(GraphSpaceID spaceId,
+                                        PartitionID partId,
+                                        const std::string& prefix,
+                                        std::unique_ptr<KVIterator>* iter,
+                                        bool canReadFromFollower = false) override;
+
+  nebula::cpp2::ErrorCode prefixReverse(GraphSpaceID spaceId,
+                                        PartitionID partId,
+                                        std::string&& prefix,
+                                        std::unique_ptr<KVIterator>* iter,
+                                        bool canReadFromFollower = false) override = delete;
+
   // Get all results with prefix starting from start
   nebula::cpp2::ErrorCode rangeWithPrefix(GraphSpaceID spaceId,
                                           PartitionID partId,

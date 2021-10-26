@@ -122,11 +122,18 @@ class MockKVStore : public ::nebula::kvstore::KVStore {
     (*iter) = std::move(mockIter);
     return ::nebula::cpp2::ErrorCode::SUCCEEDED;
   }
-  //   virtual nebula::cpp2::ErrorCode prefix(GraphSpaceID spaceId,
-  //                                          PartitionID partId,
-  //                                          std::string&& prefix,
-  //                                          std::unique_ptr<KVIterator>* iter,
-  //                                          bool canReadFromFollower = false) = delete override;
+  //  nebula::cpp2::ErrorCode prefix(GraphSpaceID spaceId,
+  //                                 PartitionID partId,
+  //                                 std::string&& prefix,
+  //                                 std::unique_ptr<KVIterator>* iter,
+  //                                 bool canReadFromFollower = false) override = delete;
+  //
+  nebula::cpp2::ErrorCode prefixReverse(GraphSpaceID spaceId,
+                                        PartitionID partId,
+                                        std::string&& prefix,
+                                        std::unique_ptr<KVIterator>* iter,
+                                        bool canReadFromFollower = false) override = delete;
+
   //   virtual nebula::cpp2::ErrorCode rangeWithPrefix(GraphSpaceID spaceId,
   //                                                   PartitionID partId,
   //                                                   std::string&& start,
@@ -161,6 +168,19 @@ class MockKVStore : public ::nebula::kvstore::KVStore {
       return true;
     });
     (*iter) = std::move(mockIter);
+    return ::nebula::cpp2::ErrorCode::SUCCEEDED;
+  }
+
+  nebula::cpp2::ErrorCode prefixReverse(GraphSpaceID spaceId,
+                                        PartitionID partId,
+                                        const std::string& prefix,
+                                        std::unique_ptr<KVIterator>* iter,
+                                        bool canReadFromFollower = false) override {
+    UNUSED(canReadFromFollower);
+    UNUSED(spaceId);
+    UNUSED(partId);
+    UNUSED(prefix);
+    UNUSED(iter);
     return ::nebula::cpp2::ErrorCode::SUCCEEDED;
   }
 

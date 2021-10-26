@@ -221,28 +221,48 @@ nebula::cpp2::ErrorCode RocksEngine::prefix(const std::string& prefix,
   }
 }
 
+nebula::cpp2::ErrorCode RocksEngine::prefixReverse(const std::string& prefix,
+                                                   std::unique_ptr<KVIterator>* storageIter) {
+  if (FLAGS_enable_rocksdb_prefix_filtering && prefix.size() >= extractorLen_) {
+    return prefixWithExtractor(prefix, storageIter, true);
+  } else {
+    return prefixWithoutExtractor(prefix, storageIter, true);
+  }
+}
+
 nebula::cpp2::ErrorCode RocksEngine::prefixWithExtractor(const std::string& prefix,
-                                                         std::unique_ptr<KVIterator>* storageIter) {
+                                                         std::unique_ptr<KVIterator>* storageIter,
+                                                         bool reverse) {
   rocksdb::ReadOptions options;
   options.prefix_same_as_start = true;
   rocksdb::Iterator* iter = db_->NewIterator(options);
   if (iter) {
-    iter->Seek(rocksdb::Slice(prefix));
+    if (reverse) {
+      iter->SeekForPrev(rocksdb::Slice(prefix));
+      storageIter->reset(new RocksPrefixReverseIter(iter, prefix));
+    } else {
+      iter->Seek(rocksdb::Slice(prefix));
+      storageIter->reset(new RocksPrefixIter(iter, prefix));
+    }
   }
-  storageIter->reset(new RocksPrefixIter(iter, prefix));
   return nebula::cpp2::ErrorCode::SUCCEEDED;
 }
 
 nebula::cpp2::ErrorCode RocksEngine::prefixWithoutExtractor(
-    const std::string& prefix, std::unique_ptr<KVIterator>* storageIter) {
+    const std::string& prefix, std::unique_ptr<KVIterator>* storageIter, bool reverse) {
   rocksdb::ReadOptions options;
   // prefix_same_as_start is false by default
   options.total_order_seek = FLAGS_enable_rocksdb_prefix_filtering;
   rocksdb::Iterator* iter = db_->NewIterator(options);
   if (iter) {
-    iter->Seek(rocksdb::Slice(prefix));
+    if (reverse) {
+      iter->SeekForPrev(rocksdb::Slice(prefix));
+      storageIter->reset(new RocksPrefixReverseIter(iter, prefix));
+    } else {
+      iter->Seek(rocksdb::Slice(prefix));
+      storageIter->reset(new RocksPrefixIter(iter, prefix));
+    }
   }
-  storageIter->reset(new RocksPrefixIter(iter, prefix));
   return nebula::cpp2::ErrorCode::SUCCEEDED;
 }
 

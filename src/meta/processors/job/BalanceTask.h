@@ -34,14 +34,14 @@ class BalanceTask {
  public:
   BalanceTask() = default;
 
-  BalanceTask(BalanceID balanceId,
+  BalanceTask(JobID jobId,
               GraphSpaceID spaceId,
               PartitionID partId,
               const HostAddr& src,
               const HostAddr& dst,
               kvstore::KVStore* kv,
               AdminClient* client)
-      : balanceId_(balanceId),
+      : jobId_(jobId),
         spaceId_(spaceId),
         partId_(partId),
         src_(src),
@@ -60,8 +60,8 @@ class BalanceTask {
 
  private:
   std::string buildTaskId() {
-    return folly::stringPrintf("[%ld, %d:%d, %s:%d->%s:%d]",
-                               balanceId_,
+    return folly::stringPrintf("[%d, %d:%d, %s:%d->%s:%d]",
+                               jobId_,
                                spaceId_,
                                partId_,
                                src_.host.c_str(),
@@ -73,7 +73,7 @@ class BalanceTask {
   bool saveInStore();
 
  private:
-  BalanceID balanceId_;
+  JobID jobId_;
   GraphSpaceID spaceId_;
   PartitionID partId_;
   HostAddr src_;

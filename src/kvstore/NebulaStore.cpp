@@ -636,6 +636,22 @@ nebula::cpp2::ErrorCode NebulaStore::prefix(GraphSpaceID spaceId,
   return part->engine()->prefix(prefix, iter);
 }
 
+nebula::cpp2::ErrorCode NebulaStore::prefixReverse(GraphSpaceID spaceId,
+                                                   PartitionID partId,
+                                                   const std::string& prefix,
+                                                   std::unique_ptr<KVIterator>* iter,
+                                                   bool canReadFromFollower) {
+  auto ret = part(spaceId, partId);
+  if (!ok(ret)) {
+    return error(ret);
+  }
+  auto part = nebula::value(ret);
+  if (!checkLeader(part, canReadFromFollower)) {
+    return nebula::cpp2::ErrorCode::E_LEADER_CHANGED;
+  }
+  return part->engine()->prefixReverse(prefix, iter);
+}
+
 nebula::cpp2::ErrorCode NebulaStore::rangeWithPrefix(GraphSpaceID spaceId,
                                                      PartitionID partId,
                                                      const std::string& start,

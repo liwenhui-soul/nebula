@@ -25,6 +25,8 @@ struct HostAddr {
    * */
   HostAddr(int h, int p) = delete;
   HostAddr(std::string h, Port p) : host(std::move(h)), port(p) {}
+  HostAddr(const HostAddr& other) : host(other.host), port(other.port) {}
+  HostAddr(HostAddr&& other) : host(std::move(other.host)), port(std::move(other.port)) {}
 
   void clear() {
     host.clear();
@@ -40,11 +42,21 @@ struct HostAddr {
     return os.str();
   }
 
+  HostAddr& operator=(const HostAddr& rhs);
+
   bool operator==(const HostAddr& rhs) const;
 
   bool operator!=(const HostAddr& rhs) const;
 
   bool operator<(const HostAddr& rhs) const;
+
+  static HostAddr fromString(const std::string& str) {
+    HostAddr ha;
+    auto pos = str.find(":");
+    ha.host = str.substr(1, pos - 2);
+    ha.port = std::stoi(str.substr(pos + 1));
+    return ha;
+  }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const HostAddr& addr) {
