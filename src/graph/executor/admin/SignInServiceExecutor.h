@@ -4,26 +4,26 @@
  * attached with Common Clause Condition 1.0, found in the LICENSES directory.
  */
 
-#ifndef GRAPH_EXECUTOR_ADMIN_SHOW_TS_CLIENTS_EXECUTOR_H_
-#define GRAPH_EXECUTOR_ADMIN_SHOW_TS_CLIENTS_EXECUTOR_H_
+#ifndef GRAPH_EXECUTOR_ADMIN_SIGNINSERVICEEXECUTOR_H_
+#define GRAPH_EXECUTOR_ADMIN_SIGNINSERVICEEXECUTOR_H_
 
 #include "graph/executor/Executor.h"
 
 namespace nebula {
 namespace graph {
 
-class ShowTSClientsExecutor final : public Executor {
+class SignInServiceExecutor final : public Executor {
  public:
-  ShowTSClientsExecutor(const PlanNode *node, QueryContext *qctx)
-      : Executor("ShowTSClientsExecutor", node, qctx) {}
+  SignInServiceExecutor(const PlanNode *node, QueryContext *qctx)
+      : Executor("SignInServiceExecutor", node, qctx) {}
 
   folly::Future<Status> execute() override;
 
  private:
-  folly::Future<Status> showTSClients();
+  folly::Future<Status> signInService();
 };
 
 }  // namespace graph
 }  // namespace nebula
 
-#endif  // GRAPH_EXECUTOR_ADMIN_SHOW_TS_CLIENTS_EXECUTOR_H_
+#endif  // GRAPH_EXECUTOR_ADMIN_SIGNINSERVICEEXECUTOR_H_

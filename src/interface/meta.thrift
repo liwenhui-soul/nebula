@@ -466,6 +466,7 @@ enum ListHostType {
     GRAPH       = 0x01,
     META        = 0x02,
     STORAGE     = 0x03,
+    DRAINER     = 0x04,
 } (cpp.enum_strict)
 
 struct ListHostsReq {
@@ -574,7 +575,8 @@ enum HostRole {
     META        = 0x01,
     STORAGE     = 0x02,
     LISTENER    = 0x03,
-    UNKNOWN     = 0x04
+    DRAINER     = 0x04,
+    UNKNOWN     = 0x05
 } (cpp.enum_strict)
 
 struct LeaderInfo {
@@ -944,12 +946,16 @@ struct ListGroupsResp {
 enum ListenerType {
     UNKNOWN       = 0x00,
     ELASTICSEARCH = 0x01,
+    SYNC          = 0x02,
+    ALL           = 0x03,
 } (cpp.enum_strict)
 
 struct AddListenerReq {
     1: common.GraphSpaceID     space_id,
     2: ListenerType            type,
     3: list<common.HostAddr>   hosts,
+    // To space name
+    4: optional binary         space_name,
 }
 
 struct RemoveListenerReq {
@@ -957,8 +963,9 @@ struct RemoveListenerReq {
     2: ListenerType            type,
 }
 
-struct ListListenerReq {
+struct ListListenersReq {
     1: common.GraphSpaceID     space_id,
+    2: ListenerType            type,
 }
 
 struct ListenerInfo {
@@ -966,12 +973,52 @@ struct ListenerInfo {
     2: common.HostAddr         host,
     3: common.PartitionID      part_id,
     4: HostStatus              status,
+    // To space name
+    5: optional binary         space_name,
 }
 
-struct ListListenerResp {
+struct ListListenersResp {
     1: common.ErrorCode        code,
     2: common.HostAddr         leader,
     3: list<ListenerInfo>      listeners,
+}
+
+struct ListListenerDrainersReq {
+    1: common.GraphSpaceID     space_id,
+}
+
+struct DrainerInfo {
+    1: common.HostAddr         host,
+    2: HostStatus              status,
+}
+
+struct ListListenerDrainersResp {
+    1: common.ErrorCode        code,
+    // Valid if code equals E_LEADER_CHANGED.
+    2: common.HostAddr         leader,
+    3: map<common.PartitionID, common.HostAddr>
+    (cpp.template = "std::unordered_map") drainerClients;
+    4: binary                  space_name;
+}
+
+struct AddDrainerReq {
+    1: common.GraphSpaceID     space_id,
+    2: list<common.HostAddr>   hosts,
+}
+
+struct RemoveDrainerReq {
+    1: common.GraphSpaceID     space_id,
+}
+
+struct ListDrainersReq {
+    1: common.GraphSpaceID     space_id,
+}
+
+struct ListDrainersResp {
+    1: common.ErrorCode        code,
+    // Valid if code equals E_LEADER_CHANGED.
+    2: common.HostAddr         leader,
+    3: list<DrainerInfo>       drainers,
 }
 
 struct GetStatsReq {
@@ -1028,31 +1075,36 @@ struct RestoreMetaReq {
     2: list<HostPair>   hosts,
 }
 
-enum FTServiceType {
+enum ExternalServiceType {
     ELASTICSEARCH = 0x01,
+    DRAINER       = 0x02,
+    ALL           = 0x03,
 } (cpp.enum_strict)
 
-struct FTClient {
+struct ServiceClient {
     1: required common.HostAddr    host,
     2: optional binary             user,
     3: optional binary             pwd,
 }
 
-struct SignInFTServiceReq {
-    1: FTServiceType                type,
-    2: list<FTClient>               clients,
+struct SignInServiceReq {
+    1: ExternalServiceType type,
+    2: list<ServiceClient> clients,
 }
 
-struct SignOutFTServiceReq {
+struct SignOutServiceReq {
+    1: ExternalServiceType type,
 }
 
-struct ListFTClientsReq {
+struct ListServiceClientsReq {
+    1: ExternalServiceType type,
 }
 
-struct ListFTClientsResp {
+struct ListServiceClientsResp {
     1: common.ErrorCode    code,
     2: common.HostAddr     leader,
-    3: list<FTClient>      clients,
+    3: map<ExternalServiceType, list<ServiceClient>>
+    (cpp.template = "std::unordered_map") clients,
 }
 
 struct FTIndex {
@@ -1283,12 +1335,17 @@ service MetaService {
     ExecResp       restoreMeta(1: RestoreMetaReq req);
     ExecResp       addListener(1: AddListenerReq req);
     ExecResp       removeListener(1: RemoveListenerReq req);
-    ListListenerResp listListener(1: ListListenerReq req);
+    ListListenersResp listListeners(1: ListListenersReq req);
+    ListListenerDrainersResp listListenerDrainers(1: ListListenerDrainersReq req);
+
+    ExecResp         addDrainer(1: AddDrainerReq req);
+    ExecResp         removeDrainer(1: RemoveDrainerReq req);
+    ListDrainersResp listDrainers(1: ListDrainersReq req);
 
     GetStatsResp  getStats(1: GetStatsReq req);
-    ExecResp signInFTService(1: SignInFTServiceReq req);
-    ExecResp signOutFTService(1: SignOutFTServiceReq req);
-    ListFTClientsResp listFTClients(1: ListFTClientsReq req);
+    ExecResp signInService(1: SignInServiceReq req);
+    ExecResp signOutService(1: SignOutServiceReq req);
+    ListServiceClientsResp listServiceClients(1: ListServiceClientsReq req);
 
     ExecResp createFTIndex(1: CreateFTIndexReq req);
     ExecResp dropFTIndex(1: DropFTIndexReq req);

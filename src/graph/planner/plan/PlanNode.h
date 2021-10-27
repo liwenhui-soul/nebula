@@ -166,11 +166,16 @@ class PlanNode {
     kRemoveListener,
     kShowListener,
 
-    // text service related
-    kShowTSClients,
+    // drainer related
+    kAddDrainer,
+    kRemoveDrainer,
+    kShowDrainers,
+
+    // service related
+    kShowServiceClients,
     kShowFTIndexes,
-    kSignInTSService,
-    kSignOutTSService,
+    kSignInService,
+    kSignOutService,
     kDownload,
     kIngest,
     kShowSessions,

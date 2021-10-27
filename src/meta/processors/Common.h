@@ -29,7 +29,7 @@ class LockUtils {
   GENERATE_LOCK(edge);
   GENERATE_LOCK(tagIndex);
   GENERATE_LOCK(edgeIndex);
-  GENERATE_LOCK(fulltextServices);
+  GENERATE_LOCK(service);
   GENERATE_LOCK(fulltextIndex);
   GENERATE_LOCK(user);
   GENERATE_LOCK(config);
@@ -37,6 +37,7 @@ class LockUtils {
   GENERATE_LOCK(group);
   GENERATE_LOCK(zone);
   GENERATE_LOCK(listener);
+  GENERATE_LOCK(drainer);
   GENERATE_LOCK(session);
 
 #undef GENERATE_LOCK

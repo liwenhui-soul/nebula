@@ -143,6 +143,8 @@ void QueryInstance::onError(Status status) {
     case Status::Code::kUserNotFound:
     case Status::Code::kListenerNotFound:
     case Status::Code::kSessionNotFound:
+    case Status::Code::kDrainerNotFound:
+    case Status::Code::kDrainerClientNotFound:
       rctx->resp().errorCode = ErrorCode::E_EXECUTION_ERROR;
       break;
   }

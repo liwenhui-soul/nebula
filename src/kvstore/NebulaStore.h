@@ -14,6 +14,7 @@
 #include "common/base/Base.h"
 #include "common/ssl/SSLConfig.h"
 #include "common/utils/Utils.h"
+#include "interface/gen-cpp2/DrainerServiceAsyncClient.h"
 #include "interface/gen-cpp2/RaftexServiceAsyncClient.h"
 #include "kvstore/DiskManager.h"
 #include "kvstore/KVEngine.h"
@@ -69,6 +70,9 @@ class NebulaStore : public KVStore, public Handler {
     clientMan_ =
         std::make_shared<thrift::ThriftClientManager<raftex::cpp2::RaftexServiceAsyncClient>>(
             FLAGS_enable_ssl);
+    // TODO(pandasheep) Use ssl for drainer
+    drainerClientMan_ =
+        std::make_shared<thrift::ThriftClientManager<drainer::cpp2::DrainerServiceAsyncClient>>();
   }
 
   ~NebulaStore();
@@ -339,6 +343,8 @@ class NebulaStore : public KVStore, public Handler {
   std::shared_ptr<raftex::RaftexService> raftService_;
   std::shared_ptr<raftex::SnapshotManager> snapshot_;
   std::shared_ptr<thrift::ThriftClientManager<raftex::cpp2::RaftexServiceAsyncClient>> clientMan_;
+  std::shared_ptr<thrift::ThriftClientManager<drainer::cpp2::DrainerServiceAsyncClient>>
+      drainerClientMan_;
   std::shared_ptr<DiskManager> diskMan_;
   folly::ConcurrentHashMap<std::string, std::function<void(std::shared_ptr<Part>&)>>
       onNewPartAdded_;

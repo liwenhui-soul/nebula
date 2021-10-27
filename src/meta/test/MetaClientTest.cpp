@@ -1442,8 +1442,8 @@ TEST(MetaClientTest, FTServiceTest) {
   std::vector<HostAddr> hosts = {{"0", 0}, {"1", 1}, {"2", 2}, {"3", 3}};
   TestUtils::registerHB(kv, hosts);
 
-  std::vector<cpp2::FTClient> clients;
-  cpp2::FTClient c1, c2;
+  std::vector<cpp2::ServiceClient> clients;
+  cpp2::ServiceClient c1, c2;
   c1.set_host({"0", 0});
   c1.set_user("u1");
   c1.set_pwd("pwd");
@@ -1452,21 +1452,21 @@ TEST(MetaClientTest, FTServiceTest) {
   c2.set_user("u2");
   clients.emplace_back(c2);
   {
-    cpp2::FTServiceType type = cpp2::FTServiceType::ELASTICSEARCH;
-    auto result = client->signInFTService(type, clients).get();
+    cpp2::ExternalServiceType type = cpp2::ExternalServiceType::ELASTICSEARCH;
+    auto result = client->signInService(type, clients).get();
     ASSERT_TRUE(result.ok());
   }
   {
-    auto result = client->listFTClients().get();
+    auto result = client->listServiceClients(cpp2::ExternalServiceType::ELASTICSEARCH).get();
     ASSERT_TRUE(result.ok());
-    ASSERT_EQ(clients, result.value());
+    ASSERT_EQ(clients, result.value()[cpp2::ExternalServiceType::ELASTICSEARCH]);
   }
   {
-    auto result = client->signOutFTService().get();
+    auto result = client->signOutService(cpp2::ExternalServiceType::ELASTICSEARCH).get();
     ASSERT_TRUE(result.ok());
   }
   {
-    auto result = client->listFTClients().get();
+    auto result = client->listServiceClients(cpp2::ExternalServiceType::ELASTICSEARCH).get();
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().empty());
   }
@@ -2056,7 +2056,7 @@ TEST(MetaClientTest, ListenerTest) {
     ASSERT_TRUE(addRet.ok()) << addRet.status();
   }
   {
-    auto listRet = client->listListener(space).get();
+    auto listRet = client->listListeners(space, cpp2::ListenerType::ELASTICSEARCH).get();
     ASSERT_TRUE(listRet.ok()) << listRet.status();
     auto listeners = listRet.value();
     ASSERT_EQ(9, listeners.size());
@@ -2076,7 +2076,7 @@ TEST(MetaClientTest, ListenerTest) {
     ASSERT_TRUE(removeRet.ok()) << removeRet.status();
   }
   {
-    auto listRet = client->listListener(space).get();
+    auto listRet = client->listListeners(space, cpp2::ListenerType::ELASTICSEARCH).get();
     ASSERT_TRUE(listRet.ok()) << listRet.status();
     auto listeners = listRet.value();
     ASSERT_EQ(0, listeners.size());
@@ -2115,6 +2115,162 @@ TEST(MetaClientTest, VerifyClientTest) {
     EXPECT_TRUE(status.ok());
   }
   FLAGS_enable_client_white_list = false;
+}
+
+// Sign in drainr service and sync listener test
+TEST(MetaClientTest, DrainerServiceAndListenerTest) {
+  FLAGS_heartbeat_interval_secs = 1;
+  fs::TempDir rootPath("/tmp/MetaClientDrainerServiceAndListenerTest.XXXXXX");
+
+  mock::MockCluster cluster;
+  cluster.startMeta(rootPath.path());
+  uint32_t localMetaPort = cluster.metaServer_->port_;
+  auto* kv = cluster.metaKV_.get();
+  auto localIp = cluster.localIP();
+
+  auto threadPool = std::make_shared<folly::IOThreadPoolExecutor>(1);
+  auto localhosts = std::vector<HostAddr>{HostAddr(localIp, localMetaPort)};
+  auto client = std::make_shared<MetaClient>(threadPool, localhosts);
+  client->waitForMetadReady();
+
+  std::vector<HostAddr> hosts = {{"0", 0}, {"1", 1}, {"2", 2}, {"3", 3}};
+  TestUtils::registerHB(kv, hosts);
+
+  std::vector<cpp2::ServiceClient> clients;
+  cpp2::ServiceClient c1, c2;
+  c1.set_host({"0", 0});
+  clients.emplace_back(c1);
+  c2.set_host({"1", 1});
+  clients.emplace_back(c2);
+
+  TestUtils::createSomeHosts(kv);
+  meta::cpp2::SpaceDesc spaceDesc;
+  spaceDesc.set_space_name("default");
+  spaceDesc.set_partition_num(9);
+  spaceDesc.set_replica_factor(3);
+  auto ret = client->createSpace(spaceDesc).get();
+  ASSERT_TRUE(ret.ok()) << ret.status();
+  GraphSpaceID space = ret.value();
+
+  std::vector<HostAddr> listenerHosts = {{"1", 0}, {"1", 1}, {"1", 2}, {"1", 3}};
+  std::string toSpaceName("tospacename");
+  TestUtils::setupHB(kv, listenerHosts, cpp2::HostRole::LISTENER, gitInfoSha());
+  {
+    // add sync listener，failed
+    auto addRet =
+        client->addListener(space, cpp2::ListenerType::SYNC, listenerHosts, &toSpaceName).get();
+    ASSERT_FALSE(addRet.ok()) << addRet.status();
+  }
+  {
+    // sign in drainer service
+    cpp2::ExternalServiceType type = cpp2::ExternalServiceType::DRAINER;
+    auto result = client->signInService(type, clients).get();
+    ASSERT_TRUE(result.ok());
+  }
+  {
+    auto result = client->listServiceClients(cpp2::ExternalServiceType::DRAINER).get();
+    ASSERT_TRUE(result.ok());
+    ASSERT_EQ(clients, result.value()[cpp2::ExternalServiceType::DRAINER]);
+  }
+  {
+    // add sync listener，succeed
+    auto addRet =
+        client->addListener(space, cpp2::ListenerType::SYNC, listenerHosts, &toSpaceName).get();
+    ASSERT_TRUE(addRet.ok()) << addRet.status();
+  }
+  {
+    auto listRet = client->listListeners(space, cpp2::ListenerType::SYNC).get();
+    ASSERT_TRUE(listRet.ok()) << listRet.status();
+    auto listeners = listRet.value();
+    ASSERT_EQ(9, listeners.size());
+    std::vector<cpp2::ListenerInfo> expected;
+    for (size_t i = 0; i < 9; i++) {
+      cpp2::ListenerInfo l;
+      l.set_type(cpp2::ListenerType::SYNC);
+      l.set_host(listenerHosts[i % 4]);
+      l.set_part_id(i + 1);
+      l.set_status(cpp2::HostStatus::ONLINE);
+      l.set_space_name(toSpaceName);
+      expected.emplace_back(std::move(l));
+    }
+    ASSERT_EQ(expected, listeners);
+  }
+  {
+    auto removeRet = client->removeListener(space, cpp2::ListenerType::SYNC).get();
+    ASSERT_TRUE(removeRet.ok()) << removeRet.status();
+  }
+  {
+    auto listRet = client->listListeners(space, cpp2::ListenerType::ELASTICSEARCH).get();
+    ASSERT_TRUE(listRet.ok()) << listRet.status();
+    auto listeners = listRet.value();
+    ASSERT_EQ(0, listeners.size());
+  }
+  {
+    auto result = client->signOutService(cpp2::ExternalServiceType::DRAINER).get();
+    ASSERT_TRUE(result.ok());
+  }
+  {
+    auto result = client->listServiceClients(cpp2::ExternalServiceType::DRAINER).get();
+    ASSERT_TRUE(result.ok());
+    ASSERT_TRUE(result.value().empty());
+  }
+}
+
+// For the slave cluster, drainer test
+TEST(MetaClientTest, DrainerTest) {
+  FLAGS_heartbeat_interval_secs = 1;
+  fs::TempDir rootPath("/tmp/MetaClientDrainerTest.XXXXXX");
+
+  mock::MockCluster cluster;
+  cluster.startMeta(rootPath.path(), HostAddr("127.0.0.1", 0));
+  uint32_t localMetaPort = cluster.metaServer_->port_;
+  auto* kv = cluster.metaKV_.get();
+  auto localIp = cluster.localIP();
+
+  auto threadPool = std::make_shared<folly::IOThreadPoolExecutor>(1);
+  auto localhosts = std::vector<HostAddr>{HostAddr(localIp, localMetaPort)};
+  auto client = std::make_shared<MetaClient>(threadPool, localhosts);
+  client->waitForMetadReady();
+
+  TestUtils::createSomeHosts(kv);
+  meta::cpp2::SpaceDesc spaceDesc;
+  spaceDesc.set_space_name("default");
+  spaceDesc.set_partition_num(9);
+  spaceDesc.set_replica_factor(3);
+  auto ret = client->createSpace(spaceDesc).get();
+  ASSERT_TRUE(ret.ok()) << ret.status();
+  GraphSpaceID space = ret.value();
+
+  std::vector<HostAddr> drainerHosts = {{"1", 0}, {"1", 1}, {"1", 2}, {"1", 3}};
+  TestUtils::setupHB(kv, drainerHosts, cpp2::HostRole::DRAINER, gitInfoSha());
+  {
+    auto addRet = client->addDrainer(space, drainerHosts).get();
+    ASSERT_TRUE(addRet.ok()) << addRet.status();
+  }
+  {
+    auto listRet = client->listDrainers(space).get();
+    ASSERT_TRUE(listRet.ok()) << listRet.status();
+    auto drainers = listRet.value();
+    ASSERT_EQ(4, drainers.size());
+    std::vector<cpp2::DrainerInfo> expected;
+    for (size_t i = 0; i < 4; i++) {
+      cpp2::DrainerInfo l;
+      l.set_host(drainerHosts[i % 4]);
+      l.set_status(cpp2::HostStatus::ONLINE);
+      expected.emplace_back(std::move(l));
+    }
+    ASSERT_EQ(expected, drainers);
+  }
+  {
+    auto removeRet = client->removeDrainer(space).get();
+    ASSERT_TRUE(removeRet.ok()) << removeRet.status();
+  }
+  {
+    auto listRet = client->listDrainers(space).get();
+    ASSERT_TRUE(listRet.ok()) << listRet.status();
+    auto drainers = listRet.value();
+    ASSERT_EQ(0, drainers.size());
+  }
 }
 
 TEST(MetaClientTest, RocksdbOptionsTest) {

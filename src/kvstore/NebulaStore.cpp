@@ -484,7 +484,8 @@ std::shared_ptr<Listener> NebulaStore::newListener(GraphSpaceID spaceId,
                                                   nullptr,
                                                   nullptr,
                                                   nullptr,
-                                                  options_.schemaMan_);
+                                                  options_.schemaMan_,
+                                                  drainerClientMan_);
   raftService_->addPartition(listener);
   // add raft group as learner
   std::vector<HostAddr> raftPeers;

@@ -22,12 +22,12 @@
 #include "meta/processors/config/ListConfigsProcessor.h"
 #include "meta/processors/config/RegConfigProcessor.h"
 #include "meta/processors/config/SetConfigProcessor.h"
+#include "meta/processors/drainer/DrainerProcessor.h"
 #include "meta/processors/index/CreateEdgeIndexProcessor.h"
 #include "meta/processors/index/CreateTagIndexProcessor.h"
 #include "meta/processors/index/DropEdgeIndexProcessor.h"
 #include "meta/processors/index/DropTagIndexProcessor.h"
 #include "meta/processors/index/FTIndexProcessor.h"
-#include "meta/processors/index/FTServiceProcessor.h"
 #include "meta/processors/index/GetEdgeIndexProcessor.h"
 #include "meta/processors/index/GetTagIndexProcessor.h"
 #include "meta/processors/index/ListEdgeIndexesProcessor.h"
@@ -62,6 +62,7 @@
 #include "meta/processors/schema/GetTagProcessor.h"
 #include "meta/processors/schema/ListEdgesProcessor.h"
 #include "meta/processors/schema/ListTagsProcessor.h"
+#include "meta/processors/service/ServiceProcessor.h"
 #include "meta/processors/session/SessionManagerProcessor.h"
 #include "meta/processors/user/AuthenticationProcessor.h"
 #include "meta/processors/zone/AddGroupProcessor.h"
@@ -287,21 +288,21 @@ folly::Future<cpp2::ListIndexStatusResp> MetaServiceHandler::future_listEdgeInde
   RETURN_FUTURE(processor);
 }
 
-folly::Future<cpp2::ExecResp> MetaServiceHandler::future_signInFTService(
-    const cpp2::SignInFTServiceReq& req) {
-  auto* processor = SignInFTServiceProcessor::instance(kvstore_);
+folly::Future<cpp2::ExecResp> MetaServiceHandler::future_signInService(
+    const cpp2::SignInServiceReq& req) {
+  auto* processor = SignInServiceProcessor::instance(kvstore_);
   RETURN_FUTURE(processor);
 }
 
-folly::Future<cpp2::ExecResp> MetaServiceHandler::future_signOutFTService(
-    const cpp2::SignOutFTServiceReq& req) {
-  auto* processor = SignOutFTServiceProcessor::instance(kvstore_);
+folly::Future<cpp2::ExecResp> MetaServiceHandler::future_signOutService(
+    const cpp2::SignOutServiceReq& req) {
+  auto* processor = SignOutServiceProcessor::instance(kvstore_);
   RETURN_FUTURE(processor);
 }
 
-folly::Future<cpp2::ListFTClientsResp> MetaServiceHandler::future_listFTClients(
-    const cpp2::ListFTClientsReq& req) {
-  auto* processor = ListFTClientsProcessor::instance(kvstore_);
+folly::Future<cpp2::ListServiceClientsResp> MetaServiceHandler::future_listServiceClients(
+    const cpp2::ListServiceClientsReq& req) {
+  auto* processor = ListServiceClientsProcessor::instance(kvstore_);
   RETURN_FUTURE(processor);
 }
 
@@ -515,9 +516,33 @@ folly::Future<cpp2::ExecResp> MetaServiceHandler::future_removeListener(
   RETURN_FUTURE(processor);
 }
 
-folly::Future<cpp2::ListListenerResp> MetaServiceHandler::future_listListener(
-    const cpp2::ListListenerReq& req) {
-  auto* processor = ListListenerProcessor::instance(kvstore_);
+folly::Future<cpp2::ListListenersResp> MetaServiceHandler::future_listListeners(
+    const cpp2::ListListenersReq& req) {
+  auto* processor = ListListenersProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
+folly::Future<cpp2::ListListenerDrainersResp> MetaServiceHandler::future_listListenerDrainers(
+    const cpp2::ListListenerDrainersReq& req) {
+  auto* processor = ListListenerDrainersProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
+folly::Future<cpp2::ExecResp> MetaServiceHandler::future_addDrainer(
+    const cpp2::AddDrainerReq& req) {
+  auto* processor = AddDrainerProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
+folly::Future<cpp2::ExecResp> MetaServiceHandler::future_removeDrainer(
+    const cpp2::RemoveDrainerReq& req) {
+  auto* processor = RemoveDrainerProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
+folly::Future<cpp2::ListDrainersResp> MetaServiceHandler::future_listDrainers(
+    const cpp2::ListDrainersReq& req) {
+  auto* processor = ListDrainersProcessor::instance(kvstore_);
   RETURN_FUTURE(processor);
 }
 

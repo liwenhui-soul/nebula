@@ -95,11 +95,33 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
     lstIter->next();
   }
 
-  // 5. Delete related statis data
-  auto statiskey = MetaKeyUtils::statsKey(spaceId);
-  deleteKeys.emplace_back(statiskey);
+  // 5. Delete listener drainer meta data
+  auto lstDrainerPrefix = MetaKeyUtils::listenerDrainerPrefix(spaceId);
+  auto lstDrainerRet = doPrefix(lstDrainerPrefix);
+  if (!nebula::ok(lstDrainerRet)) {
+    auto retCode = nebula::error(lstDrainerRet);
+    LOG(ERROR) << "Drop space Failed, space " << spaceName
+               << " error: " << apache::thrift::util::enumNameSafe(retCode);
+    handleErrorCode(retCode);
+    onFinished();
+    return;
+  }
 
-  // 6. Delte related fulltext index meta data
+  auto lstDrainerIter = nebula::value(lstDrainerRet).get();
+  while (lstDrainerIter->valid()) {
+    deleteKeys.emplace_back(lstDrainerIter->key());
+    lstDrainerIter->next();
+  }
+
+  // 6.Delete related drainer meta data
+  auto drainerKey = MetaKeyUtils::drainerKey(spaceId);
+  deleteKeys.emplace_back(drainerKey);
+
+  // 7. Delete related statis data
+  auto statskey = MetaKeyUtils::statsKey(spaceId);
+  deleteKeys.emplace_back(statskey);
+
+  // 8. Delte related fulltext index meta data
   auto ftPrefix = MetaKeyUtils::fulltextIndexPrefix();
   auto ftRet = doPrefix(ftPrefix);
   if (!nebula::ok(ftRet)) {
@@ -119,7 +141,7 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
     ftIter->next();
   }
 
-  // 7. Delete local_id meta data
+  // 9. Delete local_id meta data
   auto localIdkey = MetaKeyUtils::localIdKey(spaceId);
   deleteKeys.emplace_back(localIdkey);
 

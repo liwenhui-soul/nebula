@@ -27,6 +27,8 @@ static cpp2::HostRole toHostRole(cpp2::ListHostType type) {
       return cpp2::HostRole::META;
     case cpp2::ListHostType::STORAGE:
       return cpp2::HostRole::STORAGE;
+    case cpp2::ListHostType::DRAINER:
+      return cpp2::HostRole::DRAINER;
     default:
       return cpp2::HostRole::UNKNOWN;
   }

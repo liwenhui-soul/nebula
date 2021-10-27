@@ -74,8 +74,8 @@ Status PermissionCheck::permissionCheck(ClientSession *session,
     case Sentence::Kind::kGetConfig:
     case Sentence::Kind::kIngest:
     case Sentence::Kind::kDownload:
-    case Sentence::Kind::kSignOutTSService:
-    case Sentence::Kind::kSignInTSService: {
+    case Sentence::Kind::kSignOutService:
+    case Sentence::Kind::kSignInService: {
       return PermissionManager::canWriteSpace(session);
     }
     case Sentence::Kind::kCreateTag:
@@ -91,7 +91,9 @@ Status PermissionCheck::permissionCheck(ClientSession *session,
     case Sentence::Kind::kDropEdgeIndex:
     case Sentence::Kind::kDropFTIndex:
     case Sentence::Kind::kAddListener:
-    case Sentence::Kind::kRemoveListener: {
+    case Sentence::Kind::kRemoveListener:
+    case Sentence::Kind::kAddDrainer:
+    case Sentence::Kind::kRemoveDrainer: {
       return PermissionManager::canWriteSchema(session, vctx);
     }
     case Sentence::Kind::kCreateUser:
@@ -153,6 +155,7 @@ Status PermissionCheck::permissionCheck(ClientSession *session,
     case Sentence::Kind::kShowCreateTagIndex:
     case Sentence::Kind::kShowCreateEdgeIndex:
     case Sentence::Kind::kShowListener:
+    case Sentence::Kind::kShowDrainers:
     case Sentence::Kind::kShowFTIndexes:
     case Sentence::Kind::kAdminShowJobs: {
       /**
@@ -187,7 +190,7 @@ Status PermissionCheck::permissionCheck(ClientSession *session,
     }
     case Sentence::Kind::kShowUsers:
     case Sentence::Kind::kShowSnapshots:
-    case Sentence::Kind::kShowTSClients:
+    case Sentence::Kind::kShowServiceClients:
     case Sentence::Kind::kShowSessions: {
       /**
        * Only GOD role can be show.
@@ -195,7 +198,7 @@ Status PermissionCheck::permissionCheck(ClientSession *session,
       if (session->isGod()) {
         return Status::OK();
       } else {
-        return Status::PermissionError("No permission to show users/snapshots/textClients");
+        return Status::PermissionError("No permission to show users/snapshots/serviceClients");
       }
     }
     case Sentence::Kind::kChangePassword: {

@@ -32,11 +32,54 @@ class TestListener(NebulaTestSuite):
         self.check_resp_succeeded(resp)
         self.search_result(resp, [[1, "ELASTICSEARCH", '"127.0.0.1":8899', "OFFLINE"]])
 
+        # Show listener
+        resp = self.client.execute('SHOW LISTENER ELASTICSEARCH;')
+        self.check_resp_succeeded(resp)
+        self.search_result(resp, [[1, "ELASTICSEARCH", '"127.0.0.1":8899', "OFFLINE"]])
+
         # Remove listener
         resp = self.client.execute('REMOVE LISTENER ELASTICSEARCH;')
+        self.check_resp_succeeded(resp)
+
+        # CHECK listener
+        resp = self.client.execute('SHOW LISTENER ELASTICSEARCH;')
+        self.check_resp_succeeded(resp)
+        self.check_result(resp, [])
+
+        # Sync listener need sign in drainer service first
+        resp = self.client.execute('SIGN IN DRAINER SERVICE (127.0.0.1:7899);')
+        self.check_resp_succeeded(resp)
+
+        # CHECK drainer clients
+        resp = self.client.execute('SHOW DRAINER CLIENTS;')
+        self.check_resp_succeeded(resp)
+
+        # Add on same as storage host
+        resp = self.client.execute('ADD LISTENER SYNC {}:{} TO SPACE default_space'.format(storage_ip, storage_port))
+        self.check_resp_failed(resp)
+
+        # Add non-existen host
+        resp = self.client.execute('ADD LISTENER SYNC 127.0.0.1:7899 TO SPACE default_space')
+        self.check_resp_succeeded(resp)
+
+        # Show listener
+        resp = self.client.execute('SHOW LISTENER SYNC;')
+        self.check_resp_succeeded(resp)
+        self.search_result(resp, [[1, "SYNC", '"127.0.0.1":7899', "default_space", "OFFLINE"]])
+
+        # Remove listener
+        resp = self.client.execute('REMOVE LISTENER SYNC;')
         self.check_resp_succeeded(resp)
 
         # CHECK listener
         resp = self.client.execute('SHOW LISTENER;')
         self.check_resp_succeeded(resp)
         self.check_result(resp, [])
+
+        # Sign out drainer service
+        resp = self.client.execute('SIGN OUT DRAINER SERVICE;')
+        self.check_resp_succeeded(resp)
+
+        # CHECK drainer clients
+        resp = self.client.execute('SHOW DRAINER CLIENTS;')
+        self.check_resp_succeeded(resp)

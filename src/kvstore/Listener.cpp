@@ -297,5 +297,6 @@ bool Listener::pursueLeaderDone() {
       "pursue leader : leaderCommitId={}, lastApplyLogId_={}", leaderCommitId_, lastApplyLogId_);
   return (leaderCommitId_ - lastApplyLogId_) <= FLAGS_listener_pursue_leader_threshold;
 }
+
 }  // namespace kvstore
 }  // namespace nebula

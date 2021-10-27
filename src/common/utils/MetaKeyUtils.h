@@ -313,17 +313,42 @@ class MetaKeyUtils final {
 
   static std::string listenerKey(GraphSpaceID spaceId,
                                  PartitionID partId,
-                                 meta::cpp2::ListenerType type);
+                                 const meta::cpp2::ListenerType& type);
+
+  static std::string listenerVal(const HostAddr& host, const std::string& spaceName);
 
   static std::string listenerPrefix(GraphSpaceID spaceId);
 
-  static std::string listenerPrefix(GraphSpaceID spaceId, meta::cpp2::ListenerType type);
+  static std::string listenerPrefix(GraphSpaceID spaceId, const meta::cpp2::ListenerType& type);
+
+  static HostAddr parseListenerHost(const folly::StringPiece& rawVal);
+
+  static std::string parseListenerSpacename(const folly::StringPiece& rawVal);
+
+  static std::string listenerDrainerKey(GraphSpaceID spaceId, PartitionID partId);
+
+  static std::string listenerDrainerVal(const HostAddr& host, const std::string& spaceName);
+
+  static HostAddr parseListenerDrainerHost(const folly::StringPiece& rawVal);
+
+  static std::string parseListenerDrainerSpacename(const folly::StringPiece& rawVal);
+
+  static std::string listenerDrainerPrefix(GraphSpaceID spaceId);
+
+  static PartitionID parseListenerDrainerPart(folly::StringPiece rawData);
 
   static meta::cpp2::ListenerType parseListenerType(folly::StringPiece rawData);
 
   static GraphSpaceID parseListenerSpace(folly::StringPiece rawData);
 
   static PartitionID parseListenerPart(folly::StringPiece rawData);
+
+  // drainer
+  static std::string drainerKey(GraphSpaceID spaceId);
+
+  static std::string drainerVal(const std::vector<HostAddr>& hosts);
+
+  static std::vector<HostAddr> parseDrainerHosts(folly::StringPiece rawData);
 
   static std::string statsKey(GraphSpaceID spaceId);
 
@@ -335,12 +360,15 @@ class MetaKeyUtils final {
 
   static GraphSpaceID parseStatsSpace(folly::StringPiece rawData);
 
-  static std::string fulltextServiceKey();
+  static std::string serviceKey(const meta::cpp2::ExternalServiceType& type);
 
-  static std::string fulltextServiceVal(meta::cpp2::FTServiceType type,
-                                        const std::vector<meta::cpp2::FTClient>& clients);
+  static std::string serviceVal(const std::vector<meta::cpp2::ServiceClient>& client);
 
-  static std::vector<meta::cpp2::FTClient> parseFTClients(folly::StringPiece rawData);
+  static const std::string& servicePrefix();
+
+  static meta::cpp2::ExternalServiceType parseServiceType(folly::StringPiece rawData);
+
+  static std::vector<meta::cpp2::ServiceClient> parseServiceClients(folly::StringPiece rawData);
 
   static const std::string& sessionPrefix();
 

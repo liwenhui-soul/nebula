@@ -126,6 +126,9 @@ class Status final {
   STATUS_GENERATOR(PartNotFound);
   STATUS_GENERATOR(ListenerNotFound);
   STATUS_GENERATOR(SessionNotFound);
+  STATUS_GENERATOR(DrainerNotFound);
+  STATUS_GENERATOR(DrainerClientNotFound);
+
   // User or permission errors
   STATUS_GENERATOR(PermissionError);
 
@@ -168,6 +171,8 @@ class Status final {
     kZoneNotFound = 414,
     kListenerNotFound = 415,
     kSessionNotFound = 416,
+    kDrainerNotFound = 417,
+    kDrainerClientNotFound = 418,
     // 5xx for user or permission error
     kPermissionError = 501,
   };

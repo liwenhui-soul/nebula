@@ -148,13 +148,32 @@ StatusOr<EdgeSchema> ServerBasedSchemaManager::getAllLatestVerEdgeSchema(GraphSp
   return metaClient_->getAllLatestVerEdgeSchemaFromCache(space);
 }
 
-StatusOr<std::vector<nebula::meta::cpp2::FTClient>> ServerBasedSchemaManager::getFTClients() {
-  auto ret = metaClient_->getFTClientsFromCache();
+StatusOr<std::vector<nebula::meta::cpp2::ServiceClient>>
+ServerBasedSchemaManager::getServiceClients(meta::cpp2::ExternalServiceType type) {
+  auto ret = metaClient_->getServiceClientsFromCache(type);
   if (!ret.ok()) {
     return ret.status();
   }
   if (ret.value().empty()) {
-    return Status::Error("fulltext client list is empty");
+    return Status::Error("Service list is empty");
+  }
+  return std::move(ret).value();
+}
+
+StatusOr<HostAddr> ServerBasedSchemaManager::getDrainerClient(GraphSpaceID space,
+                                                              PartitionID partId) {
+  auto ret = metaClient_->getDrainerClientFromCache(space, partId);
+  if (!ret.ok()) {
+    return ret.status();
+  }
+  return std::move(ret).value();
+}
+
+StatusOr<std::vector<cpp2::DrainerInfo>> ServerBasedSchemaManager::getDrainerServer(
+    GraphSpaceID space) {
+  auto ret = metaClient_->getDrainerFromCache(space);
+  if (!ret.ok()) {
+    return ret.status();
   }
   return std::move(ret).value();
 }

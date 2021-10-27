@@ -9,6 +9,7 @@
 
 #include "kvstore/Listener.h"
 #include "kvstore/plugins/elasticsearch/ESListener.h"
+#include "kvstore/plugins/sync/SyncListener.h"
 
 namespace nebula {
 namespace kvstore {
@@ -19,6 +20,8 @@ class ListenerFactory {
   static std::shared_ptr<Listener> createListener(meta::cpp2::ListenerType type, Args&&... args) {
     if (type == meta::cpp2::ListenerType::ELASTICSEARCH) {
       return std::make_shared<ESListener>(std::forward<Args>(args)...);
+    } else if (type == meta::cpp2::ListenerType::SYNC) {
+      return std::make_shared<SyncListener>(std::forward<Args>(args)...);
     }
     LOG(FATAL) << "Should not reach here";
     return nullptr;
@@ -27,4 +30,5 @@ class ListenerFactory {
 
 }  // namespace kvstore
 }  // namespace nebula
+
 #endif  // KVSTORE_LISTENER_FACTORY_H_

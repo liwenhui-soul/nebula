@@ -246,7 +246,12 @@ class BaseProcessor {
 
   ErrorOr<nebula::cpp2::ErrorCode, ZoneID> getZoneId(const std::string& zoneName);
 
-  nebula::cpp2::ErrorCode listenerExist(GraphSpaceID space, cpp2::ListenerType type);
+  nebula::cpp2::ErrorCode listenerExist(GraphSpaceID space,
+                                        cpp2::ListenerType& type,
+                                        std::vector<HostAddr> hosts = {});
+
+  // Used in the slave cluster
+  nebula::cpp2::ErrorCode drainerExist(GraphSpaceID space);
 
   // A direct value of true means that data will not be written to follow via
   // the raft protocol, but will be written directly to local disk

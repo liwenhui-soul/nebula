@@ -71,6 +71,10 @@ using Indexes = std::unordered_map<IndexID, std::shared_ptr<cpp2::IndexItem>>;
 using Listeners =
     std::unordered_map<HostAddr, std::vector<std::pair<PartitionID, cpp2::ListenerType>>>;
 
+// Get services
+using ServiceClientsList =
+    std::unordered_map<cpp2::ExternalServiceType, std::vector<cpp2::ServiceClient>>;
+
 struct SpaceInfoCache {
   cpp2::SpaceDesc spaceDesc_;
   PartsAlloc partsAlloc_;
@@ -83,6 +87,11 @@ struct SpaceInfoCache {
   // objPool used to decode when adding field
   ObjectPool pool_;
   std::unordered_map<PartitionID, TermID> termOfPartition_;
+
+  // sync listener drainer client for master cluster
+  std::unordered_map<PartitionID, HostAddr> drainerclients_;
+  // drainer server for slave cluster
+  std::vector<cpp2::DrainerInfo> drainerServer_;
 };
 
 using LocalCache = std::unordered_map<GraphSpaceID, std::shared_ptr<SpaceInfoCache>>;
@@ -120,9 +129,6 @@ using UserPasswordMap = std::unordered_map<std::string, std::string>;
 // config cahce, get config via module and name
 using MetaConfigMap =
     std::unordered_map<std::pair<cpp2::ConfigModule, std::string>, cpp2::ConfigItem>;
-
-// get fulltext services
-using FulltextClientsList = std::vector<cpp2::FTClient>;
 
 using FTIndexMap = std::unordered_map<std::string, cpp2::FTIndex>;
 
@@ -172,7 +178,7 @@ struct MetaClientOptions {
   std::string serviceName_ = "";
   // Whether to skip the config manager
   bool skipConfig_ = false;
-  // host role(graph/meta/storage) using this client
+  // host role(graph/meta/storage/drainer) using this client
   cpp2::HostRole role_ = cpp2::HostRole::UNKNOWN;
   // gitInfoSHA of Host using this client
   std::string gitInfoSHA_{""};
@@ -398,14 +404,18 @@ class MetaClient {
   folly::Future<StatusOr<std::vector<cpp2::Snapshot>>> listSnapshots();
 
   // Opeartions for listener.
-
   folly::Future<StatusOr<bool>> addListener(GraphSpaceID spaceId,
                                             cpp2::ListenerType type,
-                                            std::vector<HostAddr> hosts);
+                                            std::vector<HostAddr> hosts,
+                                            const std::string* spaceName = nullptr);
 
   folly::Future<StatusOr<bool>> removeListener(GraphSpaceID spaceId, cpp2::ListenerType type);
 
-  folly::Future<StatusOr<std::vector<cpp2::ListenerInfo>>> listListener(GraphSpaceID spaceId);
+  folly::Future<StatusOr<std::vector<cpp2::ListenerInfo>>> listListeners(
+      GraphSpaceID spaceId, const cpp2::ListenerType& type);
+
+  folly::Future<StatusOr<std::unordered_map<PartitionID, HostAddr>>> listListenerDrainers(
+      GraphSpaceID spaceId);
 
   StatusOr<std::vector<std::pair<PartitionID, cpp2::ListenerType>>>
   getListenersBySpaceHostFromCache(GraphSpaceID spaceId, const HostAddr& host);
@@ -419,18 +429,30 @@ class MetaClient {
   StatusOr<std::vector<RemoteListenerInfo>> getListenerHostTypeBySpacePartType(GraphSpaceID spaceId,
                                                                                PartitionID partId);
 
-  // Operations for fulltext services
-  folly::Future<StatusOr<bool>> signInFTService(cpp2::FTServiceType type,
-                                                const std::vector<cpp2::FTClient>& clients);
+  // Opeartions for drainer.
+  folly::Future<StatusOr<bool>> addDrainer(GraphSpaceID spaceId, std::vector<HostAddr> hosts);
 
-  folly::Future<StatusOr<bool>> signOutFTService();
+  folly::Future<StatusOr<bool>> removeDrainer(GraphSpaceID spaceId);
 
-  folly::Future<StatusOr<std::vector<cpp2::FTClient>>> listFTClients();
+  folly::Future<StatusOr<std::vector<cpp2::DrainerInfo>>> listDrainers(GraphSpaceID spaceId);
 
-  StatusOr<std::vector<cpp2::FTClient>> getFTClientsFromCache();
+  // Operations for services
+  folly::Future<StatusOr<bool>> signInService(const cpp2::ExternalServiceType& type,
+                                              const std::vector<cpp2::ServiceClient>& clients);
+
+  folly::Future<StatusOr<bool>> signOutService(const cpp2::ExternalServiceType& type);
+
+  folly::Future<StatusOr<ServiceClientsList>> listServiceClients(
+      const cpp2::ExternalServiceType& type);
+
+  StatusOr<std::vector<cpp2::ServiceClient>> getServiceClientsFromCache(
+      const cpp2::ExternalServiceType& type);
+
+  StatusOr<HostAddr> getDrainerClientFromCache(GraphSpaceID spaceId, PartitionID partId);
+
+  StatusOr<std::vector<cpp2::DrainerInfo>> getDrainerFromCache(GraphSpaceID spaceId);
 
   // Opeartions for fulltext index.
-
   folly::Future<StatusOr<bool>> createFTIndex(const std::string& name, const cpp2::FTIndex& index);
 
   folly::Future<StatusOr<bool>> dropFTIndex(GraphSpaceID spaceId, const std::string& name);
@@ -653,7 +675,13 @@ class MetaClient {
 
   bool loadListeners(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCache> cache);
 
-  bool loadFulltextClients();
+  // For the master cluster, the drainer used by the sync listener of each part under the space
+  bool loadListenerDrainers(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCache> cache);
+
+  // For slave cluster, the space uses drainers
+  bool loadDrainers(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCache> cache);
+
+  bool loadGlobalServiceClients();
 
   bool loadFulltextIndexes();
 
@@ -752,7 +780,9 @@ class MetaClient {
 
   NameIndexMap tagNameIndexMap_;
   NameIndexMap edgeNameIndexMap_;
-  FulltextClientsList fulltextClientList_;
+
+  // Global service client
+  ServiceClientsList serviceClientList_;
   FTIndexMap fulltextIndexMap_;
 
   mutable folly::RWSpinLock localCacheLock_;
@@ -779,4 +809,5 @@ class MetaClient {
 
 }  // namespace meta
 }  // namespace nebula
+
 #endif  // CLIENTS_META_METACLIENT_H_

@@ -9,12 +9,14 @@
 
 #include "codec/RowReaderWrapper.h"
 #include "common/plugin/fulltext/FTStorageAdapter.h"
+#include "interface/gen-cpp2/DrainerServiceAsyncClient.h"
 #include "kvstore/Listener.h"
 
 namespace nebula {
 namespace kvstore {
 
 using nebula::plugin::DocItem;
+using DrainerClient = thrift::ThriftClientManager<drainer::cpp2::DrainerServiceAsyncClient>;
 
 class ESListener : public Listener {
  public:
@@ -28,7 +30,8 @@ class ESListener : public Listener {
              std::shared_ptr<raftex::SnapshotManager> snapshotMan,
              std::shared_ptr<RaftClient> clientMan,
              std::shared_ptr<DiskManager> diskMan,
-             meta::SchemaManager* schemaMan)
+             meta::SchemaManager* schemaMan,
+             std::shared_ptr<DrainerClient> drainerClientMan)
       : Listener(spaceId,
                  partId,
                  std::move(localAddr),
@@ -41,6 +44,7 @@ class ESListener : public Listener {
                  diskMan,
                  schemaMan) {
     CHECK(!!schemaMan);
+    UNUSED(drainerClientMan);
     lastApplyLogFile_ = std::make_unique<std::string>(
         folly::stringPrintf("%s/last_apply_log_%d", walPath.c_str(), partId));
   }

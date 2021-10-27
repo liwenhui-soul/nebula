@@ -99,9 +99,15 @@ class AdHocSchemaManager final : public nebula::meta::SchemaManager {
                                                                                  EdgeType edge,
                                                                                  SchemaVer ver);
 
-  StatusOr<std::vector<nebula::meta::cpp2::FTClient>> getFTClients() override;
+  StatusOr<std::vector<nebula::meta::cpp2::ServiceClient>> getServiceClients(
+      nebula::meta::cpp2::ExternalServiceType type) override;
 
-  void addFTClient(const nebula::meta::cpp2::FTClient& client);
+  StatusOr<HostAddr> getDrainerClient(GraphSpaceID space, PartitionID partId) override;
+
+  StatusOr<std::vector<nebula::meta::cpp2::DrainerInfo>> getDrainerServer(
+      GraphSpaceID spaceId) override;
+
+  void addServiceClient(const nebula::meta::cpp2::ServiceClient& client);
 
   StatusOr<std::pair<std::string, nebula::meta::cpp2::FTIndex>> getFTIndex(GraphSpaceID,
                                                                            int32_t) override {
@@ -142,7 +148,7 @@ class AdHocSchemaManager final : public nebula::meta::SchemaManager {
                                         std::shared_ptr<const nebula::meta::NebulaSchemaProvider>>>
       edgeSchemasInMap_;
 
-  std::vector<nebula::meta::cpp2::FTClient> ftClients_;
+  std::vector<nebula::meta::cpp2::ServiceClient> serviceClients_;
   int32_t partNum_;
 };
 

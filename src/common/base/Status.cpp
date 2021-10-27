@@ -100,6 +100,10 @@ const char *Status::toString(Code code) {
       return "ListenerNotFound";
     case kSessionNotFound:
       return "SessionNotFound";
+    case kDrainerNotFound:
+      return "DrainerNotFound";
+    case kDrainerClientNotFound:
+      return "DrainerClientNotFound";
   }
   DLOG(FATAL) << "Invalid status code: " << static_cast<uint16_t>(code);
   return "";

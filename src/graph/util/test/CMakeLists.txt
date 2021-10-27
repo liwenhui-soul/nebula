@@ -15,6 +15,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:meta_thrift_obj>
         $<TARGET_OBJECTS:meta_client_obj>
         $<TARGET_OBJECTS:meta_obj>
+        $<TARGET_OBJECTS:drainer_thrift_obj>
         $<TARGET_OBJECTS:storage_thrift_obj>
         $<TARGET_OBJECTS:graph_thrift_obj>
         $<TARGET_OBJECTS:conf_obj>

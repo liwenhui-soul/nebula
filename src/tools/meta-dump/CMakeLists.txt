@@ -28,6 +28,7 @@ nebula_add_executable(
         $<TARGET_OBJECTS:file_based_cluster_id_man_obj>
         $<TARGET_OBJECTS:time_obj>
         $<TARGET_OBJECTS:meta_thrift_obj>
+        $<TARGET_OBJECTS:drainer_thrift_obj>
         $<TARGET_OBJECTS:common_thrift_obj>
         $<TARGET_OBJECTS:raftex_thrift_obj>
         $<TARGET_OBJECTS:meta_obj>

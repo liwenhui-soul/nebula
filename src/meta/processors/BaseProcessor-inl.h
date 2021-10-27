@@ -599,7 +599,8 @@ ErrorOr<nebula::cpp2::ErrorCode, ZoneID> BaseProcessor<RESP>::getZoneId(
 
 template <typename RESP>
 nebula::cpp2::ErrorCode BaseProcessor<RESP>::listenerExist(GraphSpaceID space,
-                                                           cpp2::ListenerType type) {
+                                                           cpp2::ListenerType& type,
+                                                           std::vector<HostAddr> hosts) {
   folly::SharedMutex::ReadHolder rHolder(LockUtils::listenerLock());
   const auto& prefix = MetaKeyUtils::listenerPrefix(space, type);
   auto ret = doPrefix(prefix);
@@ -608,10 +609,50 @@ nebula::cpp2::ErrorCode BaseProcessor<RESP>::listenerExist(GraphSpaceID space,
   }
 
   auto iterRet = nebula::value(ret).get();
-  if (!iterRet->valid()) {
-    return nebula::cpp2::ErrorCode::E_LISTENER_NOT_FOUND;
+  if (iterRet->valid()) {
+    return nebula::cpp2::ErrorCode::SUCCEEDED;
   }
-  return nebula::cpp2::ErrorCode::SUCCEEDED;
+
+  if (!hosts.empty()) {
+    // Check the listener host, in the same space, a HostAddr can only be
+    // used as an es listener or a sync listener, not at the same time.
+    const auto& lPrefix = MetaKeyUtils::listenerPrefix(space);
+    ret = doPrefix(lPrefix);
+    if (!nebula::ok(ret)) {
+      return nebula::error(ret);
+    }
+
+    auto iter = nebula::value(ret).get();
+    std::unordered_set<HostAddr> listenerHosts;
+    if (iter->valid()) {
+      listenerHosts.emplace(MetaKeyUtils::parseListenerHost(iter->val()));
+      iter->next();
+    }
+    if (!listenerHosts.empty()) {
+      for (auto& host : hosts) {
+        if (std::find(listenerHosts.begin(), listenerHosts.end(), host) != listenerHosts.end()) {
+          return nebula::cpp2::ErrorCode::E_LISTENER_CONFLICT;
+        }
+      }
+    }
+  }
+  return nebula::cpp2::ErrorCode::E_LISTENER_NOT_FOUND;
+}
+
+template <typename RESP>
+nebula::cpp2::ErrorCode BaseProcessor<RESP>::drainerExist(GraphSpaceID space) {
+  folly::SharedMutex::ReadHolder rHolder(LockUtils::drainerLock());
+  auto dKey = MetaKeyUtils::drainerKey(space);
+  auto ret = doGet(std::move(dKey));
+  if (nebula::ok(ret)) {
+    return nebula::cpp2::ErrorCode::SUCCEEDED;
+  }
+
+  auto retCode = nebula::error(ret);
+  if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+    retCode = nebula::cpp2::ErrorCode::E_DRAINER_NOT_FOUND;
+  }
+  return retCode;
 }
 
 }  // namespace meta

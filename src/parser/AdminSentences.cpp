@@ -214,11 +214,20 @@ std::string AddListenerSentence::toString() const {
     case meta::cpp2::ListenerType::ELASTICSEARCH:
       buf += "ELASTICSEARCH ";
       break;
+    case meta::cpp2::ListenerType::SYNC:
+      buf += "SYNC ";
+      break;
     case meta::cpp2::ListenerType::UNKNOWN:
+    case meta::cpp2::ListenerType::ALL:
       LOG(FATAL) << "Unknown listener type.";
       break;
   }
+
   buf += listeners_->toString();
+  if (type_ == meta::cpp2::ListenerType::SYNC && spaceName_) {
+    buf += " TO SPACE ";
+    buf += *spaceName_;
+  }
   return buf;
 }
 
@@ -230,6 +239,30 @@ std::string RemoveListenerSentence::toString() const {
     case meta::cpp2::ListenerType::ELASTICSEARCH:
       buf += "ELASTICSEARCH ";
       break;
+    case meta::cpp2::ListenerType::SYNC:
+      buf += "SYNC ";
+      break;
+    case meta::cpp2::ListenerType::UNKNOWN:
+    case meta::cpp2::ListenerType::ALL:
+      DLOG(FATAL) << "Unknown listener type.";
+      break;
+  }
+  return buf;
+}
+
+std::string ShowListenerSentence::toString() const {
+  std::string buf;
+  buf.reserve(64);
+  buf += "SHOW LISTENER ";
+  switch (type_) {
+    case meta::cpp2::ListenerType::ELASTICSEARCH:
+      buf += "ELASTICSEARCH ";
+      break;
+    case meta::cpp2::ListenerType::SYNC:
+      buf += "SYNC ";
+      break;
+    case meta::cpp2::ListenerType::ALL:
+      break;
     case meta::cpp2::ListenerType::UNKNOWN:
       DLOG(FATAL) << "Unknown listener type.";
       break;
@@ -237,7 +270,27 @@ std::string RemoveListenerSentence::toString() const {
   return buf;
 }
 
-std::string ShowListenerSentence::toString() const { return "SHOW LISTENER"; }
+std::string AddDrainerSentence::toString() const {
+  std::string buf;
+  buf.reserve(64);
+  buf += "ADD DRAINER ";
+  buf += drainers_->toString();
+  return buf;
+}
+
+std::string RemoveDrainerSentence::toString() const {
+  std::string buf;
+  buf.reserve(64);
+  buf += "REMOVE DRAINER ";
+  return buf;
+}
+
+std::string ShowDrainersSentence::toString() const {
+  std::string buf;
+  buf.reserve(64);
+  buf += "SHOW DRAINERS ";
+  return buf;
+}
 
 std::string AdminJobSentence::toString() const {
   switch (op_) {
@@ -299,12 +352,31 @@ void AdminJobSentence::addPara(const NameLabelList &paras) {
 
 std::string ShowStatsSentence::toString() const { return folly::stringPrintf("SHOW STATS"); }
 
-std::string ShowTSClientsSentence::toString() const { return "SHOW TEXT SEARCH CLIENTS"; }
+std::string ShowServiceClientsSentence::toString() const {
+  switch (type_) {
+    case meta::cpp2::ExternalServiceType::ELASTICSEARCH:
+      return "SHOW TEXT SEARCH CLIENTS";
+    case meta::cpp2::ExternalServiceType::DRAINER:
+      return "SHOW DRAINER CLIENTS";
+    default:
+      LOG(FATAL) << "Unknown service type " << static_cast<uint8_t>(type_);
+  }
+}
 
-std::string SignInTextServiceSentence::toString() const {
+std::string SignInServiceSentence::toString() const {
   std::string buf;
   buf.reserve(256);
-  buf += "SIGN IN TEXT SERVICE ";
+  switch (type_) {
+    case meta::cpp2::ExternalServiceType::ELASTICSEARCH:
+      buf += "SIGN IN TEXT SERVICE ";
+      break;
+    case meta::cpp2::ExternalServiceType::DRAINER:
+      buf += "SIGN IN DRAINER SERVICE ";
+      break;
+    default:
+      LOG(FATAL) << "Unknown service type " << static_cast<uint8_t>(type_);
+  }
+
   for (auto &client : clients_->clients()) {
     buf += "(";
     buf += client.get_host().host;
@@ -329,7 +401,16 @@ std::string SignInTextServiceSentence::toString() const {
   return buf;
 }
 
-std::string SignOutTextServiceSentence::toString() const { return "SIGN OUT TEXT SERVICE"; }
+std::string SignOutServiceSentence::toString() const {
+  switch (type_) {
+    case meta::cpp2::ExternalServiceType::ELASTICSEARCH:
+      return "SIGN OUT TEXT SERVICE";
+    case meta::cpp2::ExternalServiceType::DRAINER:
+      return "SIGN OUT DRAINER SERVICE";
+    default:
+      LOG(FATAL) << "Unknown service type " << static_cast<uint8_t>(type_);
+  }
+}
 
 std::string ShowSessionsSentence::toString() const {
   if (isSetSessionID()) {

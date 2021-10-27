@@ -67,8 +67,10 @@ class TestUtils {
     return column;
   }
 
-  static void registerHB(kvstore::KVStore* kv, const std::vector<HostAddr>& hosts) {
-    return setupHB(kv, hosts, cpp2::HostRole::STORAGE, gitInfoSha());
+  static void registerHB(kvstore::KVStore* kv,
+                         const std::vector<HostAddr>& hosts,
+                         cpp2::HostRole role = cpp2::HostRole::STORAGE) {
+    return setupHB(kv, hosts, role, gitInfoSha());
   }
 
   static void setupHB(kvstore::KVStore* kv,

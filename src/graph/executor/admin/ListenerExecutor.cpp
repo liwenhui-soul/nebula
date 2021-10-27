@@ -19,7 +19,7 @@ folly::Future<Status> AddListenerExecutor::execute() {
   auto spaceId = qctx()->rctx()->session()->space().id;
   return qctx()
       ->getMetaClient()
-      ->addListener(spaceId, alNode->type(), alNode->hosts())
+      ->addListener(spaceId, alNode->type(), alNode->hosts(), alNode->spaceName())
       .via(runner())
       .thenValue([this](StatusOr<bool> resp) {
         SCOPED_TIMER(&execTime_);
@@ -51,9 +51,14 @@ folly::Future<Status> RemoveListenerExecutor::execute() {
 
 folly::Future<Status> ShowListenerExecutor::execute() {
   SCOPED_TIMER(&execTime_);
+  auto* slNode = asNode<ShowListener>(node());
   auto spaceId = qctx()->rctx()->session()->space().id;
-  return qctx()->getMetaClient()->listListener(spaceId).via(runner()).thenValue(
-      [this](StatusOr<std::vector<meta::cpp2::ListenerInfo>> resp) {
+  auto type = slNode->type();
+  return qctx()
+      ->getMetaClient()
+      ->listListeners(spaceId, type)
+      .via(runner())
+      .thenValue([this, type](StatusOr<std::vector<meta::cpp2::ListenerInfo>> resp) {
         SCOPED_TIMER(&execTime_);
         if (!resp.ok()) {
           LOG(ERROR) << resp.status();
@@ -71,17 +76,34 @@ folly::Future<Status> ShowListenerExecutor::execute() {
           return a.host_ref() < b.host_ref();
         });
 
-        DataSet result({"PartId", "Type", "Host", "Status"});
-        for (const auto& info : listenerInfos) {
-          Row row;
-          row.values.emplace_back(info.get_part_id());
-          row.values.emplace_back(apache::thrift::util::enumNameSafe(info.get_type()));
-          row.values.emplace_back((*info.host_ref()).toString());
-          row.values.emplace_back(apache::thrift::util::enumNameSafe(info.get_status()));
-          result.emplace_back(std::move(row));
+        if (type == meta::cpp2::ListenerType::SYNC) {
+          DataSet result({"PartId", "Type", "Host", "SpaceName", "Status"});
+          for (const auto& info : listenerInfos) {
+            Row row;
+            row.values.emplace_back(info.get_part_id());
+            row.values.emplace_back(apache::thrift::util::enumNameSafe(info.get_type()));
+            row.values.emplace_back((*info.host_ref()).toString());
+            if (info.space_name_ref().has_value()) {
+              row.values.emplace_back(*info.space_name_ref());
+            } else {
+              row.values.emplace_back("");
+            }
+            row.values.emplace_back(apache::thrift::util::enumNameSafe(info.get_status()));
+            result.emplace_back(std::move(row));
+          }
+          return finish(std::move(result));
+        } else {
+          DataSet result({"PartId", "Type", "Host", "Status"});
+          for (const auto& info : listenerInfos) {
+            Row row;
+            row.values.emplace_back(info.get_part_id());
+            row.values.emplace_back(apache::thrift::util::enumNameSafe(info.get_type()));
+            row.values.emplace_back((*info.host_ref()).toString());
+            row.values.emplace_back(apache::thrift::util::enumNameSafe(info.get_status()));
+            result.emplace_back(std::move(row));
+          }
+          return finish(std::move(result));
         }
-
-        return finish(std::move(result));
       });
 }
 

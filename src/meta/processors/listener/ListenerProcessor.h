@@ -38,17 +38,30 @@ class RemoveListenerProcessor : public BaseProcessor<cpp2::ExecResp> {
       : BaseProcessor<cpp2::ExecResp>(kvstore) {}
 };
 
-class ListListenerProcessor : public BaseProcessor<cpp2::ListListenerResp> {
+class ListListenersProcessor : public BaseProcessor<cpp2::ListListenersResp> {
  public:
-  static ListListenerProcessor* instance(kvstore::KVStore* kvstore) {
-    return new ListListenerProcessor(kvstore);
+  static ListListenersProcessor* instance(kvstore::KVStore* kvstore) {
+    return new ListListenersProcessor(kvstore);
   }
 
-  void process(const cpp2::ListListenerReq& req);
+  void process(const cpp2::ListListenersReq& req);
 
  private:
-  explicit ListListenerProcessor(kvstore::KVStore* kvstore)
-      : BaseProcessor<cpp2::ListListenerResp>(kvstore) {}
+  explicit ListListenersProcessor(kvstore::KVStore* kvstore)
+      : BaseProcessor<cpp2::ListListenersResp>(kvstore) {}
+};
+
+class ListListenerDrainersProcessor : public BaseProcessor<cpp2::ListListenerDrainersResp> {
+ public:
+  static ListListenerDrainersProcessor* instance(kvstore::KVStore* kvstore) {
+    return new ListListenerDrainersProcessor(kvstore);
+  }
+
+  void process(const cpp2::ListListenerDrainersReq& req);
+
+ private:
+  explicit ListListenerDrainersProcessor(kvstore::KVStore* kvstore)
+      : BaseProcessor<cpp2::ListListenerDrainersResp>(kvstore) {}
 };
 
 }  // namespace meta

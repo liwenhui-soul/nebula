@@ -251,6 +251,13 @@ Status AddListenerValidator::validateImpl() {
     return Status::SemanticError("Listener hosts should not be empty");
   }
 
+  if (sentence->type() == meta::cpp2::ListenerType::SYNC) {
+    auto spaceName = sentence->spaceName();
+    if (!spaceName) {
+      return Status::SemanticError("Sync Listener toSpaceName should not be empty");
+    }
+  }
+
   // check the hosts, if the hosts the same with storage, return error
   auto status = qctx_->getMetaClient()->getStorageHosts();
   if (!status.ok()) {
@@ -270,8 +277,8 @@ Status AddListenerValidator::validateImpl() {
 
 Status AddListenerValidator::toPlan() {
   auto sentence = static_cast<AddListenerSentence *>(sentence_);
-  auto *doNode =
-      AddListener::make(qctx_, nullptr, sentence->type(), sentence->listeners()->hosts());
+  auto *doNode = AddListener::make(
+      qctx_, nullptr, sentence->type(), sentence->listeners()->hosts(), sentence->spaceName());
   root_ = doNode;
   tail_ = root_;
   return Status::OK();
@@ -290,7 +297,58 @@ Status RemoveListenerValidator::toPlan() {
 Status ShowListenerValidator::validateImpl() { return Status::OK(); }
 
 Status ShowListenerValidator::toPlan() {
-  auto *doNode = ShowListener::make(qctx_, nullptr);
+  auto sentence = static_cast<ShowListenerSentence *>(sentence_);
+  auto *doNode = ShowListener::make(qctx_, nullptr, sentence->type());
+  root_ = doNode;
+  tail_ = root_;
+  return Status::OK();
+}
+
+Status AddDrainerValidator::validateImpl() {
+  auto sentence = static_cast<AddDrainerSentence *>(sentence_);
+  auto hosts = sentence->drainers()->hosts();
+  if (hosts.empty()) {
+    return Status::SemanticError("Drainer hosts should not be empty");
+  }
+
+  // check the hosts, if the hosts are the same with storage, return error
+  auto status = qctx_->getMetaClient()->getStorageHosts();
+  if (!status.ok()) {
+    return status.status();
+  }
+
+  auto storageHosts = std::move(status).value();
+  for (auto &host : hosts) {
+    auto iter = std::find(storageHosts.begin(), storageHosts.end(), host);
+    if (iter != storageHosts.end()) {
+      return Status::Error("The drainer host:%s couldn't on same with storage host info",
+                           host.toString().c_str());
+    }
+  }
+  return Status::OK();
+}
+
+Status AddDrainerValidator::toPlan() {
+  auto sentence = static_cast<AddDrainerSentence *>(sentence_);
+  auto *doNode = AddDrainer::make(qctx_, nullptr, sentence->drainers()->hosts());
+  root_ = doNode;
+  tail_ = root_;
+  return Status::OK();
+}
+
+Status RemoveDrainerValidator::validateImpl() { return Status::OK(); }
+
+Status RemoveDrainerValidator::toPlan() {
+  auto *doNode = RemoveDrainer::make(qctx_, nullptr);
+  root_ = doNode;
+  tail_ = root_;
+  return Status::OK();
+}
+
+Status ListDrainersValidator::validateImpl() { return Status::OK(); }
+
+Status ListDrainersValidator::toPlan() {
+  auto *doNode = ShowDrainers::make(qctx_, nullptr);
   root_ = doNode;
   tail_ = root_;
   return Status::OK();
@@ -447,33 +505,38 @@ Status ShowStatusValidator::toPlan() {
   return Status::OK();
 }
 
-Status ShowTSClientsValidator::validateImpl() { return Status::OK(); }
+Status ShowServiceClientsValidator::validateImpl() { return Status::OK(); }
 
-Status ShowTSClientsValidator::toPlan() {
-  auto *doNode = ShowTSClients::make(qctx_, nullptr);
+Status ShowServiceClientsValidator::toPlan() {
+  auto sentence = static_cast<ShowServiceClientsSentence *>(sentence_);
+  auto type = sentence->getType();
+  auto *doNode = ShowServiceClients::make(qctx_, nullptr, type);
   root_ = doNode;
   tail_ = root_;
   return Status::OK();
 }
 
-Status SignInTSServiceValidator::validateImpl() { return Status::OK(); }
+Status SignInServiceValidator::validateImpl() { return Status::OK(); }
 
-Status SignInTSServiceValidator::toPlan() {
-  auto sentence = static_cast<SignInTextServiceSentence *>(sentence_);
-  std::vector<meta::cpp2::FTClient> clients;
+Status SignInServiceValidator::toPlan() {
+  auto sentence = static_cast<SignInServiceSentence *>(sentence_);
+  std::vector<meta::cpp2::ServiceClient> clients;
   if (sentence->clients() != nullptr) {
     clients = sentence->clients()->clients();
   }
-  auto *node = SignInTSService::make(qctx_, nullptr, std::move(clients));
+  auto type = sentence->getType();
+  auto *node = SignInService::make(qctx_, nullptr, std::move(clients), type);
   root_ = node;
   tail_ = root_;
   return Status::OK();
 }
 
-Status SignOutTSServiceValidator::validateImpl() { return Status::OK(); }
+Status SignOutServiceValidator::validateImpl() { return Status::OK(); }
 
-Status SignOutTSServiceValidator::toPlan() {
-  auto *node = SignOutTSService::make(qctx_, nullptr);
+Status SignOutServiceValidator::toPlan() {
+  auto sentence = static_cast<SignOutServiceSentence *>(sentence_);
+  auto type = sentence->getType();
+  auto *node = SignOutService::make(qctx_, nullptr, type);
   root_ = node;
   tail_ = root_;
   return Status::OK();

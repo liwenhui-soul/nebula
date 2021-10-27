@@ -10,6 +10,7 @@ nebula_add_library(
     NebulaSnapshotManager.cpp
     RateLimiter.cpp
     plugins/elasticsearch/ESListener.cpp
+    plugins/sync/SyncListener.cpp
 )
 
 nebula_add_library(

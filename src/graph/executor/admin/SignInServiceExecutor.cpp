@@ -4,25 +4,30 @@
  * attached with Common Clause Condition 1.0, found in the LICENSES directory.
  */
 
-#include "graph/executor/admin/SignOutTSServiceExecutor.h"
+#include "graph/executor/admin/SignInServiceExecutor.h"
 
 #include "graph/planner/plan/Admin.h"
 
 namespace nebula {
 namespace graph {
 
-folly::Future<Status> SignOutTSServiceExecutor::execute() {
+folly::Future<Status> SignInServiceExecutor::execute() {
   SCOPED_TIMER(&execTime_);
-  return signOutTSService();
+  return signInService();
 }
 
-folly::Future<Status> SignOutTSServiceExecutor::signOutTSService() {
-  return qctx()->getMetaClient()->signOutFTService().via(runner()).thenValue(
-      [this](StatusOr<bool> resp) {
+folly::Future<Status> SignInServiceExecutor::signInService() {
+  auto *siNode = asNode<SignInService>(node());
+  auto type = siNode->type();
+  return qctx()
+      ->getMetaClient()
+      ->signInService(type, siNode->clients())
+      .via(runner())
+      .thenValue([this](StatusOr<bool> resp) {
         SCOPED_TIMER(&execTime_);
         NG_RETURN_IF_ERROR(resp);
         if (!resp.value()) {
-          return Status::Error("Sign out text service failed!");
+          return Status::Error("Sign in service failed!");
         }
         return Status::OK();
       });

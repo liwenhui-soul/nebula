@@ -12,6 +12,7 @@ set(CODEC_TEST_LIBS
     $<TARGET_OBJECTS:meta_thrift_obj>
     $<TARGET_OBJECTS:common_thrift_obj>
     $<TARGET_OBJECTS:raftex_thrift_obj>
+    $<TARGET_OBJECTS:drainer_thrift_obj>
     $<TARGET_OBJECTS:meta_client_obj>
     $<TARGET_OBJECTS:ws_obj>
     $<TARGET_OBJECTS:ws_common_obj>

@@ -25,7 +25,7 @@ static const std::unordered_map<std::string, std::pair<std::string, bool>> syste
     {"configs", {"__configs__", true}},
     {"groups", {"__groups__", true}},
     {"zones", {"__zones__", true}},
-    {"ft_service", {"__ft_service__", false}},
+    {"services", {"__services__", false}},
     {"sessions", {"__sessions__", true}}};
 
 // SystemInfo will always be backuped
@@ -48,6 +48,8 @@ static const std::unordered_map<
                  {"leaders", {"__leaders__", nullptr}},
                  {"leader_terms", {"__leader_terms__", nullptr}},
                  {"listener", {"__listener__", nullptr}},
+                 {"listener_drainer", {"__listener_drainer__", nullptr}},
+                 {"drainer", {"__drainer__", nullptr}},
                  {"stats", {"__stats__", MetaKeyUtils::parseStatsSpace}},
                  {"balance_task", {"__balance_task__", nullptr}},
                  {"balance_plan", {"__balance_plan__", nullptr}},
@@ -67,11 +69,13 @@ static const std::string kUsersTable          = systemTableMaps.at("users").firs
 static const std::string kRolesTable          = tableMaps.at("roles").first;          // NOLINT
 static const std::string kConfigsTable        = systemTableMaps.at("configs").first;        // NOLINT
 static const std::string kSnapshotsTable      = systemTableMaps.at("snapshots").first;      // NOLINT
-static const std::string kLeadersTable        = tableMaps.at("leaders").first;          // NOLINT
-static const std::string kLeaderTermsTable    = tableMaps.at("leader_terms").first;     // NOLINT
-static const std::string kGroupsTable         = systemTableMaps.at("groups").first;           // NOLINT
-static const std::string kZonesTable          = systemTableMaps.at("zones").first;            // NOLINT
-static const std::string kListenerTable       = tableMaps.at("listener").first;         // NOLINT
+static const std::string kLeadersTable        = tableMaps.at("leaders").first;              // NOLINT
+static const std::string kLeaderTermsTable    = tableMaps.at("leader_terms").first;         // NOLINT
+static const std::string kGroupsTable         = systemTableMaps.at("groups").first;         // NOLINT
+static const std::string kZonesTable          = systemTableMaps.at("zones").first;          // NOLINT
+static const std::string kListenerTable       = tableMaps.at("listener").first;             // NOLINT
+static const std::string kListenerDrainerTable  = tableMaps.at("listener_drainer").first;   // NOLINT
+static const std::string kDrainerTable        = tableMaps.at("drainer").first;              // NOLINT
 
 // Used to record the number of vertices and edges in the space
 // The number of vertices of each tag in the space
@@ -82,7 +86,7 @@ static const std::string kBalancePlanTable    = tableMaps.at("balance_plan").fir
 static const std::string kLocalIdTable        = tableMaps.at("local_id").first;         // NOLINT
 
 const std::string kFTIndexTable        = tableMaps.at("ft_index").first;         // NOLINT
-const std::string kFTServiceTable = systemTableMaps.at("ft_service").first;      // NOLINT
+const std::string kServicesTable  = systemTableMaps.at("services").first;        // NOLINT
 const std::string kSessionsTable = systemTableMaps.at("sessions").first;         // NOLINT
 
 const std::string kIdKey = systemInfoMaps.at("autoIncrementId").first;                // NOLINT
@@ -1024,7 +1028,7 @@ std::vector<HostAddr> MetaKeyUtils::parseZoneHosts(folly::StringPiece rawData) {
 
 std::string MetaKeyUtils::listenerKey(GraphSpaceID spaceId,
                                       PartitionID partId,
-                                      meta::cpp2::ListenerType type) {
+                                      const meta::cpp2::ListenerType& type) {
   std::string key;
   key.reserve(kListenerTable.size() + sizeof(GraphSpaceID) + sizeof(meta::cpp2::ListenerType) +
               sizeof(PartitionID));
@@ -1035,6 +1039,82 @@ std::string MetaKeyUtils::listenerKey(GraphSpaceID spaceId,
   return key;
 }
 
+std::string MetaKeyUtils::listenerVal(const HostAddr& host, const std::string& spaceName) {
+  std::string val;
+  val.reserve(64);
+  auto hoststr = serializeHostAddr(host);
+  size_t hostLen = hoststr.size();
+  size_t len = spaceName.size();
+  val.append(reinterpret_cast<const char*>(&hostLen), sizeof(size_t))
+      .append(hoststr)
+      .append(reinterpret_cast<const char*>(&len), sizeof(size_t))
+      .append(spaceName);
+  return val;
+}
+
+HostAddr MetaKeyUtils::parseListenerHost(const folly::StringPiece& rawVal) {
+  auto hostLen = *reinterpret_cast<const size_t*>(rawVal.begin());
+  auto hoststr = rawVal.subpiece(sizeof(size_t), hostLen);
+  return MetaKeyUtils::deserializeHostAddr(hoststr);
+}
+
+std::string MetaKeyUtils::parseListenerSpacename(const folly::StringPiece& rawVal) {
+  auto hostLen = *reinterpret_cast<const size_t*>(rawVal.begin());
+  auto offset = sizeof(size_t) + hostLen;
+  auto spaceNameLen = *reinterpret_cast<const size_t*>(rawVal.begin() + offset);
+  offset += sizeof(size_t);
+  return rawVal.subpiece(offset, spaceNameLen).str();
+}
+
+std::string MetaKeyUtils::listenerDrainerKey(GraphSpaceID spaceId, PartitionID partId) {
+  std::string key;
+  key.reserve(kListenerDrainerTable.size() + sizeof(GraphSpaceID) + sizeof(PartitionID));
+  key.append(kListenerDrainerTable.data(), kListenerDrainerTable.size())
+      .append(reinterpret_cast<const char*>(&spaceId), sizeof(GraphSpaceID))
+      .append(reinterpret_cast<const char*>(&partId), sizeof(PartitionID));
+  return key;
+}
+
+std::string MetaKeyUtils::listenerDrainerVal(const HostAddr& host, const std::string& spaceName) {
+  std::string val;
+  val.reserve(64);
+  auto hoststr = serializeHostAddr(host);
+  size_t hostLen = hoststr.size();
+  size_t len = spaceName.size();
+  val.append(reinterpret_cast<const char*>(&hostLen), sizeof(size_t))
+      .append(hoststr)
+      .append(reinterpret_cast<const char*>(&len), sizeof(size_t))
+      .append(spaceName);
+  return val;
+}
+
+HostAddr MetaKeyUtils::parseListenerDrainerHost(const folly::StringPiece& rawVal) {
+  auto hostLen = *reinterpret_cast<const size_t*>(rawVal.begin());
+  auto hoststr = rawVal.subpiece(sizeof(size_t), hostLen);
+  return MetaKeyUtils::deserializeHostAddr(hoststr);
+}
+
+std::string MetaKeyUtils::parseListenerDrainerSpacename(const folly::StringPiece& rawVal) {
+  auto hostLen = *reinterpret_cast<const size_t*>(rawVal.begin());
+  auto offset = sizeof(size_t) + hostLen;
+  auto spaceNameLen = *reinterpret_cast<const size_t*>(rawVal.begin() + offset);
+  offset += sizeof(size_t);
+  return rawVal.subpiece(offset, spaceNameLen).str();
+}
+
+std::string MetaKeyUtils::listenerDrainerPrefix(GraphSpaceID spaceId) {
+  std::string key;
+  key.reserve(kListenerDrainerTable.size() + sizeof(GraphSpaceID));
+  key.append(kListenerDrainerTable.data(), kListenerDrainerTable.size())
+      .append(reinterpret_cast<const char*>(&spaceId), sizeof(GraphSpaceID));
+  return key;
+}
+
+PartitionID MetaKeyUtils::parseListenerDrainerPart(folly::StringPiece rawData) {
+  auto offset = kListenerDrainerTable.size() + sizeof(GraphSpaceID);
+  return *reinterpret_cast<const PartitionID*>(rawData.data() + offset);
+}
+
 std::string MetaKeyUtils::listenerPrefix(GraphSpaceID spaceId) {
   std::string key;
   key.reserve(kListenerTable.size() + sizeof(GraphSpaceID));
@@ -1043,7 +1123,8 @@ std::string MetaKeyUtils::listenerPrefix(GraphSpaceID spaceId) {
   return key;
 }
 
-std::string MetaKeyUtils::listenerPrefix(GraphSpaceID spaceId, meta::cpp2::ListenerType type) {
+std::string MetaKeyUtils::listenerPrefix(GraphSpaceID spaceId,
+                                         const meta::cpp2::ListenerType& type) {
   std::string key;
   key.reserve(kListenerTable.size() + sizeof(GraphSpaceID) + sizeof(meta::cpp2::ListenerType));
   key.append(kListenerTable.data(), kListenerTable.size())
@@ -1065,6 +1146,31 @@ GraphSpaceID MetaKeyUtils::parseListenerSpace(folly::StringPiece rawData) {
 PartitionID MetaKeyUtils::parseListenerPart(folly::StringPiece rawData) {
   auto offset = kListenerTable.size() + sizeof(meta::cpp2::ListenerType) + sizeof(GraphSpaceID);
   return *reinterpret_cast<const PartitionID*>(rawData.data() + offset);
+}
+
+std::string MetaKeyUtils::drainerKey(GraphSpaceID spaceId) {
+  std::string key;
+  key.reserve(kDrainerTable.size() + sizeof(GraphSpaceID));
+  key.append(kDrainerTable.data(), kDrainerTable.size())
+      .append(reinterpret_cast<const char*>(&spaceId), sizeof(GraphSpaceID));
+  return key;
+}
+
+std::string MetaKeyUtils::drainerVal(const std::vector<HostAddr>& hosts) {
+  std::string val;
+  val.append(network::NetworkUtils::toHostsStr(hosts));
+  return val;
+}
+
+std::vector<HostAddr> MetaKeyUtils::parseDrainerHosts(folly::StringPiece rawData) {
+  std::vector<HostAddr> addresses;
+  auto hostsOrErr = network::NetworkUtils::toHosts(rawData.str());
+  if (hostsOrErr.ok()) {
+    addresses = std::move(hostsOrErr.value());
+  } else {
+    LOG(ERROR) << "invalid input for parseDrainerHosts()";
+  }
+  return addresses;
 }
 
 std::string MetaKeyUtils::statsKey(GraphSpaceID spaceId) {
@@ -1094,27 +1200,31 @@ GraphSpaceID MetaKeyUtils::parseStatsSpace(folly::StringPiece rawData) {
 
 const std::string& MetaKeyUtils::statsKeyPrefix() { return kStatsTable; }
 
-std::string MetaKeyUtils::fulltextServiceKey() {
+std::string MetaKeyUtils::serviceKey(const meta::cpp2::ExternalServiceType& type) {
   std::string key;
-  key.reserve(kFTServiceTable.size());
-  key.append(kFTServiceTable.data(), kFTServiceTable.size());
+  key.reserve(kServicesTable.size() + sizeof(meta::cpp2::ExternalServiceType));
+  key.append(kServicesTable.data(), kServicesTable.size())
+      .append(reinterpret_cast<const char*>(&type), sizeof(meta::cpp2::ExternalServiceType));
   return key;
 }
 
-std::string MetaKeyUtils::fulltextServiceVal(meta::cpp2::FTServiceType type,
-                                             const std::vector<meta::cpp2::FTClient>& clients) {
-  std::string val, cval;
-  apache::thrift::CompactSerializer::serialize(clients, &cval);
-  val.reserve(sizeof(meta::cpp2::FTServiceType) + cval.size());
-  val.append(reinterpret_cast<const char*>(&type), sizeof(meta::cpp2::FTServiceType)).append(cval);
+const std::string& MetaKeyUtils::servicePrefix() { return kServicesTable; }
+
+meta::cpp2::ExternalServiceType MetaKeyUtils::parseServiceType(folly::StringPiece rawData) {
+  auto offset = kServicesTable.size();
+  return *reinterpret_cast<const meta::cpp2::ExternalServiceType*>(rawData.data() + offset);
+}
+
+std::string MetaKeyUtils::serviceVal(const std::vector<meta::cpp2::ServiceClient>& clients) {
+  std::string val;
+  apache::thrift::CompactSerializer::serialize(clients, &val);
   return val;
 }
 
-std::vector<meta::cpp2::FTClient> MetaKeyUtils::parseFTClients(folly::StringPiece rawData) {
-  std::vector<meta::cpp2::FTClient> clients;
-  int32_t offset = sizeof(meta::cpp2::FTServiceType);
-  auto clientsRaw = rawData.subpiece(offset, rawData.size() - offset);
-  apache::thrift::CompactSerializer::deserialize(clientsRaw, clients);
+std::vector<meta::cpp2::ServiceClient> MetaKeyUtils::parseServiceClients(
+    folly::StringPiece rawData) {
+  std::vector<meta::cpp2::ServiceClient> clients;
+  apache::thrift::CompactSerializer::deserialize(rawData, clients);
   return clients;
 }
 

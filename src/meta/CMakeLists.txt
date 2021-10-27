@@ -35,7 +35,7 @@ nebula_add_library(
     processors/index/DropEdgeIndexProcessor.cpp
     processors/index/GetEdgeIndexProcessor.cpp
     processors/index/ListEdgeIndexesProcessor.cpp
-    processors/index/FTServiceProcessor.cpp
+    processors/service/ServiceProcessor.cpp
     processors/index/FTIndexProcessor.cpp
     processors/kv/GetProcessor.cpp
     processors/kv/MultiGetProcessor.cpp
@@ -96,6 +96,7 @@ nebula_add_library(
     processors/zone/UpdateGroupProcessor.cpp
     processors/listener/ListenerProcessor.cpp
     processors/session/SessionManagerProcessor.cpp
+    processors/drainer/DrainerProcessor.cpp
 )
 
 add_dependencies(
@@ -141,6 +142,7 @@ set(meta_test_deps
     $<TARGET_OBJECTS:raftex_thrift_obj>
     $<TARGET_OBJECTS:storage_thrift_obj>
     $<TARGET_OBJECTS:meta_thrift_obj>
+    $<TARGET_OBJECTS:drainer_thrift_obj>
     $<TARGET_OBJECTS:common_thrift_obj>
     $<TARGET_OBJECTS:thrift_obj>
     $<TARGET_OBJECTS:process_obj>

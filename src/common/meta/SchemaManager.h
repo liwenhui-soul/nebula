@@ -81,8 +81,6 @@ class SchemaManager {
   // get all latest version of all edge schema
   virtual StatusOr<EdgeSchema> getAllLatestVerEdgeSchema(GraphSpaceID space) = 0;
 
-  virtual StatusOr<std::vector<nebula::meta::cpp2::FTClient>> getFTClients() = 0;
-
   // Get the TagID or EdgeType by the name.
   // The first one is a bool which is used to distinguish the type.
   // When the result is an edge, it's true, otherwise it's false.
@@ -91,6 +89,17 @@ class SchemaManager {
 
   virtual StatusOr<std::pair<std::string, nebula::meta::cpp2::FTIndex>> getFTIndex(
       GraphSpaceID spaceId, int32_t schemaId) = 0;
+
+  virtual StatusOr<std::vector<nebula::meta::cpp2::ServiceClient>> getServiceClients(
+      cpp2::ExternalServiceType type) = 0;
+
+  // TODO(pandasheep) move to new man file
+  // sync listener drainer client for master cluster
+  virtual StatusOr<HostAddr> getDrainerClient(GraphSpaceID space, PartitionID partId) = 0;
+
+  // TODO(pandasheep) move to new man file
+  // drainer server for slave cluster
+  virtual StatusOr<std::vector<cpp2::DrainerInfo>> getDrainerServer(GraphSpaceID space) = 0;
 
  protected:
   SchemaManager() = default;

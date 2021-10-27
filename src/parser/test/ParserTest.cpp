@@ -1447,6 +1447,11 @@ TEST_F(ParserTest, AdminOperation) {
     ASSERT_TRUE(result.ok()) << result.status();
   }
   {
+    std::string query = "SHOW HOSTS drainer";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
     std::string query = "SHOW SPACES";
     auto result = parse(query);
     ASSERT_TRUE(result.ok()) << result.status();
@@ -2918,6 +2923,11 @@ TEST_F(ParserTest, FullTextServiceTest) {
     ASSERT_TRUE(result.ok()) << result.status();
   }
   {
+    std::string query = "SHOW LISTENER ELASTICSEARCH";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
     std::string query = "SIGN IN TEXT SERVICE (127.0.0.1:9200)";
     auto result = parse(query);
     ASSERT_TRUE(result.ok()) << result.status();
@@ -2948,6 +2958,82 @@ TEST_F(ParserTest, FullTextServiceTest) {
     std::string query = "SIGN IN TEXT SERVICE (127.0.0.1:9200, \"user\")";
     auto result = parse(query);
     ASSERT_FALSE(result.ok());
+  }
+}
+
+TEST_F(ParserTest, SyncServiceTest) {
+  {
+    std::string query = "ADD LISTENER SYNC 127.0.0.1:12000";
+    auto result = parse(query);
+    ASSERT_FALSE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "ADD LISTENER SYNC 127.0.0.1:12000 TO SPACE default_space";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "ADD LISTENER SYNC 127.0.0.1:12000, 127.0.0.1:12001 TO SPACE default_space";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "REMOVE LISTENER SYNC";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "SHOW LISTENER";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "SHOW LISTENER SYNC";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "SIGN IN DRAINER SERVICE (127.0.0.1:9200)";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "SIGN IN DRAINER SERVICE (127.0.0.1:9200), (127.0.0.1:9300)";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "SIGN OUT DRAINER SERVICE";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "SHOW DRAINER CLIENTS";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok());
+  }
+}
+
+TEST_F(ParserTest, DrainerTest) {
+  {
+    std::string query = "ADD DRAINER 127.0.0.1:12000";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "ADD DRAINER 127.0.0.1:12000, 127.0.0.1:12001";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "REMOVE DRAINER";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "SHOW DRAINERS";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
   }
 }
 

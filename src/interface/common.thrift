@@ -36,6 +36,7 @@ cpp_include "common/datatypes/GeographyOps-inl.h"
 
 const binary (cpp.type = "char const *") version = "2.6.0"
 
+typedef i64 (cpp.type = "nebula::ClusterID") ClusterID
 typedef i32 (cpp.type = "nebula::GraphSpaceID") GraphSpaceID
 typedef i32 (cpp.type = "nebula::PartitionID") PartitionID
 typedef i32 (cpp.type = "nebula::TagID") TagID
@@ -284,6 +285,8 @@ enum ErrorCode {
     E_KEY_NOT_FOUND                   = -17,
     E_USER_NOT_FOUND                  = -18,
     E_STATS_NOT_FOUND                 = -19,
+    E_SERVICE_NOT_FOUND               = -20,
+    E_DRAINER_NOT_FOUND               = -21,
 
     // backup failed
     E_BACKUP_FAILED                   = -24,
@@ -320,6 +323,7 @@ enum ErrorCode {
     E_CONFLICT                        = -2008,
     E_INVALID_PARM                    = -2009,
     E_WRONGCLUSTER                    = -2010,
+    E_LISTENER_CONFLICT               = -2011,
 
     E_STORE_FAILURE                   = -2021,
     E_STORE_SEGMENT_ILLEGAL           = -2022,
@@ -329,7 +333,7 @@ enum ErrorCode {
     E_NO_VALID_HOST                   = -2026,
     E_CORRUPTTED_BALANCE_PLAN         = -2027,
     E_NO_INVALID_BALANCE_PLAN         = -2028,
-
+    E_NO_VALID_DRAINER                = -2029,
 
     // Authentication Failure
     E_IMPROPER_ROLE                   = -2030,
@@ -431,6 +435,9 @@ enum ErrorCode {
     E_WRITE_WRITE_CONFLICT            = -3073,
 
     E_CLIENT_SERVER_INCOMPATIBLE      = -3061,
+
+    // 4xxx for drainer
+    E_LOG_GAP                         = -4001,
 
     E_UNKNOWN                         = -8000,
 } (cpp.enum_strict)
