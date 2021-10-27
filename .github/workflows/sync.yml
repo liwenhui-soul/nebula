@@ -1,0 +1,17 @@
+name: sync
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: vesoft-inc/auto-sync-repos@master
+      with:
+        from_repo: vesoft-inc/nebula
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        dingtalk_access_token: ${{ secrets.DING_ACCESS_TOKEN }}
+        dingtalk_secret: ${{ secrets.DING_SECRET }}
