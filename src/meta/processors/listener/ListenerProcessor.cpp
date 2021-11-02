@@ -77,7 +77,7 @@ void AddListenerProcessor::process(const cpp2::AddListenerReq& req) {
     }
 
     drainerClients = MetaKeyUtils::parseServiceClients(nebula::value(sRet));
-    if (drainerClients.size() == 0) {
+    if (drainerClients.empty()) {
       LOG(ERROR) << "Drainer service clients not exit.";
       handleErrorCode(nebula::cpp2::ErrorCode::E_SERVICE_NOT_FOUND);
       onFinished();
@@ -239,15 +239,14 @@ void ListListenerDrainersProcessor::process(const cpp2::ListListenerDrainersReq&
     return;
   }
 
-  std::unordered_map<PartitionID, HostAddr> drainerClients;
+  std::unordered_map<PartitionID, cpp2::DrainerClientInfo> drainerClients;
   auto iter = nebula::value(iterRet).get();
-  if (iter->valid()) {
-    resp_.set_space_name(MetaKeyUtils::parseListenerDrainerSpacename(iter->val()));
-  }
   while (iter->valid()) {
     auto partId = MetaKeyUtils::parseListenerDrainerPart(iter->key());
-    auto host = MetaKeyUtils::parseListenerDrainerHost(iter->val());
-    drainerClients.emplace(partId, std::move(host));
+    cpp2::DrainerClientInfo drainClientInfo;
+    drainClientInfo.set_host(MetaKeyUtils::parseListenerDrainerHost(iter->val()));
+    drainClientInfo.set_space_name(MetaKeyUtils::parseListenerDrainerSpacename(iter->val()));
+    drainerClients.emplace(partId, std::move(drainClientInfo));
     iter->next();
   }
   resp_.set_drainerClients(std::move(drainerClients));

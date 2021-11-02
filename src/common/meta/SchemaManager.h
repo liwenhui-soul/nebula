@@ -95,7 +95,8 @@ class SchemaManager {
 
   // TODO(pandasheep) move to new man file
   // sync listener drainer client for master cluster
-  virtual StatusOr<HostAddr> getDrainerClient(GraphSpaceID space, PartitionID partId) = 0;
+  virtual StatusOr<nebula::meta::cpp2::DrainerClientInfo> getDrainerClient(GraphSpaceID space,
+                                                                           PartitionID partId) = 0;
 
   // TODO(pandasheep) move to new man file
   // drainer server for slave cluster

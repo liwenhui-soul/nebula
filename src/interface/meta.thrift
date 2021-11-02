@@ -959,18 +959,17 @@ struct ListListenerDrainersReq {
     1: common.GraphSpaceID     space_id,
 }
 
-struct DrainerInfo {
+struct DrainerClientInfo {
     1: common.HostAddr         host,
-    2: HostStatus              status,
+    2: binary                  space_name,
 }
 
 struct ListListenerDrainersResp {
     1: common.ErrorCode        code,
     // Valid if code equals E_LEADER_CHANGED.
     2: common.HostAddr         leader,
-    3: map<common.PartitionID, common.HostAddr>
+    3: map<common.PartitionID, DrainerClientInfo>
     (cpp.template = "std::unordered_map") drainerClients;
-    4: binary                  space_name;
 }
 
 struct AddDrainerReq {
@@ -984,6 +983,11 @@ struct RemoveDrainerReq {
 
 struct ListDrainersReq {
     1: common.GraphSpaceID     space_id,
+}
+
+struct DrainerInfo {
+    1: common.HostAddr         host,
+    2: HostStatus              status,
 }
 
 struct ListDrainersResp {

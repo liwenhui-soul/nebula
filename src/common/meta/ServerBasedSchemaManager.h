@@ -72,7 +72,8 @@ class ServerBasedSchemaManager : public SchemaManager {
   StatusOr<std::vector<nebula::meta::cpp2::ServiceClient>> getServiceClients(
       cpp2::ExternalServiceType type) override;
 
-  StatusOr<HostAddr> getDrainerClient(GraphSpaceID space, PartitionID partId) override;
+  StatusOr<nebula::meta::cpp2::DrainerClientInfo> getDrainerClient(GraphSpaceID space,
+                                                                   PartitionID partId) override;
 
   StatusOr<std::vector<cpp2::DrainerInfo>> getDrainerServer(GraphSpaceID spaceId) override;
 

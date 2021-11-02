@@ -89,7 +89,7 @@ struct SpaceInfoCache {
   std::unordered_map<PartitionID, TermID> termOfPartition_;
 
   // sync listener drainer client for master cluster
-  std::unordered_map<PartitionID, HostAddr> drainerclients_;
+  std::unordered_map<PartitionID, cpp2::DrainerClientInfo> drainerclients_;
   // drainer server for slave cluster
   std::vector<cpp2::DrainerInfo> drainerServer_;
 };
@@ -414,8 +414,8 @@ class MetaClient {
   folly::Future<StatusOr<std::vector<cpp2::ListenerInfo>>> listListeners(
       GraphSpaceID spaceId, const cpp2::ListenerType& type);
 
-  folly::Future<StatusOr<std::unordered_map<PartitionID, HostAddr>>> listListenerDrainers(
-      GraphSpaceID spaceId);
+  folly::Future<StatusOr<std::unordered_map<PartitionID, cpp2::DrainerClientInfo>>>
+  listListenerDrainers(GraphSpaceID spaceId);
 
   StatusOr<std::vector<std::pair<PartitionID, cpp2::ListenerType>>>
   getListenersBySpaceHostFromCache(GraphSpaceID spaceId, const HostAddr& host);
@@ -448,7 +448,8 @@ class MetaClient {
   StatusOr<std::vector<cpp2::ServiceClient>> getServiceClientsFromCache(
       const cpp2::ExternalServiceType& type);
 
-  StatusOr<HostAddr> getDrainerClientFromCache(GraphSpaceID spaceId, PartitionID partId);
+  StatusOr<cpp2::DrainerClientInfo> getDrainerClientFromCache(GraphSpaceID spaceId,
+                                                              PartitionID partId);
 
   StatusOr<std::vector<cpp2::DrainerInfo>> getDrainerFromCache(GraphSpaceID spaceId);
 

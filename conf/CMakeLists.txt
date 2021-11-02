@@ -48,3 +48,16 @@ install(
   COMPONENT
     storage
   )
+
+install(
+  FILES
+    nebula-drainerd.conf.default
+  PERMISSIONS
+    OWNER_READ
+    GROUP_READ
+    WORLD_READ
+  DESTINATION
+    etc
+  COMPONENT
+    drainer
+  )

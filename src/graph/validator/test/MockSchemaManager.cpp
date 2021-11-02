@@ -174,7 +174,8 @@ StatusOr<std::vector<nebula::meta::cpp2::ServiceClient>> MockSchemaManager::getS
   return Status::Error("Not implemented");
 }
 
-StatusOr<HostAddr> MockSchemaManager::getDrainerClient(GraphSpaceID space, PartitionID partId) {
+StatusOr<nebula::meta::cpp2::DrainerClientInfo> MockSchemaManager::getDrainerClient(
+    GraphSpaceID space, PartitionID partId) {
   UNUSED(space);
   UNUSED(partId);
   return Status::Error("Not implemented");

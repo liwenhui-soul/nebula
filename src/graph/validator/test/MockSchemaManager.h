@@ -112,7 +112,8 @@ class MockSchemaManager final : public nebula::meta::SchemaManager {
   StatusOr<std::vector<nebula::meta::cpp2::ServiceClient>> getServiceClients(
       meta::cpp2::ExternalServiceType type) override;
 
-  StatusOr<HostAddr> getDrainerClient(GraphSpaceID space, PartitionID partId) override;
+  StatusOr<meta::cpp2::DrainerClientInfo> getDrainerClient(GraphSpaceID space,
+                                                           PartitionID partId) override;
 
   StatusOr<int32_t> getPartsNum(GraphSpaceID) override { LOG(FATAL) << "Unimplemented."; }
 

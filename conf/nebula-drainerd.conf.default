@@ -1,0 +1,49 @@
+########## basics ##########
+# Whether to run as a daemon process
+--daemonize=true
+# The file to host the process id
+--pid_file=pids/nebula-drainerd.pid
+# Whether to use the configuration obtained from the configuration file
+--local_config=true
+
+########## logging ##########
+# The directory to host logging files
+--log_dir=logs
+# Log level, 0, 1, 2, 3 for INFO, WARNING, ERROR, FATAL respectively
+--minloglevel=0
+# Verbose log level, 1, 2, 3, 4, the higher of the level, the more verbose of the logging
+--v=0
+# Maximum seconds to buffer the log messages
+--logbufsecs=0
+# Whether to redirect stdout and stderr to separate output files
+--redirect_stdout=true
+# Destination filename of stdout and stderr, which will also reside in log_dir.
+--stdout_log_file=storaged-stdout.log
+--stderr_log_file=storaged-stderr.log
+# Copy log messages at or above this level to stderr in addition to logfiles. The numbers of severity levels INFO, WARNING, ERROR, and FATAL are 0, 1, 2, and 3, respectively.
+--stderrthreshold=2
+
+########## networking ##########
+# Comma separated Meta server addresses
+--meta_server_addrs=192.168.2.1:9559
+# Local IP used to identify the nebula-drainerd process.
+# Change it to an address other than loopback if the service is distributed or
+# will be accessed remotely.
+--local_ip=192.168.2.3
+# Drainer daemon listening port
+--port=9889
+# HTTP service ip
+--ws_ip=0.0.0.0
+# HTTP service port
+--ws_http_port=19889
+# HTTP2 service port
+--ws_h2_port=19890
+# heartbeat with meta service
+--heartbeat_interval_secs=10
+
+########## Disk ##########
+# Drainer wal directory. only one path is allowed.
+--data_path=data/drainer
+
+# Minimum reserved bytes of each data path
+--minimum_reserved_bytes=268435456

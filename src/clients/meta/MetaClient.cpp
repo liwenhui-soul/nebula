@@ -2834,11 +2834,11 @@ folly::Future<StatusOr<std::vector<cpp2::ListenerInfo>>> MetaClient::listListene
   return future;
 }
 
-folly::Future<StatusOr<std::unordered_map<PartitionID, HostAddr>>> MetaClient::listListenerDrainers(
-    GraphSpaceID spaceId) {
+folly::Future<StatusOr<std::unordered_map<PartitionID, cpp2::DrainerClientInfo>>>
+MetaClient::listListenerDrainers(GraphSpaceID spaceId) {
   cpp2::ListListenerDrainersReq req;
   req.set_space_id(spaceId);
-  folly::Promise<StatusOr<std::unordered_map<PartitionID, HostAddr>>> promise;
+  folly::Promise<StatusOr<std::unordered_map<PartitionID, cpp2::DrainerClientInfo>>> promise;
   auto future = promise.getFuture();
   getResponse(
       std::move(req),
@@ -3421,7 +3421,8 @@ StatusOr<std::vector<cpp2::ServiceClient>> MetaClient::getServiceClientsFromCach
   return Status::Error("Service not found!");
 }
 
-StatusOr<HostAddr> MetaClient::getDrainerClientFromCache(GraphSpaceID spaceId, PartitionID partId) {
+StatusOr<cpp2::DrainerClientInfo> MetaClient::getDrainerClientFromCache(GraphSpaceID spaceId,
+                                                                        PartitionID partId) {
   if (!ready_) {
     return Status::Error("Not ready!");
   }

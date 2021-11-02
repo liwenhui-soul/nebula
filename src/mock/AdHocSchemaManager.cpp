@@ -306,11 +306,10 @@ StatusOr<std::vector<nebula::meta::cpp2::ServiceClient>> AdHocSchemaManager::get
   return serviceClients_;
 }
 
-StatusOr<HostAddr> AdHocSchemaManager::getDrainerClient(GraphSpaceID space, PartitionID partId) {
-  UNUSED(space);
-  UNUSED(partId);
-  HostAddr clietn;
-  return clietn;
+StatusOr<nebula::meta::cpp2::DrainerClientInfo> AdHocSchemaManager::getDrainerClient(GraphSpaceID,
+                                                                                     PartitionID) {
+  nebula::meta::cpp2::DrainerClientInfo dClientInfo;
+  return dClientInfo;
 }
 
 StatusOr<std::vector<nebula::meta::cpp2::DrainerInfo>> AdHocSchemaManager::getDrainerServer(

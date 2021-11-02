@@ -138,6 +138,25 @@ nebula_add_executable(
         wangle
 )
 
+nebula_add_executable(
+    NAME
+        nebula-drainerd
+    SOURCES
+        DrainerDaemon.cpp
+        SetupLogging.cpp
+        SetupBreakpad.cpp
+    OBJECTS
+        $<TARGET_OBJECTS:drainer_service_handler>
+        $<TARGET_OBJECTS:drainer_server>
+        ${common_deps}
+        ${storage_meta_deps}
+    LIBRARIES
+        ${ROCKSDB_LIBRARIES}
+        ${THRIFT_LIBRARIES}
+        ${PROXYGEN_LIBRARIES}
+        wangle
+)
+
 install(
     TARGETS
         nebula-graphd
@@ -175,4 +194,17 @@ install(
         bin
     COMPONENT
         meta
+)
+
+install(
+    TARGETS
+        nebula-drainerd
+    PERMISSIONS
+        OWNER_EXECUTE OWNER_WRITE OWNER_READ
+        GROUP_EXECUTE GROUP_READ
+        WORLD_EXECUTE WORLD_READ
+    DESTINATION
+        bin
+    COMPONENT
+        drainer
 )
