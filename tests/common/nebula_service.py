@@ -54,15 +54,15 @@ class NebulaService(object):
                     '/../resources/gflags.json', resources_dir)
 
         # cert files
-        shutil.copy(self.src_dir + '/tests/secrets/cert/test.ca.key',
+        shutil.copy(self.src_dir + '/tests/cert/test.ca.key',
                     resources_dir)
-        shutil.copy(self.src_dir + '/tests/secrets/cert/test.ca.pem',
+        shutil.copy(self.src_dir + '/tests/cert/test.ca.pem',
                     resources_dir)
-        shutil.copy(self.src_dir + '/tests/secrets/cert/test.ca.password',
+        shutil.copy(self.src_dir + '/tests/cert/test.ca.password',
                     resources_dir)
-        shutil.copy(self.src_dir + '/tests/secrets/cert/test.derive.key',
+        shutil.copy(self.src_dir + '/tests/cert/test.derive.key',
                     resources_dir)
-        shutil.copy(self.src_dir + '/tests/secrets/cert/test.derive.crt',
+        shutil.copy(self.src_dir + '/tests/cert/test.derive.crt',
                     resources_dir)
 
         # license
