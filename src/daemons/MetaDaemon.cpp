@@ -5,10 +5,13 @@
  */
 
 #include <folly/ssl/Init.h>
+#include <openssl/rsa.h>
+#include <openssl/sha.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "common/base/Base.h"
 #include "common/base/SignalHandler.h"
+#include "common/encryption/License.h"
 #include "common/hdfs/HdfsCommandHelper.h"
 #include "common/hdfs/HdfsHelper.h"
 #include "common/network/NetworkUtils.h"
@@ -36,6 +39,7 @@ using nebula::operator<<;
 using nebula::ProcessUtils;
 using nebula::Status;
 using nebula::StatusOr;
+using nebula::encryption::License;
 using nebula::network::NetworkUtils;
 using nebula::web::PathParams;
 
@@ -55,6 +59,8 @@ DEFINE_int32(meta_http_thread_num, 3, "Number of meta daemon's http thread");
 DEFINE_int32(num_worker_threads, 32, "Number of workers");
 DEFINE_string(pid_file, "pids/nebula-metad.pid", "File to hold the process id");
 DEFINE_bool(daemonize, true, "Whether run as a daemon process");
+// License file path
+DEFINE_string(license_path, "nebula.license", "File path to license file");
 
 static std::unique_ptr<apache::thrift::ThriftServer> gServer;
 static std::unique_ptr<nebula::kvstore::KVStore> gKVStore;
@@ -212,6 +218,7 @@ int main(int argc, char* argv[]) {
   }
 #endif
 
+  // Detect if the server has already been started
   auto pidPath = FLAGS_pid_file;
   status = ProcessUtils::isPidAvailable(pidPath);
   if (!status.ok()) {
@@ -266,6 +273,23 @@ int main(int argc, char* argv[]) {
     LOG(ERROR) << "Can't get peers address, status:" << peersRet.status();
     return EXIT_FAILURE;
   }
+
+  // License validation
+  LOG(INFO) << "-----------------Validate license-----------------\n";
+  LOG(INFO) << "License path: " << FLAGS_license_path;
+  auto licensePath = FLAGS_license_path;
+
+  status = License::validateLicense(licensePath);
+  if (!status.ok()) {
+    LOG(ERROR) << status;
+    return EXIT_FAILURE;
+  }
+
+  // Save license content
+  auto license = License::getInstance();
+  std::string contentStr = "";
+  License::parseLicenseContent(FLAGS_license_path, contentStr);
+  license->content = folly::parseJson(contentStr);
 
   gKVStore = initKV(peersRet.value(), localhost);
   if (gKVStore == nullptr) {

@@ -50,18 +50,23 @@ class NebulaService(object):
         # gflags.json
         resources_dir = self.work_dir + '/share/resources/'
         os.makedirs(resources_dir)
-        shutil.copy(self.build_dir + '/../resources/gflags.json', resources_dir)
+        shutil.copy(self.build_dir +
+                    '/../resources/gflags.json', resources_dir)
 
         # cert files
-        shutil.copy(self.src_dir + '/tests/cert/test.ca.key',
+        shutil.copy(self.src_dir + '/tests/secrets/cert/test.ca.key',
                     resources_dir)
-        shutil.copy(self.src_dir + '/tests/cert/test.ca.pem',
+        shutil.copy(self.src_dir + '/tests/secrets/cert/test.ca.pem',
                     resources_dir)
-        shutil.copy(self.src_dir + '/tests/cert/test.ca.password',
+        shutil.copy(self.src_dir + '/tests/secrets/cert/test.ca.password',
                     resources_dir)
-        shutil.copy(self.src_dir + '/tests/cert/test.derive.key',
+        shutil.copy(self.src_dir + '/tests/secrets/cert/test.derive.key',
                     resources_dir)
-        shutil.copy(self.src_dir + '/tests/cert/test.derive.crt',
+        shutil.copy(self.src_dir + '/tests/secrets/cert/test.derive.crt',
+                    resources_dir)
+
+        # license
+        shutil.copy(self.src_dir + '/tests/secrets/nebula.license',
                     resources_dir)
 
     def _format_nebula_command(self, name, meta_port, ports, debug_log=True, ca_signed=False):

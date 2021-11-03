@@ -3,6 +3,7 @@
 --daemonize=true
 # The file to host the process id
 --pid_file=pids/nebula-metad.pid
+--license_path=nebula.license
 
 ########## logging ##########
 # The directory to host logging files

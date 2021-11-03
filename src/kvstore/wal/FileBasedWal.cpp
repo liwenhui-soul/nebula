@@ -415,7 +415,7 @@ void FileBasedWal::scanLastWal(WalFileInfoPtr info, LogID firstId) {
     }
 
     if (head != foot) {
-      LOG(ERROR) << "Message size doen't match: " << head << " != " << foot;
+      LOG(ERROR) << "Message size doesn't match: " << head << " != " << foot;
       break;
     }
 
