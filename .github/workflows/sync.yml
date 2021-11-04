@@ -2,13 +2,15 @@ name: sync
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '33 5 * * *'
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.GH_BOT_PAT }}
     - uses: vesoft-inc/auto-sync-repos@master
       with:
         from_repo: vesoft-inc/nebula
