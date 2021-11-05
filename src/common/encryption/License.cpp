@@ -39,6 +39,8 @@ const char kKeyFooter[] = "----------License Key End----------";
 const std::time_t kSecsInWeek = 604800;
 const std::time_t kSecsInDay = 86400;
 
+// contact info
+const char contactInfo[] = "Please contact Vesoft.Inc at inquiry@vesoft.com to renew the license.";
 License* License::getInstance() {
   static License instance;
   return &instance;
@@ -277,17 +279,15 @@ Status License::checkExpiration(const std::string expiration) {
   }
   std::time_t expirationTimestamp = mktime(&t);
 
-  // Warning when it is a week from the exporation
+  // Warning when it is a week from the expiration
   // Give the user 3 days of grace period before disable the launch of meta service
   if (currentTimestamp > expirationTimestamp + 3 * kSecsInDay) {
-    return Status::Error(
-        "The license has expired. Please contact Vesoft.Inc to renew the license.");
+    return Status::Error("The license has expired. " + std::string(contactInfo));
   } else if (currentTimestamp > expirationTimestamp) {
-    LOG(WARNING) << "The license has expired. You can still use Nebula service for 3 days. Please "
-                    "contact Vesoft.Inc to renew the license.";
+    LOG(WARNING) << "The license has expired. You can still use Nebula service for 3 days. "
+                 << contactInfo;
   } else if (currentTimestamp > expirationTimestamp - kSecsInWeek) {
-    LOG(WARNING)
-        << "The license will be expired in a week. Please contact Vesoft.Inc to renew the license.";
+    LOG(WARNING) << "The license will be expired in a week. " << contactInfo;
   }
   return Status::OK();
 }
