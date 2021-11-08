@@ -3125,6 +3125,8 @@ list_host_type
     | KW_META       { $$ = meta::cpp2::ListHostType::META; }
     | KW_STORAGE    { $$ = meta::cpp2::ListHostType::STORAGE; }
     | KW_DRAINER    { $$ = meta::cpp2::ListHostType::DRAINER; }
+    | KW_META KW_LISTENER  { $$ = meta::cpp2::ListHostType::META_LISTENER; }
+    | KW_STORAGE KW_LISTENER  { $$ = meta::cpp2::ListHostType::STORAGE_LISTENER; }
     ;
 
 config_module_enum

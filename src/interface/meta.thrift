@@ -433,11 +433,13 @@ struct ListEdgesResp {
 
 enum ListHostType {
     // nebula 1.0 show hosts, show leader, partition info
-    ALLOC       = 0x00,
-    GRAPH       = 0x01,
-    META        = 0x02,
-    STORAGE     = 0x03,
-    DRAINER     = 0x04,
+    ALLOC            = 0x00,
+    GRAPH            = 0x01,
+    META             = 0x02,
+    STORAGE          = 0x03,
+    DRAINER          = 0x04,
+    META_LISTENER    = 0x05,
+    STORAGE_LISTENER = 0x06,
 } (cpp.enum_strict)
 
 struct ListHostsReq {
@@ -542,12 +544,13 @@ struct HBResp {
 }
 
 enum HostRole {
-    GRAPH       = 0x00,
-    META        = 0x01,
-    STORAGE     = 0x02,
-    LISTENER    = 0x03,
-    DRAINER     = 0x04,
-    UNKNOWN     = 0x05
+    GRAPH            = 0x00,
+    META             = 0x01,
+    STORAGE          = 0x02,
+    DRAINER          = 0x03,
+    META_LISTENER    = 0x04,
+    STORAGE_LISTENER = 0x05,
+    UNKNOWN          = 0x06,
 } (cpp.enum_strict)
 
 struct LeaderInfo {

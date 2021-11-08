@@ -30,9 +30,11 @@ void HBProcessor::process(const cpp2::HBReq& req) {
   HostAddr host((*req.host_ref()).host, (*req.host_ref()).port);
   nebula::cpp2::ErrorCode ret;
 
+  auto role = req.get_role();
   LOG(INFO) << "Receive heartbeat from " << host
-            << ", role = " << apache::thrift::util::enumNameSafe(req.get_role());
-  if (req.get_role() == cpp2::HostRole::STORAGE) {
+            << ", role = " << apache::thrift::util::enumNameSafe(role);
+  if (role == cpp2::HostRole::STORAGE || role == cpp2::HostRole::META_LISTENER ||
+      role == cpp2::HostRole::STORAGE_LISTENER) {
     ClusterID peerCluserId = req.get_cluster_id();
     if (peerCluserId == 0) {
       LOG(INFO) << "Set clusterId for new host " << host << "!";

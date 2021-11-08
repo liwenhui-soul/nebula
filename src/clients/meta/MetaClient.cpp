@@ -2383,7 +2383,9 @@ folly::Future<StatusOr<bool>> MetaClient::heartbeat() {
   req.set_role(options_.role_);
   req.set_git_info_sha(options_.gitInfoSHA_);
   req.set_version(getOriginVersion());
-  if (options_.role_ == cpp2::HostRole::STORAGE) {
+  if (options_.role_ == cpp2::HostRole::STORAGE ||
+      options_.role_ == cpp2::HostRole::META_LISTENER ||
+      options_.role_ == cpp2::HostRole::STORAGE_LISTENER) {
     if (options_.clusterId_.load() == 0) {
       options_.clusterId_ = FileBasedClusterIdMan::getClusterIdFromFile(FLAGS_cluster_id_path);
     }
@@ -2411,7 +2413,10 @@ folly::Future<StatusOr<bool>> MetaClient::heartbeat() {
       std::move(req),
       [](auto client, auto request) { return client->future_heartBeat(request); },
       [this](cpp2::HBResp&& resp) -> bool {
-        if (options_.role_ == cpp2::HostRole::STORAGE && options_.clusterId_.load() == 0) {
+        if ((options_.role_ == cpp2::HostRole::STORAGE ||
+             options_.role_ == cpp2::HostRole::META_LISTENER ||
+             options_.role_ == cpp2::HostRole::STORAGE_LISTENER) &&
+            options_.clusterId_.load() == 0) {
           LOG(INFO) << "Persist the cluster Id from metad " << resp.get_cluster_id();
           if (FileBasedClusterIdMan::persistInFile(resp.get_cluster_id(), FLAGS_cluster_id_path)) {
             options_.clusterId_.store(resp.get_cluster_id());
