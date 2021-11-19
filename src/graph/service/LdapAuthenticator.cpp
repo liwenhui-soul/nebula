@@ -10,7 +10,7 @@
 namespace nebula {
 namespace graph {
 
-LdapAuthenticator::LdapAuthenticator(const meta::MetaClient* client) { metaClient_ = client; }
+LdapAuthenticator::LdapAuthenticator(meta::MetaClient* client) { metaClient_ = client; }
 
 Status LdapAuthenticator::prepare() {
   if (FLAGS_ldap_server.empty()) {
