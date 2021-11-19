@@ -14,12 +14,12 @@ namespace graph {
 
 class PasswordAuthenticator final : public Authenticator {
  public:
-  explicit PasswordAuthenticator(meta::MetaClient* client);
+  explicit PasswordAuthenticator(const meta::MetaClient* client);
 
   bool auth(const std::string& user, const std::string& password) override;
 
  private:
-  meta::MetaClient* metaClient_;
+  const meta::MetaClient* metaClient_;
 };
 
 }  // namespace graph

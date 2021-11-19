@@ -38,7 +38,7 @@ class QueryEngine final : public cpp::NonCopyable, public cpp::NonMovable {
   using RequestContextPtr = std::unique_ptr<RequestContext<ExecutionResponse>>;
   void execute(RequestContextPtr rctx);
 
-  meta::MetaClient* metaClient() { return metaClient_; }
+  const meta::MetaClient* metaClient() const { return metaClient_; }
 
  private:
   Status setupMemoryMonitorThread();

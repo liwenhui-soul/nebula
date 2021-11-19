@@ -40,7 +40,7 @@ namespace graph {
  */
 class LdapAuthenticator final : public Authenticator {
  public:
-  explicit LdapAuthenticator(meta::MetaClient* client);
+  explicit LdapAuthenticator(const meta::MetaClient* client);
 
   /**
    * Execute LDAP authentication.
@@ -83,7 +83,7 @@ class LdapAuthenticator final : public Authenticator {
   StatusOr<bool> searchBindAuth();
 
  private:
-  meta::MetaClient* metaClient_;
+  const meta::MetaClient* metaClient_;
 
   LDAP* ldap_{nullptr};
 
