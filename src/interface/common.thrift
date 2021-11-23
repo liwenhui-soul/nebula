@@ -252,6 +252,11 @@ struct CheckpointInfo {
     2: binary                path,
 }
 
+// used for raft and drainer
+struct LogEntry {
+    1: ClusterID cluster;
+    2: binary log_str;
+}
 
 // These are all data types supported in the graph properties
 enum PropertyType {
