@@ -10,6 +10,7 @@ nebula_add_executable(
         $<TARGET_OBJECTS:meta_data_upgrade_obj>
         $<TARGET_OBJECTS:storage_admin_service_handler>
         $<TARGET_OBJECTS:graph_storage_service_handler>
+        $<TARGET_OBJECTS:internal_storage_service_handler>
         $<TARGET_OBJECTS:storage_transaction_executor>
         $<TARGET_OBJECTS:internal_storage_client_obj>
         $<TARGET_OBJECTS:storage_client_base_obj>
@@ -23,6 +24,7 @@ nebula_add_executable(
         $<TARGET_OBJECTS:meta_keyutils_obj>
         $<TARGET_OBJECTS:log_str_list_iterator_obj>
         $<TARGET_OBJECTS:ws_common_obj>
+        $<TARGET_OBJECTS:log_str_list_iterator_obj>
         $<TARGET_OBJECTS:http_client_obj>
         $<TARGET_OBJECTS:storage_thrift_obj>
         $<TARGET_OBJECTS:meta_client_obj>

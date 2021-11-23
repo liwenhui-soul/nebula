@@ -55,7 +55,8 @@ class FileBasedWal final : public Wal, public std::enable_shared_from_this<FileB
       FileBasedWalInfo info,
       FileBasedWalPolicy policy,
       PreProcessor preProcessor,
-      std::shared_ptr<kvstore::DiskManager> diskMan = nullptr);
+      std::shared_ptr<kvstore::DiskManager> diskMan = nullptr,
+      bool ignoreDisk = false);
 
   virtual ~FileBasedWal();
 
@@ -128,7 +129,8 @@ class FileBasedWal final : public Wal, public std::enable_shared_from_this<FileB
                FileBasedWalInfo info,
                FileBasedWalPolicy policy,
                PreProcessor preProcessor,
-               std::shared_ptr<kvstore::DiskManager> diskMan);
+               std::shared_ptr<kvstore::DiskManager> diskMan,
+               bool ignoreDisk);
 
   // Scan all WAL files
   void scanAllWalFiles();
@@ -182,6 +184,9 @@ class FileBasedWal final : public Wal, public std::enable_shared_from_this<FileB
   PreProcessor preProcessor_;
 
   std::shared_ptr<kvstore::DiskManager> diskMan_;
+
+  // TODO(ps) drainer will support
+  bool ignoreDisk_;
 
   folly::RWSpinLock rollbackLock_;
 };

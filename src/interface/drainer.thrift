@@ -14,57 +14,43 @@ namespace py nebula2.drainer
 include "common.thrift"
 
 /*
-enum ErrorCode {
-    // for common code
-    SUCCEEDED                         = 0,
-    E_DISCONNECTED                    = -1,        // RPC Failure
-    E_FAIL_TO_CONNECT                 = -2,
-    E_RPC_FAILURE                     = -3,
-    E_LEADER_CHANGED                  = -4,
-    // only unify metad and storaged error code
-    E_SPACE_NOT_FOUND                 = -5,
-    E_WRONGCLUSTER                    = -6,
-}
-*/
-
-struct LogEntry {
-    1: common.ClusterID cluster;
-    2: binary           log_str;
-}
-
-
-/*
-  AppendLogRequest send a log message to from sync listener to drainer
+  AppendLogRequest send log messages from sync listener to drainer server.
+  Don't need to consider term, drainer make sure the logId are continuous is enough.
 */
 struct AppendLogRequest {
-    // last_log_term_sent and last_log_id_sent are the term and log id
-    // for the last log being sent
+    // last_log_id_to_send is the log id for the last log being sent
     //
-    1: common.ClusterID        clusterId;           // source cluster ID
+    1: common.ClusterID        clusterId;           // Source cluster ID
     2: common.GraphSpaceID     space;               // Graphspace ID
     3: common.PartitionID      part;                // Partition ID
-    4: common.LogID            last_log_id;         // To be sent last log id this time
-    5: common.TermID           last_log_term_sent;  // LastlogTerm sent successfully last time
+    4: i32                     part_num;            // Partition num
+    5: common.LogID            last_log_id_to_send; // To be sent last log id this time
     6: common.LogID            last_log_id_sent;    // LastlogId sent successfully last time
     //
-    // In the case of AppendLogRequest, the id of the first log is greater than or equal to
+    // In the case of AppendLogRequest, the first log id of this time is equal to
     //      last_log_id_sent + 1
     //
     // All logs in the log_str_list must belong to the same term,
     // which specified by log_term
     //
     7: common.TermID          log_term;
-    // log count
-    8: i64                    count;
-    // log id is in the range [last_log_id_sent + 1, last_log_id]
-    9: list<LogEntry>         log_str_list;
-    10: bool                  sending_snapshot;
+
+    // log id is in the range [last_log_id_sent + 1, last_log_id_to_send]
+    8: list<common.LogEntry>  log_str_list;
+    9: bool                   sending_snapshot;
+    // sync to the space name of the slave cluster
+    10: binary                 to_space_name;
+    //  Used to indicate whether it is meta data.
+    11: bool                  sync_meta;
+
+    12: optional common.PropertyType     space_vid_type;      // Master cluster space vid type
+    13: optional i16                     space_vid_len;       // Master cluster space vid len
+
 }
 
 struct AppendLogResponse {
     1: common.ErrorCode    error_code;
     2: common.LogID        last_log_id;
-    3: common.TermID       last_log_term;
 }
 
 service DrainerService {

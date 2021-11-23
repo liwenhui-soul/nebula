@@ -95,6 +95,7 @@ struct AppendLogRequest {
     //
     10: TermID log_term;
     11: list<common.LogEntry> log_str_list;
+    12: bool sending_snapshot;
 }
 
 

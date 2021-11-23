@@ -17,5 +17,4 @@ nebula_add_library(
     LogStrListIterator.cpp
 )
 
-
 nebula_add_subdirectory(test)

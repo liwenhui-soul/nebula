@@ -870,6 +870,15 @@ service GeneralStorageService {
 //
 //////////////////////////////////////////////////////////
 
+struct SyncDataRequest {
+    1: common.ClusterID    cluster;
+    2: common.GraphSpaceID space_id,
+    // part -> list<log_str>, log_str is the logMsg in the wal log
+    3: map<common.PartitionID, list<binary>>(
+        cpp.template = "std::unordered_map") parts,
+}
+
+
 // transaction request
 struct InternalTxnRequest {
     1: i64                                      txn_id,
@@ -910,4 +919,7 @@ struct ChainUpdateEdgeRequest {
 service InternalStorageService {
     ExecResponse chainAddEdges(1: ChainAddEdgesRequest req);
     UpdateResponse chainUpdateEdge(1: ChainUpdateEdgeRequest req);
+
+    // Interfaces for log storage
+    ExecResponse      syncData(1: SyncDataRequest req);
 }

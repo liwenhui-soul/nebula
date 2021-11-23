@@ -58,6 +58,11 @@ class NebulaKeyUtils final {
   static std::string tagKey(
       size_t vIdLen, PartitionID partId, const VertexID& vId, TagID tagId, char pad = '\0');
 
+  /**
+   *  Update partId of tag key
+   * */
+  static std::string updatePartIdTagKey(PartitionID partId, const std::string& rawKey);
+
   static std::string edgeKey(size_t vIdLen,
                              PartitionID partId,
                              const VertexID& srcId,
@@ -65,6 +70,11 @@ class NebulaKeyUtils final {
                              EdgeRanking rank,
                              const VertexID& dstId,
                              EdgeVerPlaceHolder ev = 1);
+
+  /**
+   *  Update partId of vertex key
+   * */
+  static std::string updatePartIdEdgeKey(PartitionID partId, const std::string& rawKey);
 
   static std::string systemCommitKey(PartitionID partId);
 

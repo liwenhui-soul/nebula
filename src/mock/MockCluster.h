@@ -14,6 +14,7 @@
 
 #include "clients/storage/GeneralStorageClient.h"
 #include "clients/storage/GraphStorageClient.h"
+#include "clients/storage/InternalStorageClient.h"
 #include "common/base/Base.h"
 #include "common/base/ObjectPool.h"
 #include "kvstore/KVStore.h"

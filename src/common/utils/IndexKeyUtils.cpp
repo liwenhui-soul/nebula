@@ -118,6 +118,16 @@ std::vector<std::string> IndexKeyUtils::edgeIndexKeys(size_t vIdLen,
 }
 
 // static
+std::string IndexKeyUtils::updatePartIdIndexKey(PartitionID partId, const std::string& rawKey) {
+  int32_t item = (partId << kPartitionOffset) | static_cast<uint32_t>(NebulaKeyType::kIndex);
+  std::string key;
+  key.reserve(rawKey.size());
+  key.append(reinterpret_cast<const char*>(&item), sizeof(int32_t))
+      .append(rawKey.data() + sizeof(int32_t), rawKey.size() - sizeof(int32_t));
+  return key;
+}
+
+// static
 std::string IndexKeyUtils::indexPrefix(PartitionID partId, IndexID indexId) {
   PartitionID item = (partId << kPartitionOffset) | static_cast<uint32_t>(NebulaKeyType::kIndex);
   std::string key;

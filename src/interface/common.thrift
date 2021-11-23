@@ -471,6 +471,13 @@ enum ErrorCode {
 
     // 4xxx for drainer
     E_LOG_GAP                         = -4001,
+    E_LOG_STALE                       = -4002,
+    E_INVALID_DRAINER_STORE           = -4003,
+    E_SPACE_MISMATCH                  = -4004,
+    E_PART_MISMATCH                   = -4005,
+    E_DATA_CONFLICT                   = -4006,
+    E_REQ_CONFLICT                    = -4007,
+    E_DATA_ILLEGAL                    = -4008,
 
     E_UNKNOWN                         = -8000,
 } (cpp.enum_strict)

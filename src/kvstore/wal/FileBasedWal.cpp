@@ -28,27 +28,31 @@ using nebula::fs::FileUtils;
  *
  *********************************************/
 // static
+// TODO (drainer support diskMan)
 std::shared_ptr<FileBasedWal> FileBasedWal::getWal(const folly::StringPiece dir,
                                                    FileBasedWalInfo info,
                                                    FileBasedWalPolicy policy,
                                                    PreProcessor preProcessor,
-                                                   std::shared_ptr<kvstore::DiskManager> diskMan) {
-  return std::shared_ptr<FileBasedWal>(
-      new FileBasedWal(dir, std::move(info), std::move(policy), std::move(preProcessor), diskMan));
+                                                   std::shared_ptr<kvstore::DiskManager> diskMan,
+                                                   bool ignoreDisk) {
+  return std::shared_ptr<FileBasedWal>(new FileBasedWal(
+      dir, std::move(info), std::move(policy), std::move(preProcessor), diskMan, ignoreDisk));
 }
 
 FileBasedWal::FileBasedWal(const folly::StringPiece dir,
                            FileBasedWalInfo walInfo,
                            FileBasedWalPolicy policy,
                            PreProcessor preProcessor,
-                           std::shared_ptr<kvstore::DiskManager> diskMan)
+                           std::shared_ptr<kvstore::DiskManager> diskMan,
+                           bool ignoreDisk)
     : dir_(dir.toString()),
       idStr_(walInfo.idStr_),
       spaceId_(walInfo.spaceId_),
       partId_(walInfo.partId_),
       policy_(std::move(policy)),
       preProcessor_(std::move(preProcessor)),
-      diskMan_(diskMan) {
+      diskMan_(diskMan),
+      ignoreDisk_(ignoreDisk) {
   // Make sure WAL directory exist
   if (FileUtils::fileType(dir_.c_str()) == fs::FileType::NOTEXIST) {
     if (!FileUtils::makeDir(dir_)) {
@@ -503,7 +507,7 @@ bool FileBasedWal::appendLogInternal(LogID id, TermID term, ClusterID cluster, s
 }
 
 bool FileBasedWal::appendLog(LogID id, TermID term, ClusterID cluster, std::string msg) {
-  if (diskMan_ && !diskMan_->hasEnoughSpace(spaceId_, partId_)) {
+  if (!ignoreDisk_ && diskMan_ && !diskMan_->hasEnoughSpace(spaceId_, partId_)) {
     LOG_EVERY_N(WARNING, 100) << idStr_ << "Failed to appendLogs because of no more space";
     return false;
   }
@@ -515,7 +519,7 @@ bool FileBasedWal::appendLog(LogID id, TermID term, ClusterID cluster, std::stri
 }
 
 bool FileBasedWal::appendLogs(LogIterator& iter) {
-  if (diskMan_ && !diskMan_->hasEnoughSpace(spaceId_, partId_)) {
+  if (!ignoreDisk_ && diskMan_ && !diskMan_->hasEnoughSpace(spaceId_, partId_)) {
     LOG_EVERY_N(WARNING, 100) << idStr_ << "Failed to appendLogs because of no more space";
     return false;
   }

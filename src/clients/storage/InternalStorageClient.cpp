@@ -131,5 +131,60 @@ cpp2::ChainAddEdgesRequest InternalStorageClient::makeChainAddReq(const cpp2::Ad
   return ret;
 }
 
+// No need to execute clusterIdsToHosts, The data has been divided into parts
+folly::SemiFuture<StorageRpcResponse<cpp2::ExecResponse>> InternalStorageClient::syncData(
+    ClusterID clusterId,
+    GraphSpaceID space,
+    std::unordered_map<PartitionID, std::vector<std::string>> data,
+    folly::EventBase* evb) {
+  auto status = getPartLeader(space, std::move(data));
+
+  if (!status.ok()) {
+    return folly::makeFuture<StorageRpcResponse<cpp2::ExecResponse>>(
+        std::runtime_error(status.status().toString()));
+  }
+
+  auto& clusters = status.value();
+  std::unordered_map<HostAddr, cpp2::SyncDataRequest> requests;
+  for (auto& c : clusters) {
+    auto& host = c.first;
+    auto& req = requests[host];
+    req.set_cluster(clusterId);
+    req.set_space_id(space);
+    req.set_parts(std::move(c.second));
+  }
+
+  return collectResponse(evb,
+                         std::move(requests),
+                         [](cpp2::InternalStorageServiceAsyncClient* client,
+                            const cpp2::SyncDataRequest& r) { return client->future_syncData(r); });
+}
+
+StatusOr<std::unordered_map<HostAddr, std::unordered_map<PartitionID, std::vector<std::string>>>>
+InternalStorageClient::getPartLeader(
+    GraphSpaceID spaceId, std::unordered_map<PartitionID, std::vector<std::string>> data) const {
+  std::unordered_map<HostAddr, std::unordered_map<PartitionID, std::vector<std::string>>> clusters;
+
+  auto status = metaClient_->partsNum(spaceId);
+  if (!status.ok()) {
+    return Status::Error("Space not found, spaceid: %d", spaceId);
+  }
+  auto numParts = status.value();
+  std::unordered_map<PartitionID, HostAddr> leaders;
+  for (int32_t partId = 1; partId <= numParts; ++partId) {
+    auto leader = getLeader(spaceId, partId);
+    if (!leader.ok()) {
+      return leader.status();
+    }
+    leaders[partId] = std::move(leader).value();
+  }
+
+  for (auto& partData : data) {
+    const auto& leader = leaders[partData.first];
+    clusters[leader][partData.first] = std::move(partData.second);
+  }
+  return clusters;
+}
+
 }  // namespace storage
 }  // namespace nebula

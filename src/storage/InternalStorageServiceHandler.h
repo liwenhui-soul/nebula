@@ -22,10 +22,13 @@ class InternalStorageServiceHandler final : public cpp2::InternalStorageServiceS
  public:
   explicit InternalStorageServiceHandler(StorageEnv* env);
 
-  folly::Future<cpp2::ExecResponse> future_chainAddEdges(const cpp2::ChainAddEdgesRequest& p_req);
+  folly::Future<cpp2::ExecResponse> future_chainAddEdges(
+      const cpp2::ChainAddEdgesRequest& p_req) override;
 
   folly::Future<cpp2::UpdateResponse> future_chainUpdateEdge(
-      const cpp2::ChainUpdateEdgeRequest& p_req);
+      const cpp2::ChainUpdateEdgeRequest& p_req) override;
+
+  folly::Future<cpp2::ExecResponse> future_syncData(const cpp2::SyncDataRequest& req) override;
 
  private:
   StorageEnv* env_{nullptr};
@@ -33,4 +36,5 @@ class InternalStorageServiceHandler final : public cpp2::InternalStorageServiceS
 
 }  // namespace storage
 }  // namespace nebula
+
 #endif  // STORAGE_INTERNALSTORAGESERVICEHANDLER_H_

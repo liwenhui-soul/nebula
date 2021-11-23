@@ -64,6 +64,8 @@ bool DrainerServer::start() {
   LOG(INFO) << "Init schema manager";
   schemaMan_ = meta::ServerBasedSchemaManager::create(metaClient_.get());
 
+  LOG(INFO) << "Init index manager";
+  indexMan_ = meta::ServerBasedIndexManager::create(metaClient_.get());
   if (!initWebService()) {
     LOG(ERROR) << "Init webservice failed!";
     return false;
@@ -71,7 +73,15 @@ bool DrainerServer::start() {
 
   env_ = std::make_unique<drainer::DrainerEnv>();
   env_->schemaMan_ = schemaMan_.get();
+  env_->indexMan_ = indexMan_.get();
   env_->metaClient_ = metaClient_.get();
+  env_->drainerPath_ = dataPath_;
+
+  taskMgr_ = DrainerTaskManager::instance();
+  if (!taskMgr_->init(env_.get(), ioThreadPool_)) {
+    LOG(ERROR) << "Init drainer task manager failed!";
+    return false;
+  }
 
   drainerThread_.reset(new std::thread([this] {
     try {
@@ -121,12 +131,23 @@ void DrainerServer::stop() {
 
   webSvc_.reset();
 
+  if (taskMgr_) {
+    taskMgr_->shutdown();
+  }
+
   if (metaClient_) {
     metaClient_->stop();
   }
 
   if (drainerServer_) {
     drainerServer_->stop();
+  }
+
+  for (auto& fd : env_->recvLogIdFd_) {
+    close(fd.second);
+  }
+  for (auto& fd : env_->sendLogIdFd_) {
+    close(fd.second);
   }
 }
 

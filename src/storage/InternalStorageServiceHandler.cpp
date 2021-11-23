@@ -5,6 +5,7 @@
 
 #include "storage/InternalStorageServiceHandler.h"
 
+#include "storage/kv/SyncDataProcessor.h"
 #include "storage/transaction/ChainAddEdgesProcessorRemote.h"
 #include "storage/transaction/ChainUpdateEdgeProcessorRemote.h"
 
@@ -16,7 +17,9 @@
 namespace nebula {
 namespace storage {
 
-InternalStorageServiceHandler::InternalStorageServiceHandler(StorageEnv* env) : env_(env) {}
+InternalStorageServiceHandler::InternalStorageServiceHandler(StorageEnv* env) : env_(env) {
+  kSyncDataCounters.init("sync_data");
+}
 
 folly::Future<cpp2::ExecResponse> InternalStorageServiceHandler::future_chainAddEdges(
     const cpp2::ChainAddEdgesRequest& req) {
@@ -27,6 +30,12 @@ folly::Future<cpp2::ExecResponse> InternalStorageServiceHandler::future_chainAdd
 folly::Future<cpp2::UpdateResponse> InternalStorageServiceHandler::future_chainUpdateEdge(
     const cpp2::ChainUpdateEdgeRequest& req) {
   auto* processor = ChainUpdateEdgeProcessorRemote::instance(env_);
+  RETURN_FUTURE(processor);
+}
+
+folly::Future<cpp2::ExecResponse> InternalStorageServiceHandler::future_syncData(
+    const cpp2::SyncDataRequest& req) {
+  auto* processor = SyncDataProcessor::instance(env_, &kSyncDataCounters);
   RETURN_FUTURE(processor);
 }
 

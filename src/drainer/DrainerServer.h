@@ -13,6 +13,7 @@
 #include "common/meta/IndexManager.h"
 #include "common/meta/SchemaManager.h"
 #include "drainer/CommonUtils.h"
+#include "drainer/DrainerTaskManager.h"
 
 namespace nebula {
 
@@ -48,11 +49,14 @@ class DrainerServer final {
   std::shared_ptr<apache::thrift::concurrency::ThreadManager> workers_;
   std::unique_ptr<meta::MetaClient> metaClient_;
   std::unique_ptr<meta::SchemaManager> schemaMan_;
+  std::unique_ptr<meta::IndexManager> indexMan_;
   std::unique_ptr<nebula::WebService> webSvc_;
   std::unique_ptr<drainer::DrainerEnv> env_;
   std::unique_ptr<std::thread> drainerThread_;
   std::atomic<ServiceStatus> drainerSvcStatus_{STATUS_UNINITIALIZED};
   std::unique_ptr<apache::thrift::ThriftServer> drainerServer_;
+
+  DrainerTaskManager *taskMgr_{nullptr};
 };
 
 }  // namespace drainer

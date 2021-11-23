@@ -212,7 +212,7 @@ nebula_add_test(
 
 nebula_add_test(
     NAME
-        drainer_test
+        drainer_processor_test
     SOURCES
         DrainerTest.cpp
     OBJECTS

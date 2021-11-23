@@ -42,10 +42,20 @@ class InternalStorageClient : public StorageClientBase<cpp2::InternalStorageServ
                              folly::Promise<::nebula::cpp2::ErrorCode>&& p,
                              folly::EventBase* evb = nullptr);
 
+  folly::SemiFuture<StorageRpcResponse<cpp2::ExecResponse>> syncData(
+      ClusterID cluster,
+      GraphSpaceID space,
+      std::unordered_map<PartitionID, std::vector<std::string>> data,
+      folly::EventBase* evb = nullptr);
+
  private:
   cpp2::ChainAddEdgesRequest makeChainAddReq(const cpp2::AddEdgesRequest& req,
                                              TermID termId,
                                              folly::Optional<int64_t> optVersion);
+
+  StatusOr<std::unordered_map<HostAddr, std::unordered_map<PartitionID, std::vector<std::string>>>>
+  getPartLeader(GraphSpaceID spaceId,
+                std::unordered_map<PartitionID, std::vector<std::string>> data) const;
 };
 
 }  // namespace storage

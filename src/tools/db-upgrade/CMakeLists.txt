@@ -13,6 +13,7 @@ nebula_add_executable(
         $<TARGET_OBJECTS:meta_data_upgrade_obj>
         $<TARGET_OBJECTS:storage_admin_service_handler>
         $<TARGET_OBJECTS:graph_storage_service_handler>
+        $<TARGET_OBJECTS:internal_storage_service_handler>
         $<TARGET_OBJECTS:storage_transaction_executor>
         $<TARGET_OBJECTS:internal_storage_client_obj>
         $<TARGET_OBJECTS:storage_client_base_obj>

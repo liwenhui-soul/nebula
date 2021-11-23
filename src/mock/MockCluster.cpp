@@ -14,6 +14,7 @@
 #include "storage/CompactionFilter.h"
 #include "storage/GeneralStorageServiceHandler.h"
 #include "storage/GraphStorageServiceHandler.h"
+#include "storage/InternalStorageServiceHandler.h"
 #include "storage/StorageAdminServiceHandler.h"
 #include "storage/transaction/TransactionManager.h"
 

@@ -492,6 +492,11 @@ class IndexKeyUtils final {
   }
 
   /**
+   *  Update partId of vertex key
+   * */
+  static std::string updatePartIdIndexKey(PartitionID partId, const std::string& rawKey);
+
+  /**
    * Generate vertex|edge index key for kv store
    **/
   static std::vector<std::string> encodeValues(

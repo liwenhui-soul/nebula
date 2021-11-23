@@ -119,6 +119,7 @@ set(meta_test_deps
     $<TARGET_OBJECTS:general_storage_service_handler>
     $<TARGET_OBJECTS:storage_admin_service_handler>
     $<TARGET_OBJECTS:graph_storage_service_handler>
+    $<TARGET_OBJECTS:internal_storage_service_handler>
     $<TARGET_OBJECTS:storage_transaction_executor>
     $<TARGET_OBJECTS:graph_storage_client_obj>
     $<TARGET_OBJECTS:storage_client_base_obj>

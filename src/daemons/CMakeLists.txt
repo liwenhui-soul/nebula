@@ -149,6 +149,9 @@ nebula_add_executable(
     OBJECTS
         $<TARGET_OBJECTS:drainer_service_handler>
         $<TARGET_OBJECTS:drainer_server>
+        $<TARGET_OBJECTS:internal_storage_client_obj>
+        $<TARGET_OBJECTS:storage_client_base_obj>
+        $<TARGET_OBJECTS:drainer_common_obj>
         ${common_deps}
         ${storage_meta_deps}
     LIBRARIES

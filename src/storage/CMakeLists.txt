@@ -62,6 +62,7 @@ nebula_add_library(
 nebula_add_library(
     internal_storage_service_handler OBJECT
     InternalStorageServiceHandler.cpp
+    kv/SyncDataProcessor.cpp
 )
 
 nebula_add_library(
