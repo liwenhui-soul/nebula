@@ -122,7 +122,7 @@ void JobManager::scheduleThread() {
     auto jobDescRet = JobDescription::loadJobDescription(opJobId.second, kvStore_);
     if (!nebula::ok(jobDescRet)) {
       LOG(ERROR) << "[JobManager] load an invalid job from queue " << opJobId.second;
-      continue;  // leader change or archive happend
+      continue;  // leader change or archive happened
     }
     auto jobDesc = nebula::value(jobDescRet);
     if (!jobDesc.setStatus(cpp2::JobStatus::RUNNING)) {
@@ -335,7 +335,7 @@ nebula::cpp2::ErrorCode JobManager::reportTaskFinish(const cpp2::ReportTaskReq& 
     return nebula::cpp2::ErrorCode::E_UNKNOWN;
   }
   // because the last task will update the job's status
-  // tasks shoule report once a time
+  // tasks should report once a time
   std::lock_guard<std::mutex> lk(muReportFinish_);
   auto tasksRet = getAllTasks(jobId);
   if (!nebula::ok(tasksRet)) {
@@ -691,7 +691,7 @@ ErrorOr<nebula::cpp2::ErrorCode, GraphSpaceID> JobManager::getSpaceId(const std:
   return *reinterpret_cast<const GraphSpaceID*>(val.c_str());
 }
 
-ErrorOr<nebula::cpp2::ErrorCode, bool> JobManager::checkIndexJobRuning() {
+ErrorOr<nebula::cpp2::ErrorCode, bool> JobManager::checkIndexJobRunning() {
   std::unique_ptr<kvstore::KVIterator> iter;
   auto retCode = kvStore_->prefix(kDefaultSpaceId, kDefaultPartId, JobUtil::jobPrefix(), &iter);
   if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {

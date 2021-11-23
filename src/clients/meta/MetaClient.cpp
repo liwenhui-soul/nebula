@@ -134,7 +134,7 @@ void MetaClient::heartBeatThreadFunc() {
     return;
   }
 
-  // if MetaServer has some changes, refesh the localCache_
+  // if MetaServer has some changes, refresh the localCache_
   loadData();
   loadCfg();
 }
@@ -832,7 +832,7 @@ Status MetaClient::handleResponse(const RESP& resp) {
     case nebula::cpp2::ErrorCode::E_CONFLICT:
       return Status::Error("Conflict!");
     case nebula::cpp2::ErrorCode::E_INVALID_PARM:
-      return Status::Error("Invalid parm!");
+      return Status::Error("Invalid param!");
     case nebula::cpp2::ErrorCode::E_WRONGCLUSTER:
       return Status::Error("Wrong cluster!");
     case nebula::cpp2::ErrorCode::E_STORE_FAILURE:
@@ -847,7 +847,7 @@ Status MetaClient::handleResponse(const RESP& resp) {
       return Status::Error("No running balance plan!");
     case nebula::cpp2::ErrorCode::E_NO_VALID_HOST:
       return Status::Error("No valid host hold the partition!");
-    case nebula::cpp2::ErrorCode::E_CORRUPTTED_BALANCE_PLAN:
+    case nebula::cpp2::ErrorCode::E_CORRUPTED_BALANCE_PLAN:
       return Status::Error("No corrupted balance plan!");
     case nebula::cpp2::ErrorCode::E_INVALID_PASSWORD:
       return Status::Error("Invalid password!");

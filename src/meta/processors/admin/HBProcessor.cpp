@@ -35,11 +35,11 @@ void HBProcessor::process(const cpp2::HBReq& req) {
             << ", role = " << apache::thrift::util::enumNameSafe(role);
   if (role == cpp2::HostRole::STORAGE || role == cpp2::HostRole::META_LISTENER ||
       role == cpp2::HostRole::STORAGE_LISTENER) {
-    ClusterID peerCluserId = req.get_cluster_id();
-    if (peerCluserId == 0) {
+    ClusterID peerClusterId = req.get_cluster_id();
+    if (peerClusterId == 0) {
       LOG(INFO) << "Set clusterId for new host " << host << "!";
       resp_.set_cluster_id(clusterId_);
-    } else if (peerCluserId != clusterId_) {
+    } else if (peerClusterId != clusterId_) {
       LOG(ERROR) << "Reject wrong cluster host " << host << "!";
       handleErrorCode(nebula::cpp2::ErrorCode::E_WRONGCLUSTER);
       onFinished();
