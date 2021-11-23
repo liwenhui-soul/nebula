@@ -1674,7 +1674,7 @@ TEST_F(ParserTest, UnreservedKeywords) {
     std::string query =
         "CREATE TAG tag1(space string, spaces string, "
         "email string, password string, roles string, uuid int, "
-        "path string, variables string, leader string, data string)";
+        "paths string, variables string, leader string, data string)";
     auto result = parse(query);
     ASSERT_TRUE(result.ok()) << result.status();
   }
@@ -2521,7 +2521,7 @@ TEST_F(ParserTest, Match) {
     ASSERT_TRUE(result.ok()) << result.status();
   }
   {
-    std::string query = "MATCH p = (a) -[m:like*..2]- (b) RETURN p as Path";
+    std::string query = "MATCH p = (a) -[m:like*..2]- (b) RETURN p as PathA";
     auto result = parse(query);
     ASSERT_TRUE(result.ok()) << result.status();
   }
