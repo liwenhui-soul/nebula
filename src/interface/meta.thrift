@@ -1047,6 +1047,7 @@ struct ServiceClient {
     1: required common.HostAddr    host,
     2: optional binary             user,
     3: optional binary             pwd,
+    4: optional binary             conn_type,
 }
 
 struct SignInServiceReq {
