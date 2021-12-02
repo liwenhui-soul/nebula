@@ -276,7 +276,7 @@ bool MetaClient::loadData() {
   }
 
   auto hostsRet = listHosts().get();
-  if (!ret.ok()) {
+  if (!hostsRet.ok()) {
     LOG(ERROR) << "List hosts failed, status:" << hostsRet.status();
     return false;
   }
