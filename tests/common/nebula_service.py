@@ -244,6 +244,9 @@ class NebulaService(object):
         shutil.copy(self.src_dir + '/tests/cert/test.derive.key', resources_dir)
         shutil.copy(self.src_dir + '/tests/cert/test.derive.crt', resources_dir)
 
+        # license
+        shutil.copy(self.src_dir + '/tests/secrets/nebula.license', resources_dir)
+
     @staticmethod
     def is_port_in_use(port):
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
