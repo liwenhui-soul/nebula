@@ -53,7 +53,7 @@ class NebulaKeyUtils final {
   static std::string lastKey(const std::string& prefix, size_t count);
 
   /**
-   * Generate vertex key for kv store
+   * Generate tag key for kv store
    * */
   static std::string tagKey(
       size_t vIdLen, PartitionID partId, const VertexID& vId, TagID tagId, char pad = '\0');
@@ -71,6 +71,11 @@ class NebulaKeyUtils final {
                              const VertexID& dstId,
                              EdgeVerPlaceHolder ev = 1);
 
+  static std::string vertexKey(size_t vIdLen,
+                               PartitionID partId,
+                               const VertexID& vId,
+                               char pad = '\0');
+
   /**
    *  Update partId of vertex key
    * */
@@ -83,7 +88,7 @@ class NebulaKeyUtils final {
   static std::string kvKey(PartitionID partId, const folly::StringPiece& name);
 
   /**
-   * Prefix for vertex
+   * Prefix for tag
    * */
   static std::string tagPrefix(size_t vIdLen, PartitionID partId, const VertexID& vId, TagID tagId);
 
