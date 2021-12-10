@@ -82,6 +82,8 @@
 #include "graph/executor/query/MinusExecutor.h"
 #include "graph/executor/query/ProjectExecutor.h"
 #include "graph/executor/query/SampleExecutor.h"
+#include "graph/executor/query/ScanEdgesExecutor.h"
+#include "graph/executor/query/ScanVerticesExecutor.h"
 #include "graph/executor/query/SortExecutor.h"
 #include "graph/executor/query/TopNExecutor.h"
 #include "graph/executor/query/TraverseExecutor.h"
@@ -170,6 +172,12 @@ Executor *Executor::makeExecutor(QueryContext *qctx, const PlanNode *node) {
     }
     case PlanNode::Kind::kGetVertices: {
       return pool->add(new GetVerticesExecutor(node, qctx));
+    }
+    case PlanNode::Kind::kScanEdges: {
+      return pool->add(new ScanEdgesExecutor(node, qctx));
+    }
+    case PlanNode::Kind::kScanVertices: {
+      return pool->add(new ScanVerticesExecutor(node, qctx));
     }
     case PlanNode::Kind::kGetNeighbors: {
       return pool->add(new GetNeighborsExecutor(node, qctx));
