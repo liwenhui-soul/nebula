@@ -65,6 +65,9 @@ using RaftClient = thrift::ThriftClientManager<raftex::cpp2::RaftexServiceAsyncC
  *                                              LogID committedLogId,
  *                                              TermID committedLogTerm,
  *                                              bool finished) override;
+ *   // extra cleanup work, will be invoked when listener is about to be removed,
+ *   // or raft is reset
+ *   void cleanup()；
  *
  * * Must implement in derived class
  *   // extra initialize work could do here
@@ -81,10 +84,6 @@ using RaftClient = thrift::ThriftClientManager<raftex::cpp2::RaftexServiceAsyncC
  *
  *   // persist last commit log id/term and lastApplyId
  *   bool persist(LogID, TermID, LogID)
- *
- *   // extra cleanup work, will be invoked when listener is about to be removed,
- *   // or raft is reset
- *   virtual void cleanup() = 0
  */
 class Listener : public raftex::RaftPart {
  public:
@@ -168,6 +167,9 @@ class Listener : public raftex::RaftPart {
                                              bool finished) override;
 
   void doApply();
+
+  // Process logs and then call apply to execute
+  virtual void processLogs();
 
  protected:
   LogID leaderCommitId_ = 0;

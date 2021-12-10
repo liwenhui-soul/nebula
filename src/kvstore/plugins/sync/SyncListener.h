@@ -12,15 +12,37 @@
 
 #include "common/base/Base.h"
 #include "common/thrift/ThriftClientManager.h"
+#include "common/utils/MetaKeyUtils.h"
 #include "interface/gen-cpp2/DrainerServiceAsyncClient.h"
 #include "interface/gen-cpp2/drainer_types.h"
 #include "kvstore/Listener.h"
+#include "meta/processors/Common.h"
 
 namespace nebula {
 namespace kvstore {
 
 using DrainerClient = thrift::ThriftClientManager<drainer::cpp2::DrainerServiceAsyncClient>;
 
+// The directory structure of the storge listener is as follows:
+/* |--listenerPath_/spaceId/partId/wal
+ * |------walxx
+ * |------last_apply_log_partId(committedlogId + committedtermId + lastApplyLogId)
+ */
+
+// The directory structure of the meta listener is as follows:
+/* |--listenerPath_/spaceId/partId/wal  walPath
+ * |------walxx
+ * |------last_apply_log_0(committedlogId + committedtermId + lastApplyLogId)
+ * |------sync
+ * |--------spaceId1
+ * |----------wal
+ * |------------walxx
+ * |----------last_apply_log
+ * |--------spaceId2
+ * |----------wal
+ * |------------walxx
+ * |----------last_apply_log
+ */
 class SyncListener : public Listener {
  public:
   SyncListener(GraphSpaceID spaceId,
@@ -47,31 +69,93 @@ class SyncListener : public Listener {
                  diskMan,
                  schemaMan),
         drainerClientMan_(drainerClientMan) {
+    // Meta listener not check shemanMan
+    if (spaceId == nebula::kDefaultSpaceId && partId == nebula::kDefaultPartId) {
+      isMetaListener_ = true;
+    }
     CHECK(!!schemaMan);
     CHECK(!!drainerClientMan_);
-    lastApplyLogFile_ = std::make_unique<std::string>(
-        folly::stringPrintf("%s/last_apply_log_%d", walPath.c_str(), partId));
+    walPath_ = walPath;
+    lastApplyLogFile_ = folly::stringPrintf("%s/last_apply_log_%d", walPath.c_str(), partId);
   }
 
  protected:
   void init() override;
 
+  // Process logs and then call apply to execute
+  void processLogs() override;
+
   bool apply(const std::vector<KV>& data) override;
+
+  // send data to drainer and handle AppendLogResponse
+  bool apply(const std::vector<nebula::cpp2::LogEntry>& data,
+             LogID logIdToSend,
+             TermID logTermToSend,
+             LogID lastApplyLogId,
+             bool sendsnapshot = false);
+
+  std::pair<int64_t, int64_t> commitSnapshot(const std::vector<std::string>& rows,
+                                             LogID committedLogId,
+                                             TermID committedLogTerm,
+                                             bool finished) override;
+
+  bool persist(LogID committedLogId, TermID currentTerm, LogID lastApplyLogId) override;
 
   std::pair<LogID, TermID> lastCommittedLogId() override;
 
   LogID lastApplyLogId() override;
 
-  bool persist(LogID, TermID, LogID) override {
-    LOG(FATAL) << "Should not reach here";
-    return true;
-  }
+  void stop() override;
 
  private:
-  // File name, store lastCommittedlogId + lastCommittedtermId + lastApplyLogId + lastApplyLogId
-  std::unique_ptr<std::string> lastApplyLogFile_{nullptr};
+  // send AppendLogRequest to drainer
+  folly::Future<nebula::drainer::cpp2::AppendLogResponse> send(
+      GraphSpaceID spaceId,
+      PartitionID partId,
+      LogID lastLogIdToSend,
+      TermID lastLogTermToSend,
+      LogID lastLogIdSent,
+      const std::vector<nebula::cpp2::LogEntry>& data,
+      HostAddr& drainerClient,
+      std::string& tospaceName,
+      bool sendsnapshot);
+
+  bool writeAppliedId(LogID lastId, TermID lastTerm, LogID lastApplyLogId);
+
+  std::string encodeAppliedId(LogID lastId, TermID lastTerm, LogID lastApplyLogId) const noexcept;
+
+ private:
+  std::string walPath_;
+
+  // File name, store lastCommittedlogId + lastCommittedtermId + lastApplyLogId
+  std::string lastApplyLogFile_;
+
+  std::string spaceName_;
+
+  HostAddr drainerClient_;
+
+  std::string toSpaceName_;
+
+  int32_t vIdLen_;
+
+  int32_t partNum_;
+
+  nebula::cpp2::PropertyType vIdType_;
+
+  // Used to identify whether the sync listener is sending data to the drainer
+  std::atomic<bool> requestOnGoing_{false};
 
   std::shared_ptr<DrainerClient> drainerClientMan_;
+
+  bool isMetaListener_{false};
+
+  std::unordered_map<GraphSpaceID, std::shared_ptr<nebula::wal::FileBasedWal>> wals_;
+
+  // use for meta listener
+  std::unordered_map<GraphSpaceID, int32_t> partNums_;
+
+  // For storage listener
+  int32_t lastAppendLogIdFd_ = -1;
 };
 
 }  // namespace kvstore
