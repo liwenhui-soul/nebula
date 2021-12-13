@@ -80,6 +80,7 @@ macro(nebula_add_library name type)
         # hbase_thrift_generator
         parser_target
         wkt_parser_target
+        datetime_parser_target
     )
 endmacro()
 
