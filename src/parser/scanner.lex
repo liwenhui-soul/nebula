@@ -128,6 +128,7 @@ LABEL_FULL_WIDTH            {CN_EN_FULL_WIDTH}{CN_EN_NUM_FULL_WIDTH}*
 "IF"                        { return TokenType::KW_IF; }
 "NOT"                       { return TokenType::KW_NOT; }
 "EXISTS"                    { return TokenType::KW_EXISTS; }
+"IGNORE_EXISTED_INDEX"      { return TokenType::KW_IGNORE_EXISTED_INDEX; }
 "WITH"                      { return TokenType::KW_WITH; }
 "CHANGE"                    { return TokenType::KW_CHANGE; }
 "GRANT"                     { return TokenType::KW_GRANT; }
