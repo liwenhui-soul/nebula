@@ -9,6 +9,7 @@
 #include "common/fs/TempDir.h"
 #include "meta/processors/drainer/DrainerProcessor.h"
 #include "meta/processors/parts/CreateSpaceProcessor.h"
+#include "meta/processors/zone/AddHostsProcessor.h"
 #include "meta/test/TestUtils.h"
 
 namespace nebula {
@@ -20,6 +21,16 @@ TEST(DrainerTest, DrainerTest) {
   // Prepare
   std::unique_ptr<kvstore::KVStore> kv(MockCluster::initMetaKV(rootPath.path()));
 
+  {
+    cpp2::AddHostsReq req;
+    std::vector<HostAddr> hosts = {{"0", 0}, {"1", 1}, {"2", 2}, {"3", 3}};
+    req.set_hosts(std::move(hosts));
+    auto* processor = AddHostsProcessor::instance(kv.get());
+    auto f = processor->getFuture();
+    processor->process(req);
+    auto resp = std::move(f).get();
+    ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+  }
   {
     // Register drainer machine
     std::vector<HostAddr> addresses;

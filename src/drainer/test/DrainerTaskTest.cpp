@@ -15,6 +15,7 @@
 #include "drainer/test/TestUtils.h"
 #include "interface/gen-cpp2/meta_types.h"
 #include "kvstore/wal/FileBasedWal.h"
+#include "meta/processors/zone/AddHostsProcessor.h"
 #include "mock/MockCluster.h"
 #include "mock/MockData.h"
 
@@ -858,10 +859,14 @@ TEST(DrainerTaskTest, PartNumNotSameOnePartTest) {
   HostAddr localHost(cluster.localIP(), network::NetworkUtils::getAvailablePort());
   meta::MetaClientOptions options;
   options.localHost_ = localHost;
-  options.role_ = meta::cpp2::HostRole::STORAGE;
   cluster.initMetaClient(std::move(options));
   auto* mClient = cluster.metaClient_.get();
 
+  {
+    std::vector<HostAddr> hosts = {localHost};
+    auto result = mClient->addHosts(std::move(hosts)).get();
+    EXPECT_TRUE(result.ok());
+  }
   cluster.initStorageKV(path.c_str(), localHost);
   auto* storageEnv = cluster.storageEnv_.get();
 
@@ -1122,9 +1127,13 @@ TEST(DrainerTaskTest, PartNumNotSameMultiPartTest) {
   HostAddr localHost(cluster.localIP(), network::NetworkUtils::getAvailablePort());
   meta::MetaClientOptions options;
   options.localHost_ = localHost;
-  options.role_ = meta::cpp2::HostRole::STORAGE;
   cluster.initMetaClient(std::move(options));
   auto* mClient = cluster.metaClient_.get();
+  {
+    std::vector<HostAddr> hosts = {localHost};
+    auto result = mClient->addHosts(std::move(hosts)).get();
+    EXPECT_TRUE(result.ok());
+  }
 
   cluster.initStorageKV(path.c_str(), localHost);
   auto* storageEnv = cluster.storageEnv_.get();

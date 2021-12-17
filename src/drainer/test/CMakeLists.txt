@@ -1,4 +1,5 @@
 set(drainer_test_deps
+    $<TARGET_OBJECTS:datetime_parser_obj>
     $<TARGET_OBJECTS:meta_obj>
     $<TARGET_OBJECTS:meta_client_obj>
     $<TARGET_OBJECTS:file_based_cluster_id_man_obj>

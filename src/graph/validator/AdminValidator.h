@@ -178,6 +178,18 @@ class AddDrainerValidator final : public Validator {
   Status toPlan() override;
 };
 
+class AddHostsValidator final : public Validator {
+ public:
+  AddHostsValidator(Sentence* sentence, QueryContext* context) : Validator(sentence, context) {
+    setNoSpaceRequired();
+  }
+
+ private:
+  Status validateImpl() override;
+
+  Status toPlan() override;
+};
+
 class RemoveDrainerValidator final : public Validator {
  public:
   RemoveDrainerValidator(Sentence* sentence, QueryContext* context)
@@ -192,6 +204,18 @@ class RemoveDrainerValidator final : public Validator {
 class ListDrainersValidator final : public Validator {
  public:
   ListDrainersValidator(Sentence* sentence, QueryContext* context) : Validator(sentence, context) {}
+
+ private:
+  Status validateImpl() override;
+
+  Status toPlan() override;
+};
+
+class DropHostsValidator final : public Validator {
+ public:
+  DropHostsValidator(Sentence* sentence, QueryContext* context) : Validator(sentence, context) {
+    setNoSpaceRequired();
+  }
 
  private:
   Status validateImpl() override;

@@ -35,6 +35,13 @@ void HBProcessor::process(const cpp2::HBReq& req) {
             << ", role = " << apache::thrift::util::enumNameSafe(role);
   if (role == cpp2::HostRole::STORAGE || role == cpp2::HostRole::META_LISTENER ||
       role == cpp2::HostRole::STORAGE_LISTENER) {
+    if (!ActiveHostsMan::machineRegisted(kvstore_, host)) {
+      LOG(ERROR) << "Machine " << host << " is not registed";
+      handleErrorCode(nebula::cpp2::ErrorCode::E_MACHINE_NOT_FOUND);
+      onFinished();
+      return;
+    }
+
     ClusterID peerClusterId = req.get_cluster_id();
     if (peerClusterId == 0) {
       LOG(INFO) << "Set clusterId for new host " << host << "!";
@@ -68,7 +75,7 @@ void HBProcessor::process(const cpp2::HBReq& req) {
     }
   }
 
-  HostInfo info(time::WallClock::fastNowInMilliSec(), req.get_role(), req.get_git_info_sha());
+  HostInfo info(time::WallClock::fastNowInMilliSec(), role, req.get_git_info_sha());
   if (req.leader_partIds_ref().has_value()) {
     ret = ActiveHostsMan::updateHostInfo(kvstore_, host, info, &*req.leader_partIds_ref());
   } else {
