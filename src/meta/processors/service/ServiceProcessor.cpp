@@ -62,37 +62,102 @@ void ListServiceClientsProcessor::process(const cpp2::ListServiceClientsReq& req
   auto type = req.get_type();
 
   std::unordered_map<cpp2::ExternalServiceType, std::vector<cpp2::ServiceClient>> serviceClients;
-  if (type == cpp2::ExternalServiceType::ALL) {
-    const auto& prefix = MetaKeyUtils::servicePrefix();
-    auto iterRet = doPrefix(prefix);
-    if (!nebula::ok(iterRet)) {
-      auto retCode = nebula::error(iterRet);
-      LOG(ERROR) << "List service failed, error: " << apache::thrift::util::enumNameSafe(retCode);
-      handleErrorCode(retCode);
-      onFinished();
-      return;
-    }
-    auto iter = nebula::value(iterRet).get();
-    while (iter->valid()) {
-      auto sType = MetaKeyUtils::parseServiceType(iter->key());
-      auto client = MetaKeyUtils::parseServiceClients(iter->val());
-      serviceClients.emplace(std::move(sType), std::move(client));
-      iter->next();
-    }
-  } else {
-    const auto& serviceKey = MetaKeyUtils::serviceKey(type);
-    auto ret = doGet(serviceKey);
-    if (!nebula::ok(ret) && nebula::error(ret) != nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-      auto retCode = nebula::error(ret);
-      LOG(ERROR) << "List service failed, error: " << apache::thrift::util::enumNameSafe(retCode);
-      handleErrorCode(retCode);
-      onFinished();
-      return;
-    }
+  const auto& serviceKey = MetaKeyUtils::serviceKey(type);
+  auto ret = doGet(serviceKey);
+  if (!nebula::ok(ret) && nebula::error(ret) != nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+    auto retCode = nebula::error(ret);
+    LOG(ERROR) << "List service failed, error: " << apache::thrift::util::enumNameSafe(retCode);
+    handleErrorCode(retCode);
+    onFinished();
+    return;
+  }
 
-    if (nebula::ok(ret)) {
-      serviceClients.emplace(type, MetaKeyUtils::parseServiceClients(nebula::value(ret)));
+  if (nebula::ok(ret)) {
+    serviceClients.emplace(type, MetaKeyUtils::parseServiceClients(nebula::value(ret)));
+  }
+
+  resp_.set_clients(std::move(serviceClients));
+  handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+  onFinished();
+}
+
+void SignInSpaceServiceProcessor::process(const cpp2::SignInSpaceServiceReq& req) {
+  auto space = req.get_space_id();
+  CHECK_SPACE_ID_AND_RETURN(space);
+
+  folly::SharedMutex::WriteHolder wHolder(LockUtils::spaceServiceLock());
+  folly::SharedMutex::ReadHolder rHolder(LockUtils::spaceLock());
+  auto type = req.get_type();
+
+  auto serviceKey = MetaKeyUtils::spaceServiceKey(space, type);
+  auto ret = doGet(serviceKey);
+  if (nebula::ok(ret)) {
+    LOG(ERROR) << "Service already exists in space " << space;
+    handleErrorCode(nebula::cpp2::ErrorCode::E_EXISTED);
+    onFinished();
+    return;
+  } else {
+    auto retCode = nebula::error(ret);
+    if (retCode != nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+      LOG(ERROR) << "Sign in space service failed, error: "
+                 << apache::thrift::util::enumNameSafe(retCode);
+      handleErrorCode(retCode);
+      onFinished();
+      return;
     }
+  }
+
+  std::vector<kvstore::KV> data;
+  data.emplace_back(std::move(serviceKey), MetaKeyUtils::serviceVal(req.get_clients()));
+  doSyncPutAndUpdate(std::move(data));
+}
+
+void SignOutSpaceServiceProcessor::process(const cpp2::SignOutSpaceServiceReq& req) {
+  auto space = req.get_space_id();
+  CHECK_SPACE_ID_AND_RETURN(space)
+  folly::SharedMutex::WriteHolder wHolder(LockUtils::spaceServiceLock());
+  auto type = req.get_type();
+
+  auto serviceKey = MetaKeyUtils::spaceServiceKey(space, type);
+  auto ret = doGet(serviceKey);
+  if (!nebula::ok(ret)) {
+    auto retCode = nebula::error(ret);
+    if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+      LOG(ERROR) << "Sign out space service failed, service not exists in space " << space;
+    } else {
+      LOG(ERROR) << "Sign out space service failed, error: "
+                 << apache::thrift::util::enumNameSafe(retCode);
+    }
+    handleErrorCode(retCode);
+    onFinished();
+    return;
+  }
+
+  doSyncMultiRemoveAndUpdate({std::move(serviceKey)});
+}
+
+void ListSpaceServiceClientsProcessor::process(const cpp2::ListSpaceServiceClientsReq& req) {
+  auto space = req.get_space_id();
+  CHECK_SPACE_ID_AND_RETURN(space)
+
+  folly::SharedMutex::ReadHolder rHolder(LockUtils::spaceServiceLock());
+  auto type = req.get_type();
+
+  std::unordered_map<cpp2::ExternalSpaceServiceType, std::vector<cpp2::ServiceClient>>
+      serviceClients;
+  const auto& serviceKey = MetaKeyUtils::spaceServiceKey(space, type);
+  auto ret = doGet(serviceKey);
+  if (!nebula::ok(ret) && nebula::error(ret) != nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+    auto retCode = nebula::error(ret);
+    LOG(ERROR) << "List space service failed, error: "
+               << apache::thrift::util::enumNameSafe(retCode);
+    handleErrorCode(retCode);
+    onFinished();
+    return;
+  }
+
+  if (nebula::ok(ret)) {
+    serviceClients.emplace(type, MetaKeyUtils::parseServiceClients(nebula::value(ret)));
   }
 
   resp_.set_clients(std::move(serviceClients));

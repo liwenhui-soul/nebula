@@ -29,6 +29,7 @@ class LockUtils {
   GENERATE_LOCK(tagIndex);
   GENERATE_LOCK(edgeIndex);
   GENERATE_LOCK(service);
+  GENERATE_LOCK(spaceService);
   GENERATE_LOCK(fulltextIndex);
   GENERATE_LOCK(user);
   GENERATE_LOCK(config);

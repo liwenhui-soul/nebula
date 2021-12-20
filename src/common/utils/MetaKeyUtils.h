@@ -361,6 +361,13 @@ class MetaKeyUtils final {
 
   static std::vector<meta::cpp2::ServiceClient> parseServiceClients(folly::StringPiece rawData);
 
+  static std::string spaceServiceKey(GraphSpaceID spaceId,
+                                     const meta::cpp2::ExternalSpaceServiceType& type);
+
+  static std::string spaceServicePrefix(GraphSpaceID spaceId);
+
+  static std::string spaceServiceVal(const std::vector<meta::cpp2::ServiceClient>& client);
+
   static const std::string& sessionPrefix();
 
   static std::string sessionKey(SessionID sessionId);

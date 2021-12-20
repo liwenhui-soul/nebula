@@ -1113,6 +1113,73 @@ class SignOutService final : public SingleDependencyNode {
   meta::cpp2::ExternalServiceType type_;
 };
 
+class SignInSpaceService final : public SingleDependencyNode {
+ public:
+  static SignInSpaceService* make(QueryContext* qctx,
+                                  PlanNode* input,
+                                  std::vector<meta::cpp2::ServiceClient> clients,
+                                  meta::cpp2::ExternalSpaceServiceType type) {
+    return qctx->objPool()->add(new SignInSpaceService(qctx, input, std::move(clients), type));
+  }
+
+  const std::vector<meta::cpp2::ServiceClient>& clients() const { return clients_; }
+
+  meta::cpp2::ExternalSpaceServiceType type() const { return type_; }
+
+ private:
+  SignInSpaceService(QueryContext* qctx,
+                     PlanNode* input,
+                     std::vector<meta::cpp2::ServiceClient> clients,
+                     meta::cpp2::ExternalSpaceServiceType type)
+      : SingleDependencyNode(qctx, Kind::kSignInSpaceService, input),
+        clients_(std::move(clients)),
+        type_(type) {}
+
+ private:
+  std::vector<meta::cpp2::ServiceClient> clients_;
+  meta::cpp2::ExternalSpaceServiceType type_;
+};
+
+class SignOutSpaceService final : public SingleDependencyNode {
+ public:
+  static SignOutSpaceService* make(QueryContext* qctx,
+                                   PlanNode* input,
+                                   meta::cpp2::ExternalSpaceServiceType type) {
+    return qctx->objPool()->add(new SignOutSpaceService(qctx, input, type));
+  }
+
+  meta::cpp2::ExternalSpaceServiceType type() const { return type_; }
+
+ private:
+  SignOutSpaceService(QueryContext* qctx,
+                      PlanNode* input,
+                      meta::cpp2::ExternalSpaceServiceType type)
+      : SingleDependencyNode(qctx, Kind::kSignOutSpaceService, input), type_(type) {}
+
+ private:
+  meta::cpp2::ExternalSpaceServiceType type_;
+};
+
+class ShowSpaceServiceClients final : public SingleDependencyNode {
+ public:
+  static ShowSpaceServiceClients* make(QueryContext* qctx,
+                                       PlanNode* input,
+                                       meta::cpp2::ExternalSpaceServiceType type) {
+    return qctx->objPool()->add(new ShowSpaceServiceClients(qctx, input, type));
+  }
+
+  meta::cpp2::ExternalSpaceServiceType type() const { return type_; }
+
+ private:
+  ShowSpaceServiceClients(QueryContext* qctx,
+                          PlanNode* input,
+                          meta::cpp2::ExternalSpaceServiceType type)
+      : SingleDependencyNode(qctx, Kind::kShowSpaceServiceClients, input), type_(type) {}
+
+ private:
+  meta::cpp2::ExternalSpaceServiceType type_;
+};
+
 class ShowSessions final : public SingleInputNode {
  public:
   static ShowSessions* make(QueryContext* qctx,

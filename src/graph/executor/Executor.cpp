@@ -45,6 +45,7 @@
 #include "graph/executor/admin/SignOutServiceExecutor.h"
 #include "graph/executor/admin/SnapshotExecutor.h"
 #include "graph/executor/admin/SpaceExecutor.h"
+#include "graph/executor/admin/SpaceServiceExecutor.h"
 #include "graph/executor/admin/SubmitJobExecutor.h"
 #include "graph/executor/admin/SwitchSpaceExecutor.h"
 #include "graph/executor/admin/UpdateUserExecutor.h"
@@ -504,6 +505,15 @@ Executor *Executor::makeExecutor(QueryContext *qctx, const PlanNode *node) {
     }
     case PlanNode::Kind::kSignOutService: {
       return pool->add(new SignOutServiceExecutor(node, qctx));
+    }
+    case PlanNode::Kind::kSignInSpaceService: {
+      return pool->add(new SignInSpaceServiceExecutor(node, qctx));
+    }
+    case PlanNode::Kind::kSignOutSpaceService: {
+      return pool->add(new SignOutSpaceServiceExecutor(node, qctx));
+    }
+    case PlanNode::Kind::kShowSpaceServiceClients: {
+      return pool->add(new ShowSpaceServiceClientsExecutor(node, qctx));
     }
     case PlanNode::Kind::kDownload: {
       return pool->add(new DownloadExecutor(node, qctx));

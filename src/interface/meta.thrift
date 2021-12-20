@@ -1014,8 +1014,10 @@ struct RestoreMetaReq {
 
 enum ExternalServiceType {
     ELASTICSEARCH = 0x01,
-    DRAINER       = 0x02,
-    ALL           = 0x03,
+} (cpp.enum_strict)
+
+enum ExternalSpaceServiceType {
+    DRAINER       = 0x01,
 } (cpp.enum_strict)
 
 struct ServiceClient {
@@ -1042,6 +1044,29 @@ struct ListServiceClientsResp {
     1: common.ErrorCode    code,
     2: common.HostAddr     leader,
     3: map<ExternalServiceType, list<ServiceClient>>
+    (cpp.template = "std::unordered_map") clients,
+}
+
+struct SignInSpaceServiceReq {
+    1: common.GraphSpaceID       space_id,
+    2: ExternalSpaceServiceType  type,
+    3: list<ServiceClient>       clients,
+}
+
+struct SignOutSpaceServiceReq {
+    1: common.GraphSpaceID       space_id,
+    2: ExternalSpaceServiceType  type,
+}
+
+struct ListSpaceServiceClientsReq {
+    1: common.GraphSpaceID         space_id,
+    2: ExternalSpaceServiceType    type,
+}
+
+struct ListSpaceServiceClientsResp {
+    1: common.ErrorCode    code,
+    2: common.HostAddr     leader,
+    3: map<ExternalSpaceServiceType, list<ServiceClient>>
     (cpp.template = "std::unordered_map") clients,
 }
 
@@ -1280,6 +1305,10 @@ service MetaService {
     ExecResp signInService(1: SignInServiceReq req);
     ExecResp signOutService(1: SignOutServiceReq req);
     ListServiceClientsResp listServiceClients(1: ListServiceClientsReq req);
+
+    ExecResp signInSpaceService(1: SignInSpaceServiceReq req);
+    ExecResp signOutSpaceService(1: SignOutSpaceServiceReq req);
+    ListSpaceServiceClientsResp listSpaceServiceClients(1: ListSpaceServiceClientsReq req);
 
     ExecResp createFTIndex(1: CreateFTIndexReq req);
     ExecResp dropFTIndex(1: DropFTIndexReq req);

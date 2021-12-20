@@ -2274,14 +2274,15 @@ TEST(MetaClientTest, DrainerServiceAndListenerTest) {
   }
   {
     // sign in drainer service
-    cpp2::ExternalServiceType type = cpp2::ExternalServiceType::DRAINER;
-    auto result = client->signInService(type, clients).get();
+    cpp2::ExternalSpaceServiceType type = cpp2::ExternalSpaceServiceType::DRAINER;
+    auto result = client->signInSpaceService(space, type, clients).get();
     ASSERT_TRUE(result.ok());
   }
   {
-    auto result = client->listServiceClients(cpp2::ExternalServiceType::DRAINER).get();
+    auto result =
+        client->listSpaceServiceClients(space, cpp2::ExternalSpaceServiceType::DRAINER).get();
     ASSERT_TRUE(result.ok());
-    ASSERT_EQ(clients, result.value()[cpp2::ExternalServiceType::DRAINER]);
+    ASSERT_EQ(clients, result.value()[cpp2::ExternalSpaceServiceType::DRAINER]);
   }
   {
     // add sync listener，succeed
@@ -2317,11 +2318,12 @@ TEST(MetaClientTest, DrainerServiceAndListenerTest) {
     ASSERT_EQ(0, listeners.size());
   }
   {
-    auto result = client->signOutService(cpp2::ExternalServiceType::DRAINER).get();
+    auto result = client->signOutSpaceService(space, cpp2::ExternalSpaceServiceType::DRAINER).get();
     ASSERT_TRUE(result.ok());
   }
   {
-    auto result = client->listServiceClients(cpp2::ExternalServiceType::DRAINER).get();
+    auto result =
+        client->listSpaceServiceClients(space, cpp2::ExternalSpaceServiceType::DRAINER).get();
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().empty());
   }

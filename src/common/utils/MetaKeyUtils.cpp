@@ -27,6 +27,7 @@ static const std::unordered_map<std::string, std::pair<std::string, bool>> syste
     {"groups", {"__groups__", true}},
     {"zones", {"__zones__", true}},
     {"services", {"__services__", false}},
+    {"space_services", {"__space_services__", false}},
     {"sessions", {"__sessions__", true}}};
 
 // SystemInfo will always be backed up
@@ -90,9 +91,10 @@ static const std::string kBalanceTaskTable    = tableMaps.at("balance_task").fir
 static const std::string kBalancePlanTable    = tableMaps.at("balance_plan").first;     // NOLINT
 static const std::string kLocalIdTable        = tableMaps.at("local_id").first;         // NOLINT
 
-const std::string kFTIndexTable        = tableMaps.at("ft_index").first;         // NOLINT
-const std::string kServicesTable  = systemTableMaps.at("services").first;        // NOLINT
-const std::string kSessionsTable = systemTableMaps.at("sessions").first;         // NOLINT
+const std::string kFTIndexTable        = tableMaps.at("ft_index").first;                // NOLINT
+const std::string kServicesTable       = systemTableMaps.at("services").first;          // NOLINT
+const std::string kSpaceServicesTable  = systemTableMaps.at("space_services").first;    // NOLINT
+const std::string kSessionsTable       = systemTableMaps.at("sessions").first;          // NOLINT
 
 const std::string kIdKey = systemInfoMaps.at("autoIncrementId").first;                // NOLINT
 const std::string kLastUpdateTimeTable = systemInfoMaps.at("lastUpdateTime").first;   // NOLINT
@@ -1212,6 +1214,25 @@ std::vector<meta::cpp2::ServiceClient> MetaKeyUtils::parseServiceClients(
   std::vector<meta::cpp2::ServiceClient> clients;
   apache::thrift::CompactSerializer::deserialize(rawData, clients);
   return clients;
+}
+
+std::string MetaKeyUtils::spaceServiceKey(GraphSpaceID spaceId,
+                                          const meta::cpp2::ExternalSpaceServiceType& type) {
+  std::string key;
+  key.reserve(kSpaceServicesTable.size() + sizeof(GraphSpaceID) +
+              sizeof(meta::cpp2::ExternalSpaceServiceType));
+  key.append(kSpaceServicesTable.data(), kSpaceServicesTable.size())
+      .append(reinterpret_cast<const char*>(&spaceId), sizeof(GraphSpaceID))
+      .append(reinterpret_cast<const char*>(&type), sizeof(meta::cpp2::ExternalSpaceServiceType));
+  return key;
+}
+
+std::string MetaKeyUtils::spaceServicePrefix(GraphSpaceID spaceId) {
+  std::string key;
+  key.reserve(kSpaceServicesTable.size() + sizeof(GraphSpaceID));
+  key.append(kSpaceServicesTable.data(), kSpaceServicesTable.size())
+      .append(reinterpret_cast<const char*>(&spaceId), sizeof(GraphSpaceID));
+  return key;
 }
 
 const std::string& MetaKeyUtils::sessionPrefix() { return kSessionsTable; }

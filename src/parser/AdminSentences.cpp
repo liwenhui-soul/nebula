@@ -349,8 +349,6 @@ std::string ShowServiceClientsSentence::toString() const {
   switch (type_) {
     case meta::cpp2::ExternalServiceType::ELASTICSEARCH:
       return "SHOW TEXT SEARCH CLIENTS";
-    case meta::cpp2::ExternalServiceType::DRAINER:
-      return "SHOW DRAINER CLIENTS";
     default:
       LOG(FATAL) << "Unknown service type " << static_cast<uint8_t>(type_);
   }
@@ -362,9 +360,6 @@ std::string SignInServiceSentence::toString() const {
   switch (type_) {
     case meta::cpp2::ExternalServiceType::ELASTICSEARCH:
       buf += "SIGN IN TEXT SERVICE ";
-      break;
-    case meta::cpp2::ExternalServiceType::DRAINER:
-      buf += "SIGN IN DRAINER SERVICE ";
       break;
     default:
       LOG(FATAL) << "Unknown service type " << static_cast<uint8_t>(type_);
@@ -405,8 +400,66 @@ std::string SignOutServiceSentence::toString() const {
   switch (type_) {
     case meta::cpp2::ExternalServiceType::ELASTICSEARCH:
       return "SIGN OUT TEXT SERVICE";
-    case meta::cpp2::ExternalServiceType::DRAINER:
+    default:
+      LOG(FATAL) << "Unknown service type " << static_cast<uint8_t>(type_);
+  }
+}
+
+std::string SignInSpaceServiceSentence::toString() const {
+  std::string buf;
+  buf.reserve(256);
+  switch (type_) {
+    case meta::cpp2::ExternalSpaceServiceType::DRAINER:
+      buf += "SIGN IN DRAINER SERVICE ";
+      break;
+    default:
+      LOG(FATAL) << "Unknown service type " << static_cast<uint8_t>(type_);
+  }
+
+  for (auto &client : clients_->clients()) {
+    buf += "(";
+    buf += client.get_host().host;
+    buf += ":";
+    buf += std::to_string(client.get_host().port);
+    if (client.conn_type_ref().has_value()) {
+      std::string connType = *client.get_conn_type();
+      auto toupper = [](auto c) { return ::toupper(c); };
+      std::transform(connType.begin(), connType.end(), connType.begin(), toupper);
+      buf += ", ";
+      buf += connType;
+    }
+    if (client.user_ref().has_value() && !(*client.user_ref()).empty()) {
+      buf += ", \"";
+      buf += *client.get_user();
+      buf += "\"";
+    }
+    if (client.pwd_ref().has_value() && !(*client.pwd_ref()).empty()) {
+      buf += ", \"";
+      buf += *client.get_pwd();
+      buf += "\"";
+    }
+    buf += ")";
+    buf += ", ";
+  }
+  if (!buf.empty()) {
+    buf.resize(buf.size() - 2);
+  }
+  return buf;
+}
+
+std::string SignOutSpaceServiceSentence::toString() const {
+  switch (type_) {
+    case meta::cpp2::ExternalSpaceServiceType::DRAINER:
       return "SIGN OUT DRAINER SERVICE";
+    default:
+      LOG(FATAL) << "Unknown service type " << static_cast<uint8_t>(type_);
+  }
+}
+
+std::string ShowSpaceServiceClientsSentence::toString() const {
+  switch (type_) {
+    case meta::cpp2::ExternalSpaceServiceType::DRAINER:
+      return "SHOW DRAINER CLIENTS";
     default:
       LOG(FATAL) << "Unknown service type " << static_cast<uint8_t>(type_);
   }

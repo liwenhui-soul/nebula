@@ -312,6 +312,24 @@ folly::Future<cpp2::ListServiceClientsResp> MetaServiceHandler::future_listServi
   RETURN_FUTURE(processor);
 }
 
+folly::Future<cpp2::ExecResp> MetaServiceHandler::future_signInSpaceService(
+    const cpp2::SignInSpaceServiceReq& req) {
+  auto* processor = SignInSpaceServiceProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
+folly::Future<cpp2::ExecResp> MetaServiceHandler::future_signOutSpaceService(
+    const cpp2::SignOutSpaceServiceReq& req) {
+  auto* processor = SignOutSpaceServiceProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
+folly::Future<cpp2::ListSpaceServiceClientsResp> MetaServiceHandler::future_listSpaceServiceClients(
+    const cpp2::ListSpaceServiceClientsReq& req) {
+  auto* processor = ListSpaceServiceClientsProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
 folly::Future<cpp2::ExecResp> MetaServiceHandler::future_createFTIndex(
     const cpp2::CreateFTIndexReq& req) {
   auto* processor = CreateFTIndexProcessor::instance(kvstore_);

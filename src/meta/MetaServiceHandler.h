@@ -123,6 +123,15 @@ class MetaServiceHandler final : public cpp2::MetaServiceSvIf {
   folly::Future<cpp2::ListServiceClientsResp> future_listServiceClients(
       const cpp2::ListServiceClientsReq& req) override;
 
+  folly::Future<cpp2::ExecResp> future_signInSpaceService(
+      const cpp2::SignInSpaceServiceReq& req) override;
+
+  folly::Future<cpp2::ExecResp> future_signOutSpaceService(
+      const cpp2::SignOutSpaceServiceReq& req) override;
+
+  folly::Future<cpp2::ListSpaceServiceClientsResp> future_listSpaceServiceClients(
+      const cpp2::ListSpaceServiceClientsReq& req) override;
+
   folly::Future<cpp2::ExecResp> future_createFTIndex(const cpp2::CreateFTIndexReq& req) override;
 
   folly::Future<cpp2::ExecResp> future_dropFTIndex(const cpp2::DropFTIndexReq& req) override;

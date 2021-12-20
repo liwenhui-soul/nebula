@@ -76,6 +76,9 @@ using Listeners =
 using ServiceClientsList =
     std::unordered_map<cpp2::ExternalServiceType, std::vector<cpp2::ServiceClient>>;
 
+using SpaceServiceClients =
+    std::unordered_map<cpp2::ExternalSpaceServiceType, std::vector<cpp2::ServiceClient>>;
+
 struct SpaceInfoCache {
   cpp2::SpaceDesc spaceDesc_;
   PartsAlloc partsAlloc_;
@@ -465,6 +468,16 @@ class MetaClient {
 
   StatusOr<std::vector<cpp2::ServiceClient>> getServiceClientsFromCache(
       const cpp2::ExternalServiceType& type);
+
+  folly::Future<StatusOr<bool>> signInSpaceService(GraphSpaceID spaceId,
+                                                   const cpp2::ExternalSpaceServiceType& type,
+                                                   const std::vector<cpp2::ServiceClient>& clients);
+
+  folly::Future<StatusOr<bool>> signOutSpaceService(GraphSpaceID spaceId,
+                                                    const cpp2::ExternalSpaceServiceType& type);
+
+  folly::Future<StatusOr<SpaceServiceClients>> listSpaceServiceClients(
+      GraphSpaceID spaceId, const cpp2::ExternalSpaceServiceType& type);
 
   StatusOr<cpp2::DrainerClientInfo> getDrainerClientFromCache(GraphSpaceID spaceId,
                                                               PartitionID partId);

@@ -547,7 +547,7 @@ bool MetaClient::loadDrainers(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCac
 }
 
 bool MetaClient::loadGlobalServiceClients() {
-  auto ret = listServiceClients(cpp2::ExternalServiceType::ALL).get();
+  auto ret = listServiceClients(cpp2::ExternalServiceType::ELASTICSEARCH).get();
   if (!ret.ok()) {
     LOG(ERROR) << "List services failed, status:" << ret.status();
     return false;
@@ -3389,14 +3389,69 @@ StatusOr<std::vector<cpp2::ServiceClient>> MetaClient::getServiceClientsFromCach
   }
 
   folly::RWSpinLock::ReadHolder holder(localCacheLock_);
-  if (type == cpp2::ExternalServiceType::ELASTICSEARCH ||
-      type == cpp2::ExternalServiceType::DRAINER) {
+  if (type == cpp2::ExternalServiceType::ELASTICSEARCH) {
     auto sIter = serviceClientList_.find(type);
     if (sIter != serviceClientList_.end()) {
       return sIter->second;
     }
   }
   return Status::Error("Service not found!");
+}
+
+folly::Future<StatusOr<bool>> MetaClient::signInSpaceService(
+    GraphSpaceID spaceId,
+    const cpp2::ExternalSpaceServiceType& type,
+    const std::vector<cpp2::ServiceClient>& clients) {
+  cpp2::SignInSpaceServiceReq req;
+  req.set_space_id(spaceId);
+  req.set_type(type);
+  req.set_clients(clients);
+  folly::Promise<StatusOr<bool>> promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_signInSpaceService(request); },
+      [](cpp2::ExecResp&& resp) -> bool {
+        return resp.get_code() == nebula::cpp2::ErrorCode::SUCCEEDED;
+      },
+      std::move(promise),
+      true);
+  return future;
+}
+
+folly::Future<StatusOr<bool>> MetaClient::signOutSpaceService(
+    GraphSpaceID spaceId, const cpp2::ExternalSpaceServiceType& type) {
+  cpp2::SignOutSpaceServiceReq req;
+  req.set_space_id(spaceId);
+  req.set_type(type);
+  folly::Promise<StatusOr<bool>> promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_signOutSpaceService(request); },
+      [](cpp2::ExecResp&& resp) -> bool {
+        return resp.get_code() == nebula::cpp2::ErrorCode::SUCCEEDED;
+      },
+      std::move(promise),
+      true);
+  return future;
+}
+
+folly::Future<StatusOr<SpaceServiceClients>> MetaClient::listSpaceServiceClients(
+    GraphSpaceID spaceId, const cpp2::ExternalSpaceServiceType& type) {
+  cpp2::ListSpaceServiceClientsReq req;
+  req.set_space_id(spaceId);
+  req.set_type(type);
+  folly::Promise<StatusOr<SpaceServiceClients>> promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_listSpaceServiceClients(request); },
+      [](cpp2::ListSpaceServiceClientsResp&& resp) -> decltype(auto) {
+        return std::move(resp).get_clients();
+      },
+      std::move(promise));
+  return future;
 }
 
 StatusOr<cpp2::DrainerClientInfo> MetaClient::getDrainerClientFromCache(GraphSpaceID spaceId,

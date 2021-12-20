@@ -242,6 +242,12 @@ std::unique_ptr<Validator> Validator::makeValidator(Sentence* sentence, QueryCon
       return std::make_unique<SignInServiceValidator>(sentence, context);
     case Sentence::Kind::kSignOutService:
       return std::make_unique<SignOutServiceValidator>(sentence, context);
+    case Sentence::Kind::kSignInSpaceService:
+      return std::make_unique<SignInSpaceServiceValidator>(sentence, context);
+    case Sentence::Kind::kSignOutSpaceService:
+      return std::make_unique<SignOutSpaceServiceValidator>(sentence, context);
+    case Sentence::Kind::kShowSpaceServiceClients:
+      return std::make_unique<ShowSpaceServiceClientsValidator>(sentence, context);
     case Sentence::Kind::kDownload:
       return std::make_unique<DownloadValidator>(sentence, context);
     case Sentence::Kind::kIngest:

@@ -50,6 +50,45 @@ class ListServiceClientsProcessor : public BaseProcessor<cpp2::ListServiceClient
       : BaseProcessor<cpp2::ListServiceClientsResp>(kvstore) {}
 };
 
+class SignInSpaceServiceProcessor : public BaseProcessor<cpp2::ExecResp> {
+ public:
+  static SignInSpaceServiceProcessor* instance(kvstore::KVStore* kvstore) {
+    return new SignInSpaceServiceProcessor(kvstore);
+  }
+
+  void process(const cpp2::SignInSpaceServiceReq& req);
+
+ private:
+  explicit SignInSpaceServiceProcessor(kvstore::KVStore* kvstore)
+      : BaseProcessor<cpp2::ExecResp>(kvstore) {}
+};
+
+class SignOutSpaceServiceProcessor : public BaseProcessor<cpp2::ExecResp> {
+ public:
+  static SignOutSpaceServiceProcessor* instance(kvstore::KVStore* kvstore) {
+    return new SignOutSpaceServiceProcessor(kvstore);
+  }
+
+  void process(const cpp2::SignOutSpaceServiceReq& req);
+
+ private:
+  explicit SignOutSpaceServiceProcessor(kvstore::KVStore* kvstore)
+      : BaseProcessor<cpp2::ExecResp>(kvstore) {}
+};
+
+class ListSpaceServiceClientsProcessor : public BaseProcessor<cpp2::ListSpaceServiceClientsResp> {
+ public:
+  static ListSpaceServiceClientsProcessor* instance(kvstore::KVStore* kvstore) {
+    return new ListSpaceServiceClientsProcessor(kvstore);
+  }
+
+  void process(const cpp2::ListSpaceServiceClientsReq& req);
+
+ private:
+  explicit ListSpaceServiceClientsProcessor(kvstore::KVStore* kvstore)
+      : BaseProcessor<cpp2::ListSpaceServiceClientsResp>(kvstore) {}
+};
+
 }  // namespace meta
 }  // namespace nebula
 

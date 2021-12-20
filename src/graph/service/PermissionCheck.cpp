@@ -70,7 +70,9 @@ Status PermissionCheck::permissionCheck(ClientSession *session,
     case Sentence::Kind::kIngest:
     case Sentence::Kind::kDownload:
     case Sentence::Kind::kSignOutService:
-    case Sentence::Kind::kSignInService: {
+    case Sentence::Kind::kSignInService:
+    case Sentence::Kind::kSignInSpaceService:
+    case Sentence::Kind::kSignOutSpaceService: {
       return PermissionManager::canWriteSpace(session);
     }
     case Sentence::Kind::kCreateTag:
@@ -151,6 +153,7 @@ Status PermissionCheck::permissionCheck(ClientSession *session,
     case Sentence::Kind::kShowCreateEdgeIndex:
     case Sentence::Kind::kShowListener:
     case Sentence::Kind::kShowDrainers:
+    case Sentence::Kind::kShowSpaceServiceClients:
     case Sentence::Kind::kShowFTIndexes:
     case Sentence::Kind::kAdminShowJobs: {
       /**

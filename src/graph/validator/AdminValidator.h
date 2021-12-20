@@ -374,6 +374,39 @@ class SignOutServiceValidator final : public Validator {
   Status toPlan() override;
 };
 
+class SignInSpaceServiceValidator final : public Validator {
+ public:
+  SignInSpaceServiceValidator(Sentence* sentence, QueryContext* context)
+      : Validator(sentence, context) {}
+
+ private:
+  Status validateImpl() override;
+
+  Status toPlan() override;
+};
+
+class SignOutSpaceServiceValidator final : public Validator {
+ public:
+  SignOutSpaceServiceValidator(Sentence* sentence, QueryContext* context)
+      : Validator(sentence, context) {}
+
+ private:
+  Status validateImpl() override;
+
+  Status toPlan() override;
+};
+
+class ShowSpaceServiceClientsValidator final : public Validator {
+ public:
+  ShowSpaceServiceClientsValidator(Sentence* sentence, QueryContext* context)
+      : Validator(sentence, context) {}
+
+ private:
+  Status validateImpl() override;
+
+  Status toPlan() override;
+};
+
 class ShowSessionsValidator final : public Validator {
  public:
   ShowSessionsValidator(Sentence* sentence, QueryContext* context) : Validator(sentence, context) {

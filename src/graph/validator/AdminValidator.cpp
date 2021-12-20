@@ -577,6 +577,49 @@ Status SignOutServiceValidator::toPlan() {
   return Status::OK();
 }
 
+Status SignInSpaceServiceValidator::validateImpl() {
+  auto sentence = static_cast<SignInSpaceServiceSentence *>(sentence_);
+  if (sentence->clients() == nullptr || sentence->clients()->clients().empty()) {
+    return Status::SemanticError("Space service client should not be empty");
+  }
+  return Status::OK();
+}
+
+Status SignInSpaceServiceValidator::toPlan() {
+  auto sentence = static_cast<SignInSpaceServiceSentence *>(sentence_);
+  std::vector<meta::cpp2::ServiceClient> clients;
+  if (sentence->clients() != nullptr) {
+    clients = sentence->clients()->clients();
+  }
+  auto type = sentence->getType();
+  auto *node = SignInSpaceService::make(qctx_, nullptr, std::move(clients), type);
+  root_ = node;
+  tail_ = root_;
+  return Status::OK();
+}
+
+Status SignOutSpaceServiceValidator::validateImpl() { return Status::OK(); }
+
+Status SignOutSpaceServiceValidator::toPlan() {
+  auto sentence = static_cast<SignOutSpaceServiceSentence *>(sentence_);
+  auto type = sentence->getType();
+  auto *node = SignOutSpaceService::make(qctx_, nullptr, type);
+  root_ = node;
+  tail_ = root_;
+  return Status::OK();
+}
+
+Status ShowSpaceServiceClientsValidator::validateImpl() { return Status::OK(); }
+
+Status ShowSpaceServiceClientsValidator::toPlan() {
+  auto sentence = static_cast<ShowSpaceServiceClientsSentence *>(sentence_);
+  auto type = sentence->getType();
+  auto *doNode = ShowSpaceServiceClients::make(qctx_, nullptr, type);
+  root_ = doNode;
+  tail_ = root_;
+  return Status::OK();
+}
+
 Status ShowSessionsValidator::toPlan() {
   auto sentence = static_cast<ShowSessionsSentence *>(sentence_);
   auto *node =

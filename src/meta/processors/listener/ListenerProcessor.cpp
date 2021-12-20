@@ -64,7 +64,8 @@ void AddListenerProcessor::process(const cpp2::AddListenerReq& req) {
   // Because each sync listener part uses a fixed drainer
   std::vector<cpp2::ServiceClient> drainerClients;
   if (type == cpp2::ListenerType::SYNC) {
-    const auto& serviceKey = MetaKeyUtils::serviceKey(cpp2::ExternalServiceType::DRAINER);
+    const auto& serviceKey =
+        MetaKeyUtils::spaceServiceKey(space, cpp2::ExternalSpaceServiceType::DRAINER);
     auto sRet = doGet(serviceKey);
     if (!nebula::ok(sRet)) {
       auto retCode = nebula::error(sRet);

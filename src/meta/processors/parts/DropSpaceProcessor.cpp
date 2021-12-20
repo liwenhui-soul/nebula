@@ -144,6 +144,23 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
   auto localIdkey = MetaKeyUtils::localIdKey(spaceId);
   deleteKeys.emplace_back(localIdkey);
 
+  // 10. Delete space leval external service data
+  auto spaceServicePre = MetaKeyUtils::spaceServicePrefix(spaceId);
+  auto spaceServiceRet = doPrefix(spaceServicePre);
+  if (!nebula::ok(spaceServiceRet)) {
+    auto retCode = nebula::error(spaceServiceRet);
+    LOG(ERROR) << "Drop space Failed, space " << spaceName
+               << " error: " << apache::thrift::util::enumNameSafe(retCode);
+    handleErrorCode(retCode);
+    onFinished();
+    return;
+  }
+  auto spaceServiceIter = nebula::value(spaceServiceRet).get();
+  while (spaceServiceIter->valid()) {
+    deleteKeys.emplace_back(spaceServiceIter->key());
+    spaceServiceIter->next();
+  }
+
   doSyncMultiRemoveAndUpdate(std::move(deleteKeys));
   LOG(INFO) << "Drop space " << spaceName << ", id " << spaceId;
 }

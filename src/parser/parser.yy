@@ -388,6 +388,7 @@ static constexpr size_t kCommentLengthLimit = 256;
 %type <explain_sentence> explain_sentence
 %type <sentences> sentences
 %type <sentence> sign_in_service_sentence sign_out_service_sentence
+%type <sentence> sign_in_space_service_sentence sign_out_space_service_sentence
 
 %type <boolval> opt_if_not_exists
 %type <boolval> opt_if_exists
@@ -1913,17 +1914,23 @@ sign_in_service_sentence
     : KW_SIGN KW_IN KW_TEXT KW_SERVICE service_client_list {
         $$ = new SignInServiceSentence(meta::cpp2::ExternalServiceType::ELASTICSEARCH, $5);
     }
-    | KW_SIGN KW_IN KW_DRAINER KW_SERVICE service_client_list {
-        $$ = new SignInServiceSentence(meta::cpp2::ExternalServiceType::DRAINER, $5);
-    }
     ;
 
 sign_out_service_sentence
     : KW_SIGN KW_OUT KW_TEXT KW_SERVICE {
         $$ = new SignOutServiceSentence(meta::cpp2::ExternalServiceType::ELASTICSEARCH);
     }
-    | KW_SIGN KW_OUT KW_DRAINER KW_SERVICE {
-        $$ = new SignOutServiceSentence(meta::cpp2::ExternalServiceType::DRAINER);
+    ;
+
+sign_in_space_service_sentence
+    : KW_SIGN KW_IN KW_DRAINER KW_SERVICE service_client_list {
+        $$ = new SignInSpaceServiceSentence(meta::cpp2::ExternalSpaceServiceType::DRAINER, $5);
+    }
+    ;
+
+sign_out_space_service_sentence
+    : KW_SIGN KW_OUT KW_DRAINER KW_SERVICE {
+        $$ = new SignOutSpaceServiceSentence(meta::cpp2::ExternalSpaceServiceType::DRAINER);
     }
     ;
 
@@ -3262,7 +3269,7 @@ show_sentence
         $$ = new ShowServiceClientsSentence(meta::cpp2::ExternalServiceType::ELASTICSEARCH);
     }
     | KW_SHOW KW_DRAINER KW_CLIENTS {
-        $$ = new ShowServiceClientsSentence(meta::cpp2::ExternalServiceType::DRAINER);
+        $$ = new ShowSpaceServiceClientsSentence(meta::cpp2::ExternalSpaceServiceType::DRAINER);
     }
     | KW_SHOW KW_FULLTEXT KW_INDEXES {
         $$ = new ShowFTIndexesSentence();
@@ -3752,6 +3759,8 @@ maintain_sentence
     | drop_snapshot_sentence { $$ = $1; }
     | sign_in_service_sentence { $$ = $1; }
     | sign_out_service_sentence { $$ = $1; }
+    | sign_in_space_service_sentence { $$ = $1; }
+    | sign_out_space_service_sentence { $$ = $1; }
     ;
 
 sentence

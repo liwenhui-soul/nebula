@@ -661,6 +661,56 @@ class SignOutServiceSentence final : public Sentence {
   meta::cpp2::ExternalServiceType type_;
 };
 
+class SignInSpaceServiceSentence final : public Sentence {
+ public:
+  explicit SignInSpaceServiceSentence(const meta::cpp2::ExternalSpaceServiceType& type,
+                                      ServiceClientList* clients)
+      : type_(type) {
+    kind_ = Kind::kSignInSpaceService;
+    clients_.reset(clients);
+  }
+
+  std::string toString() const override;
+
+  ServiceClientList* clients() const { return clients_.get(); }
+
+  meta::cpp2::ExternalSpaceServiceType getType() { return type_; }
+
+ private:
+  std::unique_ptr<ServiceClientList> clients_;
+  meta::cpp2::ExternalSpaceServiceType type_;
+};
+
+class SignOutSpaceServiceSentence final : public Sentence {
+ public:
+  explicit SignOutSpaceServiceSentence(const meta::cpp2::ExternalSpaceServiceType& type)
+      : type_(type) {
+    kind_ = Kind::kSignOutSpaceService;
+  }
+
+  std::string toString() const override;
+
+  meta::cpp2::ExternalSpaceServiceType getType() { return type_; }
+
+ private:
+  meta::cpp2::ExternalSpaceServiceType type_;
+};
+
+class ShowSpaceServiceClientsSentence final : public Sentence {
+ public:
+  explicit ShowSpaceServiceClientsSentence(const meta::cpp2::ExternalSpaceServiceType& type)
+      : type_(type) {
+    kind_ = Kind::kShowSpaceServiceClients;
+  }
+
+  std::string toString() const override;
+
+  meta::cpp2::ExternalSpaceServiceType getType() { return type_; }
+
+ private:
+  meta::cpp2::ExternalSpaceServiceType type_;
+};
+
 class ShowSessionsSentence final : public Sentence {
  public:
   ShowSessionsSentence() { kind_ = Kind::kShowSessions; }
