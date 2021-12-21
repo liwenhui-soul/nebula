@@ -124,6 +124,14 @@ class ClientSession final {
     return session_;
   }
 
+  bool currentSpaceReadOnly() const {
+    folly::RWSpinLock::ReadHolder rHolder(rwSpinLock_);
+    if (!metaClient_) {
+      return false;
+    }
+    return metaClient_->currentSpaceReadOnly(space_.id);
+  }
+
   void updateSpaceName(const std::string& spaceName) {
     folly::RWSpinLock::WriteHolder wHolder(rwSpinLock_);
     session_.set_space_name(spaceName);

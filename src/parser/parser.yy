@@ -204,6 +204,7 @@ static constexpr size_t kCommentLengthLimit = 256;
 %token KW_GEOGRAPHY KW_POINT KW_LINESTRING KW_POLYGON
 %token KW_LIST KW_MAP
 %token KW_MERGE KW_SPLIT KW_RENAME
+%token KW_VARIABLES
 
 /* symbols */
 %token L_PAREN R_PAREN L_BRACKET R_BRACKET L_BRACE R_BRACE COMMA
@@ -389,6 +390,7 @@ static constexpr size_t kCommentLengthLimit = 256;
 %type <sentences> sentences
 %type <sentence> sign_in_service_sentence sign_out_service_sentence
 %type <sentence> sign_in_space_service_sentence sign_out_space_service_sentence
+%type <sentence> set_variable_sentence get_variable_sentence
 
 %type <boolval> opt_if_not_exists
 %type <boolval> opt_if_exists
@@ -545,6 +547,7 @@ unreserved_keyword
     | KW_MERGE              { $$ = new std::string("merge"); }
     | KW_SPLIT              { $$ = new std::string("split"); }
     | KW_RENAME             { $$ = new std::string("rename"); }
+    | KW_VARIABLES          { $$ = new std::string("variables"); }
     ;
 
 expression
@@ -1989,6 +1992,18 @@ sign_in_space_service_sentence
 sign_out_space_service_sentence
     : KW_SIGN KW_OUT KW_DRAINER KW_SERVICE {
         $$ = new SignOutSpaceServiceSentence(meta::cpp2::ExternalSpaceServiceType::DRAINER);
+    }
+    ;
+
+set_variable_sentence
+    : KW_SET KW_VARIABLES name_label ASSIGN expression {
+         $$ = new SetVariableSentence($3, $5);
+    }
+    ;
+
+get_variable_sentence
+    : KW_GET KW_VARIABLES name_label {
+        $$ = new GetVariableSentence($3);
     }
     ;
 
@@ -3839,6 +3854,8 @@ maintain_sentence
     | sign_out_service_sentence { $$ = $1; }
     | sign_in_space_service_sentence { $$ = $1; }
     | sign_out_space_service_sentence { $$ = $1; }
+    | set_variable_sentence {$$ = $1;}
+    | get_variable_sentence {$$ = $1;}
     ;
 
 sentence

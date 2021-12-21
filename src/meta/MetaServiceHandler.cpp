@@ -14,6 +14,7 @@
 #include "meta/processors/admin/ListClusterInfoProcessor.h"
 #include "meta/processors/admin/ListSnapshotsProcessor.h"
 #include "meta/processors/admin/RestoreProcessor.h"
+#include "meta/processors/admin/VariableProcessor.h"
 #include "meta/processors/admin/VerifyClientVersionProcessor.h"
 #include "meta/processors/config/GetConfigProcessor.h"
 #include "meta/processors/config/ListConfigsProcessor.h"
@@ -593,6 +594,24 @@ folly::Future<cpp2::ExecResp> MetaServiceHandler::future_killQuery(const cpp2::K
 folly::Future<cpp2::VerifyClientVersionResp> MetaServiceHandler::future_verifyClientVersion(
     const cpp2::VerifyClientVersionReq& req) {
   auto* processor = VerifyClientVersionProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
+folly::Future<cpp2::GetVariableResp> MetaServiceHandler::future_getVariable(
+    const cpp2::GetVariableReq& req) {
+  auto* processor = GetVariableProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
+folly::Future<cpp2::ExecResp> MetaServiceHandler::future_setVariable(
+    const cpp2::SetVariableReq& req) {
+  auto* processor = SetVariableProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
+folly::Future<cpp2::ListVariablesResp> MetaServiceHandler::future_listVariables(
+    const cpp2::ListVariablesReq& req) {
+  auto* processor = ListVariablesProcessor::instance(kvstore_);
   RETURN_FUTURE(processor);
 }
 

@@ -666,5 +666,18 @@ nebula::cpp2::ErrorCode BaseProcessor<RESP>::drainerExist(GraphSpaceID space) {
   return retCode;
 }
 
+template <typename RESP>
+Value BaseProcessor<RESP>::variableValToValue(const std::string& varType,
+                                              const std::string& varValue) {
+  std::string vType = varType;
+  std::string vValue = varValue;
+  folly::toLowerAscii(vType);
+  folly::toLowerAscii(vValue);
+  if (vType == "bool") {
+    return Value(folly::to<bool>(vValue));
+  }
+  return Value::kNullValue;
+}
+
 }  // namespace meta
 }  // namespace nebula

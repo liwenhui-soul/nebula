@@ -40,6 +40,7 @@ class LockUtils {
   GENERATE_LOCK(drainer);
   GENERATE_LOCK(session);
   GENERATE_LOCK(machine);
+  GENERATE_LOCK(variable);
 
 #undef GENERATE_LOCK
 };

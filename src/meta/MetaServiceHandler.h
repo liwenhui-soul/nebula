@@ -184,6 +184,14 @@ class MetaServiceHandler final : public cpp2::MetaServiceSvIf {
 
   folly::Future<cpp2::CreateBackupResp> future_createBackup(
       const cpp2::CreateBackupReq& req) override;
+
+  folly::Future<cpp2::GetVariableResp> future_getVariable(const cpp2::GetVariableReq& req) override;
+
+  folly::Future<cpp2::ExecResp> future_setVariable(const cpp2::SetVariableReq& req) override;
+
+  folly::Future<cpp2::ListVariablesResp> future_listVariables(
+      const cpp2::ListVariablesReq& req) override;
+
   /**
    * Zone manager
    **/

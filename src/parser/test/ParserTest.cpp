@@ -3208,6 +3208,16 @@ TEST_F(ParserTest, SyncServiceTest) {
 
 TEST_F(ParserTest, DrainerTest) {
   {
+    std::string query = "SET VARIABLES read_only = true";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "GET VARIABLES read_only";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
     std::string query = "ADD DRAINER 127.0.0.1:12000";
     auto result = parse(query);
     ASSERT_TRUE(result.ok()) << result.status();

@@ -29,7 +29,7 @@ class PermissionManager final {
                              meta::cpp2::RoleType targetRole,
                              GraphSpaceID spaceId,
                              const std::string &targetUser);
-  static Status canWriteData(ClientSession *session, ValidateContext *vctx);
+  static Status canWriteData(ClientSession *session, ValidateContext *vctx, bool isAdminJob);
 
  private:
   static StatusOr<meta::cpp2::RoleType> checkRoleWithSpace(ClientSession *session,

@@ -493,4 +493,29 @@ std::string KillQuerySentence::toString() const {
   buf += ")";
   return buf;
 }
+
+std::string SetVariableSentence::toString() const {
+  std::string buf;
+  buf.reserve(128);
+  buf += "SET VARIABLES ";
+  if (name_ != nullptr) {
+    buf += *name_;
+  }
+  if (value_ != nullptr) {
+    buf += " = ";
+    buf += value_->toString();
+  }
+  return buf;
+}
+
+std::string GetVariableSentence::toString() const {
+  std::string buf;
+  buf.reserve(128);
+  buf += "GET VARIABLES ";
+  if (name_ != nullptr) {
+    buf += *name_;
+  }
+  return buf;
+}
+
 }  // namespace nebula

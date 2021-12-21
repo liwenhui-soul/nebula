@@ -265,6 +265,8 @@ class BaseProcessor {
                                                            const HostAddr& ipv4To,
                                                            bool direct = false);
 
+  Value variableValToValue(const std::string& varType, const std::string& varValue);
+
  protected:
   kvstore::KVStore* kvstore_ = nullptr;
   RESP resp_;

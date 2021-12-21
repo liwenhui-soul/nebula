@@ -72,7 +72,9 @@ Status PermissionCheck::permissionCheck(ClientSession *session,
     case Sentence::Kind::kSignOutService:
     case Sentence::Kind::kSignInService:
     case Sentence::Kind::kSignInSpaceService:
-    case Sentence::Kind::kSignOutSpaceService: {
+    case Sentence::Kind::kSignOutSpaceService:
+    case Sentence::Kind::kSetVariable:
+    case Sentence::Kind::kGetVariable: {
       return PermissionManager::canWriteSpace(session);
     }
     case Sentence::Kind::kCreateTag:
@@ -114,9 +116,11 @@ Status PermissionCheck::permissionCheck(ClientSession *session,
     case Sentence::Kind::kUpdateEdge:
     case Sentence::Kind::kDeleteVertices:
     case Sentence::Kind::kDeleteTags:
-    case Sentence::Kind::kDeleteEdges:
+    case Sentence::Kind::kDeleteEdges: {
+      return PermissionManager::canWriteData(session, vctx, false);
+    }
     case Sentence::Kind::kAdminJob: {
-      return PermissionManager::canWriteData(session, vctx);
+      return PermissionManager::canWriteData(session, vctx, true);
     }
     case Sentence::Kind::kDescribeTag:
     case Sentence::Kind::kDescribeEdge:

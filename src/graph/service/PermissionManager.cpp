@@ -76,6 +76,9 @@ Status PermissionManager::canWriteSchema(ClientSession *session, ValidateContext
   if (!FLAGS_enable_authorize) {
     return Status::OK();
   }
+  if (session->currentSpaceReadOnly()) {
+    return Status::PermissionError("No permission to write schema, current space readonly.");
+  }
   if (session->isGod()) {
     return Status::OK();
   }
@@ -178,9 +181,14 @@ Status PermissionManager::canWriteRole(ClientSession *session,
 }
 
 // static
-Status PermissionManager::canWriteData(ClientSession *session, ValidateContext *vctx) {
+Status PermissionManager::canWriteData(ClientSession *session,
+                                       ValidateContext *vctx,
+                                       bool isAdminJob) {
   if (!FLAGS_enable_authorize) {
     return Status::OK();
+  }
+  if (!isAdminJob && session->currentSpaceReadOnly()) {
+    return Status::PermissionError("No permission to write schema, current space readonly.");
   }
   if (session->isGod()) {
     return Status::OK();

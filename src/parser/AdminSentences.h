@@ -784,6 +784,41 @@ class KillQuerySentence final : public Sentence {
 
   std::unique_ptr<QueryUniqueIdentifier> identifier_;
 };
+
+class SetVariableSentence final : public Sentence {
+ public:
+  explicit SetVariableSentence(std::string* name, Expression* value) {
+    kind_ = Kind::kSetVariable;
+    name_.reset(name);
+    value_ = value;
+  }
+
+  std::string toString() const override;
+
+  const std::string* getName() const { return name_.get(); }
+
+  Expression* getValue() const { return value_; }
+
+ private:
+  std::unique_ptr<std::string> name_;
+  Expression* value_{nullptr};
+};
+
+class GetVariableSentence final : public Sentence {
+ public:
+  explicit GetVariableSentence(std::string* name) {
+    kind_ = Kind::kGetVariable;
+    name_.reset(name);
+  }
+
+  std::string toString() const override;
+
+  const std::string* getName() const { return name_.get(); }
+
+ protected:
+  std::unique_ptr<std::string> name_;
+};
+
 }  // namespace nebula
 
 #endif  // PARSER_ADMINSENTENCES_H_

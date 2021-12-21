@@ -686,5 +686,46 @@ Status KillQueryValidator::toPlan() {
   tail_ = root_;
   return Status::OK();
 }
+
+Status SetVariableValidator::validateImpl() {
+  auto sentence = static_cast<SetVariableSentence *>(sentence_);
+
+  if (sentence->getName() == nullptr) {
+    return Status::SemanticError("Empty variable name");
+  }
+  if (sentence->getValue() == nullptr) {
+    return Status::SemanticError("Empty variable value");
+  }
+
+  name_ = *sentence->getName();
+  QueryExpressionContext ctx;
+  value_ = Expression::eval(sentence->getValue(), ctx(nullptr));
+
+  return Status::OK();
+}
+
+Status SetVariableValidator::toPlan() {
+  auto *doNode = SetVariable::make(qctx_, nullptr, std::move(name_), std::move(value_));
+  root_ = doNode;
+  tail_ = root_;
+  return Status::OK();
+}
+
+Status GetVariableValidator::validateImpl() {
+  auto sentence = static_cast<GetVariableSentence *>(sentence_);
+  if (sentence->getName() == nullptr) {
+    return Status::SemanticError("Empty variable name");
+  }
+  name_ = *sentence->getName();
+  return Status::OK();
+}
+
+Status GetVariableValidator::toPlan() {
+  auto *doNode = GetVariable::make(qctx_, nullptr, std::move(name_));
+  root_ = doNode;
+  tail_ = root_;
+  return Status::OK();
+}
+
 }  // namespace graph
 }  // namespace nebula

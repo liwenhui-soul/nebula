@@ -414,6 +414,9 @@ enum ErrorCode {
 
     E_QUERY_NOT_FOUND                 = -2073,
 
+    E_INVALID_VARIABLE                = -2080,
+    E_VARIABLE_TYPE_VALUE_MISMATCH    = -2081,
+
     // 3xxx for storaged
     E_CONSENSUS_ERROR                 = -3001,
     E_KEY_HAS_EXISTS                  = -3002,

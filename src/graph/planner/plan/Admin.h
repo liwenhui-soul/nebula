@@ -1263,6 +1263,48 @@ class KillQuery final : public SingleInputNode {
   Expression* sessionId_;
   Expression* epId_;
 };
+
+class SetVariable final : public SingleDependencyNode {
+ public:
+  static SetVariable* make(QueryContext* qctx, PlanNode* input, std::string name, Value value) {
+    return qctx->objPool()->add(new SetVariable(qctx, input, std::move(name), std::move(value)));
+  }
+
+  std::unique_ptr<PlanNodeDescription> explain() const override;
+
+  const std::string& getName() const { return name_; }
+
+  const Value& getValue() const { return value_; }
+
+ private:
+  SetVariable(QueryContext* qctx, PlanNode* input, std::string name, Value value)
+      : SingleDependencyNode(qctx, Kind::kSetVariable, input),
+        name_(std::move(name)),
+        value_(std::move(value)) {}
+
+ private:
+  std::string name_;
+  Value value_;
+};
+
+class GetVariable final : public SingleDependencyNode {
+ public:
+  static GetVariable* make(QueryContext* qctx, PlanNode* input, std::string name) {
+    return qctx->objPool()->add(new GetVariable(qctx, input, std::move(name)));
+  }
+
+  std::unique_ptr<PlanNodeDescription> explain() const override;
+
+  const std::string& getName() const { return name_; }
+
+ private:
+  explicit GetVariable(QueryContext* qctx, PlanNode* input, std::string name)
+      : SingleDependencyNode(qctx, Kind::kGetVariable, input), name_(std::move(name)) {}
+
+ private:
+  std::string name_;
+};
+
 }  // namespace graph
 }  // namespace nebula
 #endif  // GRAPH_PLANNER_PLAN_ADMIN_H_

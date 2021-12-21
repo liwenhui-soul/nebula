@@ -457,6 +457,34 @@ class KillQueryValidator final : public Validator {
 
   Status toPlan() override;
 };
+
+class SetVariableValidator final : public Validator {
+ public:
+  SetVariableValidator(Sentence* sentence, QueryContext* context) : Validator(sentence, context) {}
+
+ private:
+  Status validateImpl() override;
+
+  Status toPlan() override;
+
+ private:
+  std::string name_;
+  Value value_;
+};
+
+class GetVariableValidator final : public Validator {
+ public:
+  GetVariableValidator(Sentence* sentence, QueryContext* context) : Validator(sentence, context) {}
+
+ private:
+  Status validateImpl() override;
+
+  Status toPlan() override;
+
+ private:
+  std::string name_;
+};
+
 }  // namespace graph
 }  // namespace nebula
 #endif  // GRAPH_VALIDATOR_ADMINVALIDATOR_H_

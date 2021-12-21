@@ -269,6 +269,10 @@ const char* PlanNode::toString(PlanNode::Kind kind) {
       return "ShowDrainers";
     case Kind::kShowStats:
       return "ShowStats";
+    case Kind::kSetVariable:
+      return "SetVariable";
+    case Kind::kGetVariable:
+      return "GetVariable";
     // service search
     case Kind::kShowServiceClients:
       return "ShowServiceClients";

@@ -186,5 +186,19 @@ std::unique_ptr<PlanNodeDescription> KillQuery::explain() const {
   addDescription("planId", epId()->toString(), desc.get());
   return desc;
 }
+
+std::unique_ptr<PlanNodeDescription> SetVariable::explain() const {
+  auto desc = SingleDependencyNode::explain();
+  addDescription("name", name_, desc.get());
+  addDescription("value", value_.toString(), desc.get());
+  return desc;
+}
+
+std::unique_ptr<PlanNodeDescription> GetVariable::explain() const {
+  auto desc = SingleDependencyNode::explain();
+  addDescription("name", name_, desc.get());
+  return desc;
+}
+
 }  // namespace graph
 }  // namespace nebula

@@ -430,6 +430,17 @@ class MetaKeyUtils final {
   static std::string diskPartsVal(const meta::cpp2::PartitionList& partList);
 
   static meta::cpp2::PartitionList parseDiskPartsVal(const folly::StringPiece& rawData);
+
+  static GraphSpaceID parseVariable(folly::StringPiece rawData);
+
+  static std::pair<std::string, std::string> getVariableTypeAndDefaultValue(
+      const std::string& varName);
+
+  static std::string variableKey(GraphSpaceID spaceId, const std::string& varName);
+
+  static std::string variablePrefix(GraphSpaceID spaceId);
+
+  static std::unordered_map<std::string, std::pair<std::string, std::string>> getAllVariableInfo();
 };
 
 }  // namespace nebula

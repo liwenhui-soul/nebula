@@ -509,6 +509,9 @@ TEST(Scanner, Basic) {
       CHECK_SEMANTIC_TYPE("RENAME", TokenType::KW_RENAME),
       CHECK_SEMANTIC_TYPE("Rename", TokenType::KW_RENAME),
       CHECK_SEMANTIC_TYPE("rename", TokenType::KW_RENAME),
+      CHECK_SEMANTIC_TYPE("VARIABLES", TokenType::KW_VARIABLES),
+      CHECK_SEMANTIC_TYPE("Variables", TokenType::KW_VARIABLES),
+      CHECK_SEMANTIC_TYPE("variables", TokenType::KW_VARIABLES),
 
       CHECK_SEMANTIC_TYPE("_type", TokenType::TYPE_PROP),
       CHECK_SEMANTIC_TYPE("_id", TokenType::ID_PROP),

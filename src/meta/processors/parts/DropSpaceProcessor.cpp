@@ -161,6 +161,23 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
     spaceServiceIter->next();
   }
 
+  // 11. Delete space leval variable data
+  auto variablePre = MetaKeyUtils::variablePrefix(spaceId);
+  auto variableRet = doPrefix(variablePre);
+  if (!nebula::ok(variableRet)) {
+    auto retCode = nebula::error(variableRet);
+    LOG(ERROR) << "Drop space Failed, space " << spaceName
+               << " error: " << apache::thrift::util::enumNameSafe(retCode);
+    handleErrorCode(retCode);
+    onFinished();
+    return;
+  }
+  auto variableIter = nebula::value(variableRet).get();
+  while (variableIter->valid()) {
+    deleteKeys.emplace_back(ftIter->key());
+    variableIter->next();
+  }
+
   doSyncMultiRemoveAndUpdate(std::move(deleteKeys));
   LOG(INFO) << "Drop space " << spaceName << ", id " << spaceId;
 }

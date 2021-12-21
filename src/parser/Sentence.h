@@ -138,6 +138,8 @@ class Sentence {
     kShowQueries,
     kKillQuery,
     kShowMetaLeader,
+    kSetVariable,
+    kGetVariable,
   };
 
   Kind kind() const { return kind_; }

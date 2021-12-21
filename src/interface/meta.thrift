@@ -1212,6 +1212,38 @@ struct VerifyClientVersionReq {
     3: binary build_version;
 }
 
+struct VariableItem {
+    1: binary           name,
+    2: common.Value     value,
+}
+
+struct GetVariableReq {
+    1: common.GraphSpaceID   space_id,
+    2: VariableItem          item,
+}
+
+struct GetVariableResp {
+    1: common.ErrorCode     code,
+    2: common.HostAddr      leader,
+    3: VariableItem         item,
+}
+
+struct SetVariableReq {
+    1: common.GraphSpaceID   space_id,
+    2: VariableItem          item,
+}
+
+struct ListVariablesReq {
+    1: common.GraphSpaceID   space_id,
+}
+
+struct ListVariablesResp {
+    1: common.ErrorCode     code,
+    2: common.HostAddr      leader,
+    3: map<binary, common.Value>
+    (cpp.template = "std::unordered_map") variables,
+}
+
 service MetaService {
     ExecResp createSpace(1: CreateSpaceReq req);
     ExecResp dropSpace(1: DropSpaceReq req);
@@ -1326,5 +1358,9 @@ service MetaService {
     ListClusterInfoResp listCluster(1: ListClusterInfoReq req);
     GetMetaDirInfoResp getMetaDirInfo(1: GetMetaDirInfoReq req);
 
-    VerifyClientVersionResp verifyClientVersion(1: VerifyClientVersionReq req)
+    VerifyClientVersionResp verifyClientVersion(1: VerifyClientVersionReq req);
+
+    ExecResp          setVariable(1: SetVariableReq req);
+    GetVariableResp   getVariable(1: GetVariableReq req);
+    ListVariablesResp listVariables(1: ListVariablesReq req);
 }

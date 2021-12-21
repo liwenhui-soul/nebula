@@ -57,7 +57,8 @@ static const std::unordered_map<
                  {"balance_plan", {"__balance_plan__", nullptr}},
                  {"ft_index", {"__ft_index__", nullptr}},
                  {"local_id", {"__local_id__", MetaKeyUtils::parseLocalIdSpace}},
-                 {"disk_parts", {"__disk_parts__", MetaKeyUtils::parseDiskPartsSpace}}};
+                 {"disk_parts", {"__disk_parts__", MetaKeyUtils::parseDiskPartsSpace}},
+                 {"variable", {"__variable__", MetaKeyUtils::parseVariable}}};
 
 // clang-format off
 static const std::string kSpacesTable         = tableMaps.at("spaces").first;         // NOLINT
@@ -81,7 +82,8 @@ static const std::string kZonesTable          = systemTableMaps.at("zones").firs
 static const std::string kListenerTable       = tableMaps.at("listener").first;             // NOLINT
 static const std::string kListenerDrainerTable  = tableMaps.at("listener_drainer").first;   // NOLINT
 static const std::string kDrainerTable        = tableMaps.at("drainer").first;              // NOLINT
-static const std::string kDiskPartsTable      = tableMaps.at("disk_parts").first;       // NOLINT
+static const std::string kDiskPartsTable      = tableMaps.at("disk_parts").first;           // NOLINT
+static const std::string kVariableTable       = tableMaps.at("variable").first;             // NOLINT
 
 // Used to record the number of vertices and edges in the space
 // The number of vertices of each tag in the space
@@ -100,6 +102,12 @@ const std::string kIdKey = systemInfoMaps.at("autoIncrementId").first;          
 const std::string kLastUpdateTimeTable = systemInfoMaps.at("lastUpdateTime").first;   // NOLINT
 
 // clang-format on
+
+// Variabletable name -> <type, default value>
+static const std::unordered_map<std::string, std::pair<std::string, std::string>>
+    variableTableMaps = {
+        {"read_only", {"bool", "0"}},
+};
 
 const int kMaxIpAddrLen = 15;  // '255.255.255.255'
 
@@ -1368,6 +1376,42 @@ meta::cpp2::PartitionList MetaKeyUtils::parseDiskPartsVal(const folly::StringPie
   meta::cpp2::PartitionList partList;
   apache::thrift::CompactSerializer::deserialize(rawData, partList);
   return partList;
+}
+
+GraphSpaceID MetaKeyUtils::parseVariable(folly::StringPiece rawData) {
+  auto offset = kVariableTable.size();
+  return *reinterpret_cast<const GraphSpaceID*>(rawData.data() + offset);
+}
+
+std::pair<std::string, std::string> MetaKeyUtils::getVariableTypeAndDefaultValue(
+    const std::string& varName) {
+  auto iter = variableTableMaps.find(varName);
+  if (iter != variableTableMaps.end()) {
+    return iter->second;
+  }
+  return std::make_pair("", "");
+}
+
+std::unordered_map<std::string, std::pair<std::string, std::string>>
+MetaKeyUtils::getAllVariableInfo() {
+  return variableTableMaps;
+}
+
+std::string MetaKeyUtils::variableKey(GraphSpaceID spaceId, const std::string& varName) {
+  std::string key;
+  key.reserve(kVariableTable.size() + sizeof(GraphSpaceID) + varName.size());
+  key.append(kDrainerTable.data(), kDrainerTable.size())
+      .append(reinterpret_cast<const char*>(&spaceId), sizeof(GraphSpaceID))
+      .append(varName);
+  return key;
+}
+
+std::string MetaKeyUtils::variablePrefix(GraphSpaceID spaceId) {
+  std::string key;
+  key.reserve(kVariableTable.size() + sizeof(GraphSpaceID));
+  key.append(kDrainerTable.data(), kDrainerTable.size())
+      .append(reinterpret_cast<const char*>(&spaceId), sizeof(GraphSpaceID));
+  return key;
 }
 
 }  // namespace nebula

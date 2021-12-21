@@ -101,6 +101,9 @@ struct SpaceInfoCache {
   // drainer server for slave cluster
   std::vector<cpp2::DrainerInfo> drainerServer_;
 
+  // space level variable
+  std::unordered_map<std::string, Value> variables_;
+
   SpaceInfoCache() = default;
   SpaceInfoCache(const SpaceInfoCache& info)
       : spaceDesc_(info.spaceDesc_),
@@ -117,7 +120,8 @@ struct SpaceInfoCache {
         listeners_(info.listeners_),
         termOfPartition_(info.termOfPartition_),
         drainerclients_(info.drainerclients_),
-        drainerServer_(info.drainerServer_) {}
+        drainerServer_(info.drainerServer_),
+        variables_(info.variables_) {}
 
   ~SpaceInfoCache() = default;
 };
@@ -674,6 +678,18 @@ class MetaClient {
 
   folly::Future<StatusOr<bool>> ingest(GraphSpaceID spaceId);
 
+  folly::Future<StatusOr<cpp2::VariableItem>> getVariable(GraphSpaceID spaceId,
+                                                          const std::string& name);
+
+  folly::Future<StatusOr<bool>> setVariable(GraphSpaceID spaceId,
+                                            const std::string& name,
+                                            const Value& value);
+
+  folly::Future<StatusOr<std::unordered_map<std::string, Value>>> listVariables(
+      GraphSpaceID spaceId);
+
+  bool currentSpaceReadOnly(GraphSpaceID spaceId);
+
   HostAddr getMetaLeader() { return leader_; }
 
   int64_t HeartbeatTime() { return heartbeatTime_; }
@@ -709,6 +725,8 @@ class MetaClient {
 
   // For slave cluster, the space uses drainers
   bool loadDrainers(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCache> cache);
+
+  bool loadVariables(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCache> cache);
 
   bool loadGlobalServiceClients();
 

@@ -168,6 +168,10 @@ class PlanNode {
     kRemoveDrainer,
     kShowDrainers,
 
+    // variable
+    kSetVariable,
+    kGetVariable,
+
     // service related
     kShowServiceClients,
     kShowFTIndexes,

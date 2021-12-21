@@ -16,6 +16,7 @@ nebula_add_library(
     processors/parts/DropSpaceProcessor.cpp
     processors/parts/GetPartsAllocProcessor.cpp
     processors/schema/CreateTagProcessor.cpp
+    processors/admin/VariableProcessor.cpp
     processors/schema/AlterTagProcessor.cpp
     processors/schema/GetTagProcessor.cpp
     processors/schema/ListTagsProcessor.cpp

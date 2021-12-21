@@ -262,6 +262,11 @@ bool MetaClient::loadData() {
       return false;
     }
 
+    if (!loadVariables(spaceId, spaceCache)) {
+      LOG(ERROR) << "Load Variables Failed";
+      return false;
+    }
+
     // get space properties
     auto resp = getSpace(spaceName).get();
     if (!resp.ok()) {
@@ -543,6 +548,17 @@ bool MetaClient::loadDrainers(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCac
   }
 
   cache->drainerServer_ = std::move(drainerRet.value());
+  return true;
+}
+
+bool MetaClient::loadVariables(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCache> cache) {
+  auto variableRet = listVariables(spaceId).get();
+  if (!variableRet.ok()) {
+    LOG(ERROR) << "Get variables failed for spaceId " << spaceId << ", " << variableRet.status();
+    return false;
+  }
+
+  cache->variables_ = std::move(variableRet.value());
   return true;
 }
 
@@ -919,6 +935,10 @@ Status MetaClient::handleResponse(const RESP& resp) {
       return Status::Error("Invalid drainer!");
     case nebula::cpp2::ErrorCode::E_LISTENER_CONFLICT:
       return Status::Error("Listener host conflict!");
+    case nebula::cpp2::ErrorCode::E_INVALID_VARIABLE:
+      return Status::Error("Invalid variable!");
+    case nebula::cpp2::ErrorCode::E_VARIABLE_TYPE_VALUE_MISMATCH:
+      return Status::Error("Variable type and value mismatch!");
     default:
       return Status::Error("Unknown error!");
   }
@@ -2757,6 +2777,60 @@ folly::Future<StatusOr<std::vector<cpp2::ConfigItem>>> MetaClient::listConfigs(
   return future;
 }
 
+folly::Future<StatusOr<cpp2::VariableItem>> MetaClient::getVariable(GraphSpaceID spaceId,
+                                                                    const std::string& name) {
+  cpp2::VariableItem item;
+  item.set_name(name);
+  cpp2::GetVariableReq req;
+  req.set_space_id(spaceId);
+  req.set_item(item);
+  folly::Promise<StatusOr<cpp2::VariableItem>> promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_getVariable(request); },
+      [](cpp2::GetVariableResp&& resp) -> decltype(auto) { return std::move(resp).get_item(); },
+      std::move(promise));
+  return future;
+}
+
+folly::Future<StatusOr<bool>> MetaClient::setVariable(GraphSpaceID spaceId,
+                                                      const std::string& name,
+                                                      const Value& value) {
+  cpp2::VariableItem item;
+  item.set_name(name);
+  item.set_value(value);
+  cpp2::SetVariableReq req;
+  req.set_space_id(spaceId);
+  req.set_item(item);
+  folly::Promise<StatusOr<bool>> promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_setVariable(request); },
+      [](cpp2::ExecResp&& resp) -> bool {
+        return resp.get_code() == nebula::cpp2::ErrorCode::SUCCEEDED;
+      },
+      std::move(promise));
+  return future;
+}
+
+folly::Future<StatusOr<std::unordered_map<std::string, Value>>> MetaClient::listVariables(
+    GraphSpaceID spaceId) {
+  cpp2::ListVariablesReq req;
+  req.set_space_id(spaceId);
+  folly::Promise<StatusOr<std::unordered_map<std::string, Value>>> promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_listVariables(request); },
+      [](cpp2::ListVariablesResp&& resp) -> decltype(auto) {
+        return std::move(resp).get_variables();
+      },
+      std::move(promise));
+  return future;
+}
+
 folly::Future<StatusOr<bool>> MetaClient::createSnapshot() {
   cpp2::CreateSnapshotReq req;
   folly::Promise<StatusOr<bool>> promise;
@@ -3801,5 +3875,26 @@ Status MetaClient::verifyVersion() {
   }
   return Status::OK();
 }
+
+bool MetaClient::currentSpaceReadOnly(GraphSpaceID spaceId) {
+  if (!ready_) {
+    return false;
+  }
+
+  const ThreadLocalInfo& threadLocalInfo = getThreadLocalInfo();
+  auto spaceIt = threadLocalInfo.localCache_.find(spaceId);
+  if (spaceIt == threadLocalInfo.localCache_.end()) {
+    VLOG(3) << "Space " << spaceId << " not found!";
+    return false;
+  }
+  auto iter = spaceIt->second->variables_.find("read_only");
+  if (iter == spaceIt->second->variables_.end()) {
+    VLOG(3) << "Space " << spaceId << ", variable read_only not found!";
+    return false;
+  } else {
+    return iter->second.getBool();
+  }
+}
+
 }  // namespace meta
 }  // namespace nebula

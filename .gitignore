@@ -66,3 +66,6 @@ venv/
 
 #ctags
 .tags
+
+#license
+tests/secrets/nebula.license

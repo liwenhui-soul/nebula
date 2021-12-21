@@ -78,6 +78,7 @@ nebula_add_library(
     admin/SessionExecutor.cpp
     admin/ShowQueriesExecutor.cpp
     admin/KillQueryExecutor.cpp
+    admin/VariableExecutor.cpp
     maintain/TagExecutor.cpp
     maintain/TagIndexExecutor.cpp
     maintain/EdgeExecutor.cpp
