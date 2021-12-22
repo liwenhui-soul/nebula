@@ -1775,6 +1775,7 @@ folly::Future<StatusOr<IndexID>> MetaClient::createTagIndex(GraphSpaceID spaceID
                                                             std::string tagName,
                                                             std::vector<cpp2::IndexFieldDef> fields,
                                                             bool ifNotExists,
+                                                            const cpp2::IndexParams* indexParams,
                                                             const std::string* comment) {
   cpp2::CreateTagIndexReq req;
   req.set_space_id(spaceID);
@@ -1782,6 +1783,9 @@ folly::Future<StatusOr<IndexID>> MetaClient::createTagIndex(GraphSpaceID spaceID
   req.set_tag_name(std::move(tagName));
   req.set_fields(std::move(fields));
   req.set_if_not_exists(ifNotExists);
+  if (indexParams != nullptr) {
+    req.set_index_params(*indexParams);
+  }
   if (comment != nullptr) {
     req.set_comment(*comment);
   }
@@ -1887,6 +1891,7 @@ folly::Future<StatusOr<IndexID>> MetaClient::createEdgeIndex(
     std::string edgeName,
     std::vector<cpp2::IndexFieldDef> fields,
     bool ifNotExists,
+    const cpp2::IndexParams* indexParams,
     const std::string* comment) {
   cpp2::CreateEdgeIndexReq req;
   req.set_space_id(spaceID);
@@ -1894,6 +1899,9 @@ folly::Future<StatusOr<IndexID>> MetaClient::createEdgeIndex(
   req.set_edge_name(std::move(edgeName));
   req.set_fields(std::move(fields));
   req.set_if_not_exists(ifNotExists);
+  if (indexParams != nullptr) {
+    req.set_index_params(*indexParams);
+  }
   if (comment != nullptr) {
     req.set_comment(*comment);
   }

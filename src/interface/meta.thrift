@@ -141,13 +141,19 @@ struct EdgeItem {
     4: Schema           schema,
 }
 
+struct IndexParams {
+    1: optional i32     s2_max_level,
+    2: optional i32     s2_max_cells,
+}
+
 struct IndexItem {
-    1: common.IndexID      index_id,
-    2: binary              index_name,
-    3: common.SchemaID     schema_id
-    4: binary              schema_name,
-    5: list<ColumnDef>     fields,
-    6: optional binary     comment,
+    1: common.IndexID       index_id,
+    2: binary               index_name,
+    3: common.SchemaID      schema_id
+    4: binary               schema_name,
+    5: list<ColumnDef>      fields,
+    6: optional binary      comment,
+    7: optional IndexParams index_params,
 }
 
 enum HostStatus {
@@ -596,6 +602,7 @@ struct CreateTagIndexReq {
     4: list<IndexFieldDef>  fields,
     5: bool                 if_not_exists,
     6: optional binary      comment,
+    7: optional IndexParams index_params,
 }
 
 struct DropTagIndexReq {
@@ -632,6 +639,7 @@ struct CreateEdgeIndexReq {
     4: list<IndexFieldDef>	fields,
     5: bool                	if_not_exists,
     6: optional binary      comment,
+    7: optional IndexParams index_params,
 }
 
 struct DropEdgeIndexReq {
