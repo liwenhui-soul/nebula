@@ -12,6 +12,7 @@
 
 #include "common/base/ObjectPool.h"
 #include "common/memory/MemoryUtils.h"
+#include "common/stats/StatsManager.h"
 #include "common/time/ScopedTimer.h"
 #include "graph/context/ExecutionContext.h"
 #include "graph/context/QueryContext.h"
@@ -101,6 +102,7 @@
 #include "graph/planner/plan/PlanNode.h"
 #include "graph/planner/plan/Query.h"
 #include "graph/service/GraphFlags.h"
+#include "graph/stats/GraphStats.h"
 #include "interface/gen-cpp2/graph_types.h"
 
 using folly::stringPrintf;
@@ -160,9 +162,11 @@ Executor *Executor::makeExecutor(QueryContext *qctx, const PlanNode *node) {
       return pool->add(new PassThroughExecutor(node, qctx));
     }
     case PlanNode::Kind::kAggregate: {
+      stats::StatsManager::addValue(kNumAggregateExecutors);
       return pool->add(new AggregateExecutor(node, qctx));
     }
     case PlanNode::Kind::kSort: {
+      stats::StatsManager::addValue(kNumSortExecutors);
       return pool->add(new SortExecutor(node, qctx));
     }
     case PlanNode::Kind::kTopN: {
@@ -205,6 +209,7 @@ Executor *Executor::makeExecutor(QueryContext *qctx, const PlanNode *node) {
     case PlanNode::Kind::kTagIndexFullScan:
     case PlanNode::Kind::kTagIndexPrefixScan:
     case PlanNode::Kind::kTagIndexRangeScan: {
+      stats::StatsManager::addValue(kNumIndexScanExecutors);
       return pool->add(new IndexScanExecutor(node, qctx));
     }
     case PlanNode::Kind::kStart: {
@@ -600,6 +605,7 @@ Status Executor::close() {
 
 Status Executor::checkMemoryWatermark() {
   if (node_->isQueryNode() && MemoryUtils::kHitMemoryHighWatermark.load()) {
+    stats::StatsManager::addValue(kNumOomExecutors);
     return Status::Error("Used memory hits the high watermark(%lf) of total system memory.",
                          FLAGS_system_memory_high_watermark_ratio);
   }
