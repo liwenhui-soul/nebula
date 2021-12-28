@@ -13,6 +13,10 @@ set(drainer_test_deps
     $<TARGET_OBJECTS:ws_common_obj>
     $<TARGET_OBJECTS:process_obj>
     $<TARGET_OBJECTS:stats_obj>
+    $<TARGET_OBJECTS:kv_stats_obj>
+    $<TARGET_OBJECTS:storage_stats_obj>
+    $<TARGET_OBJECTS:storage_client_stats_obj>
+    $<TARGET_OBJECTS:meta_client_stats_obj>
     $<TARGET_OBJECTS:encryption_obj>
     $<TARGET_OBJECTS:fs_obj>
     $<TARGET_OBJECTS:time_obj>
