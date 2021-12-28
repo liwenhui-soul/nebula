@@ -172,11 +172,14 @@ InternalStorageClient::getPartLeader(
   auto numParts = status.value();
   std::unordered_map<PartitionID, HostAddr> leaders;
   for (int32_t partId = 1; partId <= numParts; ++partId) {
-    auto leader = getLeader(spaceId, partId);
-    if (!leader.ok()) {
-      return leader.status();
+    auto leaderRet = getLeader(spaceId, partId);
+    if (!leaderRet.ok()) {
+      return leaderRet.status();
     }
-    leaders[partId] = std::move(leader).value();
+
+    HostAddr& leader = leaderRet.value();
+    leader.port += kInternalPortOffset;
+    leaders[partId] = leader;
   }
 
   for (auto& partData : data) {

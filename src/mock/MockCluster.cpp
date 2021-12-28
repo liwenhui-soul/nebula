@@ -182,6 +182,7 @@ void MockCluster::initStorageKV(const char* dataPath,
     options.partMan_ =
         std::make_unique<kvstore::MetaServerBasedPartManager>(addr, metaClient_.get());
     schemaMan_ = meta::ServerBasedSchemaManager::create(metaClient_.get());
+    serviceMan_ = meta::ServiceManager::create(metaClient_.get());
     indexMan_ = meta::ServerBasedIndexManager::create(metaClient_.get());
   } else {
     LOG(INFO) << "Use meta in memory!";

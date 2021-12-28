@@ -23,7 +23,6 @@ set(common_deps
     $<TARGET_OBJECTS:thread_obj>
     $<TARGET_OBJECTS:conf_obj>
     $<TARGET_OBJECTS:datatypes_obj>
-    $<TARGET_OBJECTS:wkt_wkb_io_obj>
     $<TARGET_OBJECTS:base_obj>
     $<TARGET_OBJECTS:memory_obj>
     $<TARGET_OBJECTS:expression_obj>
@@ -160,6 +159,11 @@ nebula_add_executable(
         $<TARGET_OBJECTS:internal_storage_client_obj>
         $<TARGET_OBJECTS:storage_client_base_obj>
         $<TARGET_OBJECTS:drainer_common_obj>
+        $<TARGET_OBJECTS:meta_service_handler>
+        $<TARGET_OBJECTS:meta_http_handler>
+        $<TARGET_OBJECTS:meta_version_man_obj>
+        $<TARGET_OBJECTS:meta_data_upgrade_obj>
+        $<TARGET_OBJECTS:meta_v1_thrift_obj>
         ${common_deps}
         ${storage_meta_deps}
     LIBRARIES

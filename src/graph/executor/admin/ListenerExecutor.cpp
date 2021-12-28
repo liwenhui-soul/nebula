@@ -18,7 +18,8 @@ folly::Future<Status> AddListenerExecutor::execute() {
   auto spaceId = qctx()->rctx()->session()->space().id;
   return qctx()
       ->getMetaClient()
-      ->addListener(spaceId, alNode->type(), alNode->hosts(), alNode->spaceName())
+      ->addListener(
+          spaceId, alNode->type(), alNode->hosts(), alNode->metaListener(), alNode->spaceName())
       .via(runner())
       .thenValue([this](StatusOr<bool> resp) {
         SCOPED_TIMER(&execTime_);

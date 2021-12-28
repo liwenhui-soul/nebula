@@ -26,7 +26,8 @@ Listener::Listener(GraphSpaceID spaceId,
                    std::shared_ptr<raftex::SnapshotManager> snapshotMan,
                    std::shared_ptr<RaftClient> clientMan,
                    std::shared_ptr<DiskManager> diskMan,
-                   meta::SchemaManager* schemaMan)
+                   meta::SchemaManager* schemaMan,
+                   meta::ServiceManager* serviceMan)
     : RaftPart(FLAGS_cluster_id,
                spaceId,
                partId,
@@ -38,7 +39,8 @@ Listener::Listener(GraphSpaceID spaceId,
                snapshotMan,
                clientMan,
                diskMan),
-      schemaMan_(schemaMan) {}
+      schemaMan_(schemaMan),
+      serviceMan_(serviceMan) {}
 
 void Listener::start(std::vector<HostAddr>&& peers, bool) {
   std::lock_guard<std::mutex> g(raftLock_);

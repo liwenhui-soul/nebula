@@ -88,6 +88,9 @@ case ${TARGET} in
     storaged)
         TARGETS=(${TARGET})
         ;;
+    drainerd)
+        TARGETS=(${TARGET})
+        ;;
     all)
         TARGETS=(metad graphd storaged)
         ;;

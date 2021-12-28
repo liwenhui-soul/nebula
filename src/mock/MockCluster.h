@@ -120,6 +120,7 @@ class MockCluster {
   std::unique_ptr<storage::StorageEnv> storageEnv_{nullptr};
 
   std::unique_ptr<meta::SchemaManager> schemaMan_;
+  std::unique_ptr<meta::ServiceManager> serviceMan_;
   std::unique_ptr<meta::IndexManager> indexMan_;
   nebula::ClusterID clusterId_ = 10;
   int32_t totalParts_;

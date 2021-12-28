@@ -21,7 +21,7 @@ void ESListener::init() {
   }
   vIdLen_ = vRet.value();
 
-  auto cRet = schemaMan_->getServiceClients(meta::cpp2::ExternalServiceType::ELASTICSEARCH);
+  auto cRet = serviceMan_->getServiceClients(meta::cpp2::ExternalServiceType::ELASTICSEARCH);
   if (!cRet.ok() || cRet.value().empty()) {
     LOG(FATAL) << "elasticsearch clients error";
   }

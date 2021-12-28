@@ -43,6 +43,7 @@ nebula_add_library(
     processors/kv/RemoveProcessor.cpp
     processors/kv/RemoveRangeProcessor.cpp
     processors/kv/ScanProcessor.cpp
+    processors/kv/SyncDataProcessor.cpp
     processors/admin/HBProcessor.cpp
     processors/user/AuthenticationProcessor.cpp
     processors/admin/CreateSnapshotProcessor.cpp
@@ -57,6 +58,7 @@ nebula_add_library(
     processors/admin/ListClusterInfoProcessor.cpp
     processors/admin/GetMetaDirInfoProcessor.cpp
     processors/admin/VerifyClientVersionProcessor.cpp
+    processors/admin/VariableProcessor.cpp
     processors/config/RegConfigProcessor.cpp
     processors/config/GetConfigProcessor.cpp
     processors/config/ListConfigsProcessor.cpp

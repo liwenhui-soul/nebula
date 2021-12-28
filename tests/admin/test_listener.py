@@ -58,13 +58,14 @@ class TestListener(NebulaTestSuite):
         self.check_resp_failed(resp)
 
         # Add non-existen host
-        resp = self.client.execute('ADD LISTENER SYNC 127.0.0.1:7899 TO SPACE default_space')
+        resp = self.client.execute('ADD LISTENER SYNC META 127.0.0.1:7899 STORAGE 127.0.0.1:7999 TO SPACE default_space')
         self.check_resp_succeeded(resp)
 
         # Show listener
         resp = self.client.execute('SHOW LISTENER SYNC;')
         self.check_resp_succeeded(resp)
-        self.search_result(resp, [[1, "SYNC", '"127.0.0.1":7899', "default_space", "OFFLINE"]])
+        self.search_result(resp, [[0, "SYNC", '"127.0.0.1":7899', "default_space", "OFFLINE"]])
+        self.search_result(resp, [[1, "SYNC", '"127.0.0.1":7999', "default_space", "OFFLINE"]])
 
         # Remove listener
         resp = self.client.execute('REMOVE LISTENER SYNC;')

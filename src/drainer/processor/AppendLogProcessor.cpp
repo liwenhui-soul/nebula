@@ -28,7 +28,7 @@ void AppendLogProcessor::process(const cpp2::AppendLogRequest& req) {
   auto toSpaceName = req.get_to_space_name();
   auto space = env_->schemaMan_->toGraphSpaceID(toSpaceName);
   if (!space.ok()) {
-    LOG(ERROR) << space.status();
+    LOG(ERROR) << folly::stringPrintf("space %s not found", toSpaceName.c_str());
     pushResultCode(nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND);
     onFinished();
     return;
@@ -51,7 +51,7 @@ void AppendLogProcessor::process(const cpp2::AppendLogRequest& req) {
   lastLogId_ = req.get_last_log_id_to_send();
   term_ = req.get_log_term();
   logStrs_ = req.get_log_str_list();
-  sendSnapshot_ = req.get_sending_snapshot();
+  cleanupData_ = req.get_cleanup_data();
 
   // The sender also ensures that only one request is being sent
   // at a time for the same part of the same space
@@ -107,15 +107,17 @@ void AppendLogProcessor::wal() {
 
     // Assuming that the wal logId from sync listener to drainer is continuous
     // That is, the received wal log contains heartbeat information
-    env_->wals_[toSpaceId_][fromPartId_] = wal::FileBasedWal::getWal(
-        walPath_,
-        std::move(info),
-        std::move(policy),
-        [this](LogID logId, TermID logTermId, ClusterID logClusterId, const std::string& log) {
-          return this->preProcessLog(logId, logTermId, logClusterId, log);
-        },
-        env_->diskMan_,
-        true);
+    env_->wals_[toSpaceId_].emplace(
+        fromPartId_,
+        wal::FileBasedWal::getWal(
+            walPath_,
+            std::move(info),
+            std::move(policy),
+            [this](LogID logId, TermID logTermId, ClusterID logClusterId, const std::string& log) {
+              return this->preProcessLog(logId, logTermId, logClusterId, log);
+            },
+            env_->diskMan_,
+            true));
     wal_ = env_->wals_[toSpaceId_][fromPartId_];
   }
 }
@@ -175,32 +177,32 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkAndBuildContexts(
 
   // 5) create or check data/drainer/nebula/toSpaceId/frompartId/recv.log file
   recvLogFile_ = folly::stringPrintf("%s/%d/recv.log", datapath.c_str(), fromPartId_);
-  if (access(recvLogFile_.c_str(), 0) != 0) {
-    // file not exists
+  wal();
+
+  if (cleanupData_) {
+    // TODO(pandasheep) clear the data in the space under slave cluster.
+    // Clear wal, clear the recvLogFile, sendLogFile file
+    wal_->reset();
     result = updateRecvLog(0);
     if (!result) {
       return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
     }
+    sendLogFile_ = folly::stringPrintf("%s/%d/send.log", datapath.c_str(), fromPartId_);
+    if (access(sendLogFile_.c_str(), 0) == 0) {
+      result = updateSendLog(0);
+      if (!result) {
+        return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+      }
+    }
   } else {
     // file exists and need check
-    if (!sendSnapshot_) {
-      retCode = checkLastRecvLogId();
-      if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
-        return retCode;
-      }
-    } else {
-      // TODO(pandasheep) Need to clear wal, clear the recvLogFile, sendLogFile file,
-      // clear the data in the space under slave cluster.
-      // Currently report error
-      LOG(ERROR) << "Prepare to receive snapshot data from the listener of the master cluster,"
-                 << "Please clear the data first.";
-      return nebula::cpp2::ErrorCode::E_DATA_CONFLICT;
+    retCode = checkLastRecvLogId();
+    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+      return retCode;
     }
   }
 
   // Checks whether the drainer's wal lastlogId matches the stored lastLogIdRecv
-  wal();
-
   if (wal_->lastLogId() > lastLogIdRecv_) {
     wal_->rollbackToLog(lastLogIdRecv_);
   }
@@ -358,55 +360,122 @@ bool AppendLogProcessor::updateRecvLog(LogID lastLogIdRecv) {
   return true;
 }
 
-nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogId() {
+bool AppendLogProcessor::updateSendLog(LogID lastLogIdSend) {
   auto key = std::make_pair(toSpaceId_, fromPartId_);
-  auto recvLogFdIter = env_->recvLogIdFd_.find(key);
-  if (recvLogFdIter == env_->recvLogIdFd_.end()) {
-    int32_t fd = open(recvLogFile_.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
+  auto sendLogFdIter = env_->sendLogIdFd_.find(key);
+  if (sendLogFdIter == env_->sendLogIdFd_.end()) {
+    int32_t fd = open(sendLogFile_.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
     if (fd < 0) {
-      LOG(ERROR) << "Failed to open file " << recvLogFile_ << "errno(" << errno
+      LOG(ERROR) << "Failed to open file " << sendLogFile_ << "errno(" << errno
                  << "): " << strerror(errno);
-      return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+      return false;
     }
-    auto ret = env_->recvLogIdFd_.insert(key, fd).second;
+    auto ret = env_->sendLogIdFd_.insert(key, fd).second;
     if (!ret) {
       close(fd);
     }
   }
 
-  LogID lastLogIdRecv;
   int32_t currFd;
   try {
-    currFd = env_->recvLogIdFd_.at(key);
+    currFd = env_->sendLogIdFd_.at(key);
   } catch (...) {
-    LOG(ERROR) << "Failed to read the file " << recvLogFile_;
-    return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+    LOG(ERROR) << "Failed to read the file " << sendLogFile_;
+    return false;
   }
-  auto ret = pread(currFd, reinterpret_cast<char*>(&lastLogIdRecv), sizeof(LogID), 0);
-  if (ret != static_cast<ssize_t>(sizeof(LogID))) {
-    LOG(ERROR) << "Failed to read the file " << recvLogFile_ << " (errno: " << errno
-               << "): " << strerror(errno);
+  if (lseek(currFd, 0, SEEK_SET) < 0) {
+    LOG(ERROR) << "Failed to seek the send.log, space " << toSpaceId_ << " part " << fromPartId_
+               << "error: " << strerror(errno);
     close(currFd);
-    env_->recvLogIdFd_.erase(key);
-    return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+    env_->sendLogIdFd_.erase(key);
+    return false;
   }
 
-  // the wal log data sent has expired
-  // logId is continuous. But the term is not necessarily continuous
-  if (lastLogIdRecv > lastLogIdRecv_) {
-    LOG(ERROR) << "Sync data expired! lastLogIdRecv from Listener: " << lastLogIdRecv_
-               << ", lastLogIdRecv from drainer: " << lastLogIdRecv;
-    // Maybe needs more detailed processing
-    nextLastLogIdRecv_ = lastLogIdRecv;
-    return nebula::cpp2::ErrorCode::E_LOG_STALE;
-  } else if (lastLogIdRecv < lastLogIdRecv_) {
-    // There is a gap in the wal log data
-    LOG(ERROR) << "Sync data has a gap! lastLogIdRecv from listener: " << lastLogIdRecv_
-               << ", lastLogIdRecv from drainer: " << lastLogIdRecv;
-    nextLastLogIdRecv_ = lastLogIdRecv;
-    return nebula::cpp2::ErrorCode::E_LOG_GAP;
+  std::string val;
+  val.reserve(sizeof(LogID));
+  val.append(reinterpret_cast<const char*>(&lastLogIdSend), sizeof(LogID));
+  ssize_t written = write(currFd, val.c_str(), val.size());
+  if (written != (ssize_t)val.size()) {
+    LOG(ERROR) << "Bytes written:" << written << ", expected:" << val.size()
+               << ", error:" << strerror(errno);
+    close(currFd);
+    env_->sendLogIdFd_.erase(key);
+    return false;
   }
+  fsync(currFd);
+  return true;
+}
 
+nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogId() {
+  // By checking the existence of the recv.Log file to determine
+  // whether it is the first time to receive data, or the first time to receive data after the
+  // snapshot. Normally, before sending data for the first time, the recv.log file does not exist.
+  // When sending snapshot data, the recv.log file exists, and 0 is written in it
+  if (access(recvLogFile_.c_str(), 0) == 0) {
+    auto key = std::make_pair(toSpaceId_, fromPartId_);
+    auto recvLogFdIter = env_->recvLogIdFd_.find(key);
+    if (recvLogFdIter == env_->recvLogIdFd_.end()) {
+      int32_t fd = open(recvLogFile_.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
+      if (fd < 0) {
+        LOG(ERROR) << "Failed to open file " << recvLogFile_ << "errno(" << errno
+                   << "): " << strerror(errno);
+        return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+      }
+      auto ret = env_->recvLogIdFd_.insert(key, fd).second;
+      if (!ret) {
+        close(fd);
+      }
+    }
+
+    LogID lastLogIdRecv;
+    int32_t currFd;
+    try {
+      currFd = env_->recvLogIdFd_.at(key);
+    } catch (...) {
+      LOG(ERROR) << "Failed to read the file " << recvLogFile_;
+      return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+    }
+    auto ret = pread(currFd, reinterpret_cast<char*>(&lastLogIdRecv), sizeof(LogID), 0);
+    if (ret != static_cast<ssize_t>(sizeof(LogID))) {
+      LOG(ERROR) << "Failed to read the file " << recvLogFile_ << " (errno: " << errno
+                 << "): " << strerror(errno);
+      close(currFd);
+      env_->recvLogIdFd_.erase(key);
+      return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+    }
+
+    // the wal log data sent has expired
+    // logId is continuous. But the term is not necessarily continuous
+    if (lastLogIdRecv > lastLogIdRecv_) {
+      LOG(ERROR) << "Sync data expired! lastLogIdRecv from Listener: " << lastLogIdRecv_
+                 << ", lastLogIdRecv from drainer: " << lastLogIdRecv;
+      // Maybe needs more detailed processing
+      nextLastLogIdRecv_ = lastLogIdRecv;
+      return nebula::cpp2::ErrorCode::E_LOG_STALE;
+    } else if (lastLogIdRecv < lastLogIdRecv_) {
+      // When sending snapshot data, the lastLogIdRecv in the request and in the file are both 0
+      // When the wal data is sent for the first time after the snapshot,
+      // the lastLogIdRecv in the request is committedLogId, and the lastLogIdRecv in the drainer
+      // file is 0
+      if (lastLogIdRecv != 0) {
+        // There is a gap in the wal log data
+        LOG(ERROR) << "Sync data has a gap! lastLogIdRecv from listener: " << lastLogIdRecv_
+                   << ", lastLogIdRecv from drainer: " << lastLogIdRecv;
+        nextLastLogIdRecv_ = lastLogIdRecv;
+        return nebula::cpp2::ErrorCode::E_LOG_GAP;
+      }
+    }
+  } else {
+    // Regardless of receiving snapshot or receiving wal, when receiving for the first time, it
+    // should be 0
+    if (lastLogIdRecv_ != 0) {
+      // There is a gap in the wal log data
+      LOG(ERROR) << "Sync data has a gap! lastLogIdRecv from listener: " << lastLogIdRecv_
+                 << ", drainer not receive log";
+      nextLastLogIdRecv_ = 0;
+      return nebula::cpp2::ErrorCode::E_LOG_GAP;
+    }
+  }
   return nebula::cpp2::ErrorCode::SUCCEEDED;
 }
 

@@ -91,6 +91,8 @@ struct SpaceInfoCache {
   Indexes tagIndexes_;
   std::vector<cpp2::IndexItem> edgeIndexItemVec_;
   Indexes edgeIndexes_;
+
+  // Only contains storage part listener
   Listeners listeners_;
   // objPool used to decode when adding field
   ObjectPool pool_;
@@ -98,6 +100,9 @@ struct SpaceInfoCache {
 
   // sync listener drainer client for master cluster
   std::unordered_map<PartitionID, cpp2::DrainerClientInfo> drainerclients_;
+
+  // meta listener drainer client has one.
+  cpp2::DrainerClientInfo metaDrainerClient_;
   // drainer server for slave cluster
   std::vector<cpp2::DrainerInfo> drainerServer_;
 
@@ -120,6 +125,7 @@ struct SpaceInfoCache {
         listeners_(info.listeners_),
         termOfPartition_(info.termOfPartition_),
         drainerclients_(info.drainerclients_),
+        metaDrainerClient_(info.metaDrainerClient_),
         drainerServer_(info.drainerServer_),
         variables_(info.variables_) {}
 
@@ -434,7 +440,8 @@ class MetaClient {
 
   folly::Future<StatusOr<bool>> addListener(GraphSpaceID spaceId,
                                             cpp2::ListenerType type,
-                                            std::vector<HostAddr> hosts,
+                                            std::vector<HostAddr> storageHosts,
+                                            const HostAddr* metaHost = nullptr,
                                             const std::string* spaceName = nullptr);
 
   folly::Future<StatusOr<bool>> removeListener(GraphSpaceID spaceId, cpp2::ListenerType type);
@@ -625,6 +632,11 @@ class MetaClient {
 
   bool authCheckFromCache(const std::string& account, const std::string& password);
 
+  StatusOr<std::vector<std::pair<GraphSpaceID, std::string>>> getMetaListenerInfoFromCache(
+      HostAddr host);
+
+  StatusOr<cpp2::DrainerClientInfo> getMetaListenerDrainerOnSpaceFromCache(GraphSpaceID space);
+
   StatusOr<TermID> getTermFromCache(GraphSpaceID spaceId, PartitionID);
 
   bool checkShadowAccountFromCache(const std::string& account);
@@ -696,6 +708,13 @@ class MetaClient {
   HostAddr getMetaLeader() { return leader_; }
 
   int64_t HeartbeatTime() { return heartbeatTime_; }
+
+  nebula::ClusterID getClusterId() { return options_.clusterId_.load(); }
+
+  // use for drainer to slave meta
+  folly::Future<StatusOr<bool>> syncData(ClusterID cluster,
+                                         GraphSpaceID space,
+                                         std::vector<std::string> data);
 
  protected:
   // Return true if load succeeded.
@@ -815,6 +834,10 @@ class MetaClient {
   LeaderInfo leadersInfo_;
 
   LocalCache localCache_;
+
+  // meta Listener localCache, meta listener host-> <fromspaceId, tospace name>
+  std::unordered_map<HostAddr, std::vector<std::pair<GraphSpaceID, std::string>>> metaListeners_;
+
   std::vector<HostAddr> addrs_;
   // The lock used to protect active_ and leader_.
   folly::RWSpinLock hostLock_;

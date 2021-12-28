@@ -35,11 +35,13 @@ void HBProcessor::process(const cpp2::HBReq& req) {
             << ", role = " << apache::thrift::util::enumNameSafe(role);
   if (role == cpp2::HostRole::STORAGE || role == cpp2::HostRole::META_LISTENER ||
       role == cpp2::HostRole::STORAGE_LISTENER) {
-    if (!ActiveHostsMan::machineRegisted(kvstore_, host)) {
-      LOG(ERROR) << "Machine " << host << " is not registed";
-      handleErrorCode(nebula::cpp2::ErrorCode::E_MACHINE_NOT_FOUND);
-      onFinished();
-      return;
+    if (role == cpp2::HostRole::STORAGE) {
+      if (!ActiveHostsMan::machineRegisted(kvstore_, host)) {
+        LOG(ERROR) << "Machine " << host << " is not registed";
+        handleErrorCode(nebula::cpp2::ErrorCode::E_MACHINE_NOT_FOUND);
+        onFinished();
+        return;
+      }
     }
 
     ClusterID peerClusterId = req.get_cluster_id();

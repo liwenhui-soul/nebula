@@ -37,15 +37,15 @@ struct AppendLogRequest {
 
     // log id is in the range [last_log_id_sent + 1, last_log_id_to_send]
     8: list<common.LogEntry>  log_str_list;
-    9: bool                   sending_snapshot;
+    // Whether to clear data
+    9: bool                   cleanup_data;
     // sync to the space name of the slave cluster
-    10: binary                 to_space_name;
+    10: binary                to_space_name;
     //  Used to indicate whether it is meta data.
     11: bool                  sync_meta;
 
     12: optional common.PropertyType     space_vid_type;      // Master cluster space vid type
     13: optional i16                     space_vid_len;       // Master cluster space vid len
-
 }
 
 struct AppendLogResponse {

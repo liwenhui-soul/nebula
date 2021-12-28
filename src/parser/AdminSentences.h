@@ -483,10 +483,12 @@ class AddListenerSentence final : public Sentence {
  public:
   AddListenerSentence(const meta::cpp2::ListenerType& type,
                       HostList* hosts,
+                      HostAddr* metaListener = nullptr,
                       std::string* spaceName = nullptr) {
     kind_ = Kind::kAddListener;
     type_ = type;
-    listeners_.reset(hosts);
+    storageListeners_.reset(hosts);
+    metaListener_.reset(metaListener);
     spaceName_.reset(spaceName);
   }
 
@@ -494,13 +496,16 @@ class AddListenerSentence final : public Sentence {
 
   const std::string* spaceName() const { return spaceName_.get(); }
 
-  HostList* listeners() const { return listeners_.get(); }
+  HostList* storageListeners() const { return storageListeners_.get(); }
+
+  HostAddr* metaListeners() const { return metaListener_.get(); }
 
   std::string toString() const override;
 
  private:
   meta::cpp2::ListenerType type_;
-  std::unique_ptr<HostList> listeners_;
+  std::unique_ptr<HostList> storageListeners_;
+  std::unique_ptr<HostAddr> metaListener_;
   std::unique_ptr<std::string> spaceName_;
 };
 

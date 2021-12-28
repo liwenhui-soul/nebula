@@ -13,6 +13,7 @@
 #include "common/base/ErrorOr.h"
 #include "common/base/Status.h"
 #include "common/meta/SchemaManager.h"
+#include "common/meta/ServiceManager.h"
 #include "kvstore/Common.h"
 #include "kvstore/CompactionFilter.h"
 #include "kvstore/KVIterator.h"
@@ -28,6 +29,8 @@ struct KVOptions {
 
   // SchemaManager instance, help the hbasestore to encode/decode data.
   meta::SchemaManager* schemaMan_{nullptr};
+  // SericeManager instance
+  meta::ServiceManager* serviceMan_{nullptr};
 
   // Paths for data. It would be used by rocksdb engine.
   // Be careful! We should ensure each "paths" has only one instance,
@@ -48,6 +51,9 @@ struct KVOptions {
 
   // Custom CompactionFilter used in compaction.
   std::unique_ptr<CompactionFilterFactoryBuilder> cffBuilder_{nullptr};
+
+  // Used for meta normal replica
+  bool isMeta_{false};
 };
 
 struct StoreCapability {

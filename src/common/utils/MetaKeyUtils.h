@@ -215,6 +215,34 @@ class MetaKeyUtils final {
 
   static std::string indexTagKey(GraphSpaceID spaceId, const std::string& name);
 
+  // drainer
+  // judge whether it is indexTagKey
+  static bool isIndexTagKey(const std::string& key);
+
+  // judge whether it is indexEdgeKey
+  static bool isIndexEdgeKey(const std::string& key);
+
+  // judge whether it is indexIndeKey
+  static bool isIndexIndexKey(const std::string& key);
+
+  // replace spaceId of key
+  static std::string replaceTagEdgeIndexIndexKey(GraphSpaceID space, const std::string& rawKey);
+
+  // get spaceId from key
+  static GraphSpaceID getSpaceIdFromTagEdgeIndexIndexKey(const std::string& rawKey);
+
+  static bool isSchemaTagKey(const std::string& key);
+
+  static std::string replaceSchemaTagKey(GraphSpaceID space, const std::string& rawKey);
+
+  static bool isSchemaEdgeKey(const std::string& key);
+
+  static std::string replaceSchemaEdgeKey(GraphSpaceID space, const std::string& rawKey);
+
+  static bool isIndexKey(const std::string& key);
+
+  static std::string replaceIndexKey(GraphSpaceID space, const std::string& rawKey);
+
   static std::string indexEdgeKey(GraphSpaceID spaceId, const std::string& name);
 
   static std::string indexIndexKey(GraphSpaceID spaceId, const std::string& name);

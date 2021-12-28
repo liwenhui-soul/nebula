@@ -32,6 +32,7 @@ class InternalStorageServiceHandler final : public cpp2::InternalStorageServiceS
 
  private:
   StorageEnv* env_{nullptr};
+  std::shared_ptr<folly::Executor> readerPool_;
 };
 
 }  // namespace storage

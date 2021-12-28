@@ -68,6 +68,7 @@ std::unique_ptr<kvstore::KVStore> StorageServer::getStoreInstance() {
         std::make_unique<StorageCompactionFilterFactoryBuilder>(schemaMan_.get(), indexMan_.get());
   }
   options.schemaMan_ = schemaMan_.get();
+  options.serviceMan_ = serviceMan_.get();
   if (FLAGS_store_type == "nebula") {
     auto nbStore = std::make_unique<kvstore::NebulaStore>(
         std::move(options), ioThreadPool_, localHost_, workers_);
@@ -170,6 +171,9 @@ bool StorageServer::start() {
   LOG(INFO) << "Init schema manager";
   schemaMan_ = meta::ServerBasedSchemaManager::create(metaClient_.get());
 
+  LOG(INFO) << "Init service manager";
+  serviceMan_ = meta::ServiceManager::create(metaClient_.get());
+
   LOG(INFO) << "Init index manager";
   indexMan_ = meta::ServerBasedIndexManager::create(metaClient_.get());
 
@@ -192,6 +196,7 @@ bool StorageServer::start() {
   env_->kvstore_ = kvstore_.get();
   env_->indexMan_ = indexMan_.get();
   env_->schemaMan_ = schemaMan_.get();
+  env_->serviceMan_ = serviceMan_.get();
   env_->rebuildIndexGuard_ = std::make_unique<IndexGuard>();
   env_->metaClient_ = metaClient_.get();
   env_->interClient_ = interClient_.get();

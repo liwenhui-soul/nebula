@@ -66,6 +66,8 @@ class MetaServiceHandler final : public cpp2::MetaServiceSvIf {
 
   folly::Future<cpp2::ScanResp> future_scan(const cpp2::ScanReq& req) override;
 
+  folly::Future<cpp2::ExecResp> future_syncData(const cpp2::SyncDataReq& req) override;
+
   /**
    * Schema related operations.
    * */

@@ -3160,12 +3160,15 @@ TEST_F(ParserTest, SyncServiceTest) {
     ASSERT_FALSE(result.ok()) << result.status();
   }
   {
-    std::string query = "ADD LISTENER SYNC 127.0.0.1:12000 TO SPACE default_space";
+    std::string query =
+        "ADD LISTENER SYNC meta 127.0.0.1:12000 storage 127.0.0.1:13000 TO SPACE default_space";
     auto result = parse(query);
     ASSERT_TRUE(result.ok()) << result.status();
   }
   {
-    std::string query = "ADD LISTENER SYNC 127.0.0.1:12000, 127.0.0.1:12001 TO SPACE default_space";
+    std::string query =
+        "ADD LISTENER SYNC meta 127.0.0.1:12000 storage 127.0.0.1:13000, 127.0.0.1:13001 TO SPACE "
+        "default_space";
     auto result = parse(query);
     ASSERT_TRUE(result.ok()) << result.status();
   }

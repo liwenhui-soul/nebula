@@ -12,6 +12,7 @@
 #include "common/base/Base.h"
 #include "common/meta/IndexManager.h"
 #include "common/meta/SchemaManager.h"
+#include "common/meta/ServiceManager.h"
 #include "drainer/CommonUtils.h"
 #include "drainer/DrainerTaskManager.h"
 
@@ -49,6 +50,7 @@ class DrainerServer final {
   std::shared_ptr<apache::thrift::concurrency::ThreadManager> workers_;
   std::unique_ptr<meta::MetaClient> metaClient_;
   std::unique_ptr<meta::SchemaManager> schemaMan_;
+  std::unique_ptr<meta::ServiceManager> serviceMan_;
   std::unique_ptr<meta::IndexManager> indexMan_;
   std::unique_ptr<nebula::WebService> webSvc_;
   std::unique_ptr<drainer::DrainerEnv> env_;

@@ -50,56 +50,24 @@ struct HookableTask : public DrainerTask {
     return true;
   }
 
-  StatusOr<std::tuple<ClusterID, int32_t, ClusterID>> getClusterIdPartsFormClusterSpaceId(
-      std::string& path) {
-    int32_t fd = open(path.c_str(), O_RDONLY);
-    if (fd < 0) {
-      return Status::Error("Failed to open the file %s", path.c_str());
-    }
-    std::tuple<ClusterID, int32_t, ClusterID> ret;
-    // read fromCluster, fromSpaceId, partNum, toCluster, toSpaceId
-    ClusterID fromClusterId;
-    CHECK_EQ(pread(fd, reinterpret_cast<char*>(&fromClusterId), sizeof(ClusterID), 0),
-             static_cast<ssize_t>(sizeof(ClusterID)));
-
-    GraphSpaceID fromSpaceId;
-    CHECK_EQ(
-        pread(fd, reinterpret_cast<char*>(&fromSpaceId), sizeof(GraphSpaceID), sizeof(ClusterID)),
-        static_cast<ssize_t>(sizeof(GraphSpaceID)));
-
-    int32_t parts;
-    auto offset = sizeof(ClusterID) + sizeof(GraphSpaceID);
-    CHECK_EQ(pread(fd, reinterpret_cast<char*>(&parts), sizeof(int32_t), offset),
-             static_cast<ssize_t>(sizeof(parts)));
-
-    ClusterID toClusterId;
-    offset = sizeof(ClusterID) + sizeof(GraphSpaceID) + sizeof(int32_t);
-    CHECK_EQ(pread(fd, reinterpret_cast<char*>(&toClusterId), sizeof(ClusterID), offset),
-             static_cast<ssize_t>(sizeof(ClusterID)));
-    close(fd);
-
-    std::get<0>(ret) = fromClusterId;
-    std::get<1>(ret) = parts;
-    std::get<2>(ret) = toClusterId;
-    return ret;
-  }
-
-  Status checkClusterAndParts(DrainerEnv* env, std::string& spaceDir, GraphSpaceID spaceId) {
+  Status checkSpaceMeta(DrainerEnv* env, std::string& spaceDir, GraphSpaceID spaceId) {
     auto iter = env->spaceClusters_.find(spaceId);
     auto oldIter = env->spaceOldParts_.find(spaceId);
 
     ClusterID fromClusterId;
-    ClusterID toClusterId;
+    GraphSpaceID fromSpaceId;
     int32_t partNum;
+    ClusterID toClusterId;
+
     if (iter == env->spaceClusters_.end() || oldIter == env->spaceOldParts_.end()) {
       // read cluster_space_id
       auto spaceFile = folly::stringPrintf("%s/cluster_space_id", spaceDir.c_str());
-      auto partsRet = getClusterIdPartsFormClusterSpaceId(spaceFile);
+      auto partsRet = DrainerCommon::readSpaceMeta(spaceFile);
       if (!partsRet.ok()) {
         LOG(ERROR) << "Get space partition number failed from cluster_space_id";
         return partsRet.status();
       }
-      std::tie(fromClusterId, partNum, toClusterId) = partsRet.value();
+      std::tie(fromClusterId, fromSpaceId, partNum, toClusterId) = partsRet.value();
     }
 
     if (iter == env->spaceClusters_.end()) {
@@ -163,7 +131,7 @@ struct HookableTask : public DrainerTask {
           return nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND;
         }
         // check space oldparts and newParts
-        auto ret = checkClusterAndParts(env, spaceDir, spaceId);
+        auto ret = checkSpaceMeta(env, spaceDir, spaceId);
         if (!ret.ok()) {
           LOG(ERROR) << "Get clusterId and partNum failed.";
           return nebula::cpp2::ErrorCode::E_PART_MISMATCH;
@@ -254,7 +222,7 @@ struct HookableTask : public DrainerTask {
 
     // build subtask
     auto wal = env->wals_[space][part];
-    auto ret = DrainerTask::genSubTask(space, part, wal.get());
+    auto ret = DrainerTask::genSubTask(part, wal.get());
     if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
       LOG(ERROR) << folly::stringPrintf("Execute subtask failed, space %d part %d.", space, part);
       return ret;
@@ -267,34 +235,8 @@ struct HookableTask : public DrainerTask {
   }
 
   // Mock drainer sends data to storage successfully
-  Status processorAndSend(std::vector<std::string> logs, PartitionID part) override {
-    auto oldPartIter = env_->spaceOldParts_.find(spaceId_);
-    if (oldPartIter == env_->spaceOldParts_.end()) {
-      return Status::Error("Do not set old partNum in space %d", spaceId_);
-    }
-    auto oldPartNum = oldPartIter->second;
-
-    auto newPartIter = env_->spaceNewParts_.find(spaceId_);
-    if (newPartIter == env_->spaceNewParts_.end()) {
-      return Status::Error("Do not set new partNum in space %d", spaceId_);
-    }
-    newPartNum_ = newPartIter->second;
-
-    std::unordered_map<PartitionID, std::vector<std::string>> data;
-    // If the number of parts in the space on the master-slave cluster is the same,
-    // Do not re-partitioned, at this time, the number of parts is 1.
-    if (oldPartNum == newPartNum_) {
-      data.emplace(part, std::move(logs));
-    } else {
-      // re-partitioned, the number of parts is unknown at this time.
-      auto retLogStats = rePartitionData(logs, part);
-      if (!retLogStats.ok()) {
-        return retLogStats.status();
-      }
-      data = retLogStats.value();
-    }
-
-    // mock drainer server to storage client, assuming that the data is sent successfully.
+  Status sendData(std::unordered_map<PartitionID, std::vector<std::string>>&,
+                  PartitionID) override {
     return Status::OK();
   }
 

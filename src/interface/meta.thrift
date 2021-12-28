@@ -892,11 +892,13 @@ enum ListenerType {
 } (cpp.enum_strict)
 
 struct AddListenerReq {
-    1: common.GraphSpaceID     space_id,
-    2: ListenerType            type,
-    3: list<common.HostAddr>   hosts,
+    1: common.GraphSpaceID         space_id,
+    2: ListenerType                type,
+    3: list<common.HostAddr>       storage_hosts,
+    4: optional common.HostAddr    meta_host,
     // To space name
-    4: optional binary         space_name,
+    5: optional binary             space_name,
+
 }
 
 struct RemoveListenerReq {
@@ -1252,6 +1254,14 @@ struct ListVariablesResp {
     (cpp.template = "std::unordered_map") variables,
 }
 
+struct SyncDataReq {
+    // slave clusterId
+    1: common.ClusterID    cluster;
+    // sync space id
+    2: common.GraphSpaceID space_id;
+    3: list<binary>        logs;
+}
+
 service MetaService {
     ExecResp createSpace(1: CreateSpaceReq req);
     ExecResp dropSpace(1: DropSpaceReq req);
@@ -1286,6 +1296,8 @@ service MetaService {
     ExecResp remove(1: RemoveReq req);
     ExecResp removeRange(1: RemoveRangeReq req);
     ScanResp scan(1: ScanReq req);
+    // use for drainer to meta
+    ExecResp syncData(1: SyncDataReq req);
 
     ExecResp             createTagIndex(1: CreateTagIndexReq req);
     ExecResp             dropTagIndex(1: DropTagIndexReq req );

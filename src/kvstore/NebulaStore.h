@@ -226,6 +226,9 @@ class NebulaStore : public KVStore, public Handler {
 
   nebula::cpp2::ErrorCode backup();
 
+  // meta normal replica sync meta listener info
+  nebula::cpp2::ErrorCode checkRemoteMetaListeners();
+
   nebula::cpp2::ErrorCode dropCheckpoint(GraphSpaceID spaceId, const std::string& name) override;
 
   nebula::cpp2::ErrorCode setWriteBlocking(GraphSpaceID spaceId, bool sign) override;
@@ -332,6 +335,9 @@ class NebulaStore : public KVStore, public Handler {
   int32_t getSpaceVidLen(GraphSpaceID spaceId);
 
   void removeSpaceDir(const std::string& dir);
+
+  ErrorOr<nebula::cpp2::ErrorCode, std::pair<meta::cpp2::HostRole, int64_t>> decodeHost(
+      const folly::StringPiece& data);
 
  private:
   // The lock used to protect spaces_

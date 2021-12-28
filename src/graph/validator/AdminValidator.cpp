@@ -241,12 +241,16 @@ Status ShowSnapshotsValidator::toPlan() {
 
 Status AddListenerValidator::validateImpl() {
   auto sentence = static_cast<AddListenerSentence *>(sentence_);
-  auto hosts = sentence->listeners()->hosts();
+  auto hosts = sentence->storageListeners()->hosts();
   if (hosts.empty()) {
     return Status::SemanticError("Listener hosts should not be empty");
   }
 
   if (sentence->type() == meta::cpp2::ListenerType::SYNC) {
+    auto metaListener = sentence->metaListeners();
+    if (!metaListener) {
+      return Status::SemanticError("Sync meta Listener host should not be empty");
+    }
     auto spaceName = sentence->spaceName();
     if (!spaceName) {
       return Status::SemanticError("Sync Listener toSpaceName should not be empty");
@@ -272,8 +276,12 @@ Status AddListenerValidator::validateImpl() {
 
 Status AddListenerValidator::toPlan() {
   auto sentence = static_cast<AddListenerSentence *>(sentence_);
-  auto *doNode = AddListener::make(
-      qctx_, nullptr, sentence->type(), sentence->listeners()->hosts(), sentence->spaceName());
+  auto *doNode = AddListener::make(qctx_,
+                                   nullptr,
+                                   sentence->type(),
+                                   sentence->storageListeners()->hosts(),
+                                   sentence->metaListeners(),
+                                   sentence->spaceName());
   root_ = doNode;
   tail_ = root_;
   return Status::OK();

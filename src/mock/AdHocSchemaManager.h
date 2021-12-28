@@ -98,17 +98,6 @@ class AdHocSchemaManager final : public nebula::meta::SchemaManager {
                                                                                  EdgeType edge,
                                                                                  SchemaVer ver);
 
-  StatusOr<std::vector<nebula::meta::cpp2::ServiceClient>> getServiceClients(
-      nebula::meta::cpp2::ExternalServiceType type) override;
-
-  StatusOr<nebula::meta::cpp2::DrainerClientInfo> getDrainerClient(GraphSpaceID space,
-                                                                   PartitionID partId) override;
-
-  StatusOr<std::vector<nebula::meta::cpp2::DrainerInfo>> getDrainerServer(
-      GraphSpaceID spaceId) override;
-
-  void addServiceClient(const nebula::meta::cpp2::ServiceClient& client);
-
   StatusOr<std::pair<std::string, nebula::meta::cpp2::FTIndex>> getFTIndex(GraphSpaceID,
                                                                            int32_t) override {
     LOG(FATAL) << "Unimplemented";

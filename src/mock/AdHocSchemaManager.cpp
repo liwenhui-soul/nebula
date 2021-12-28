@@ -299,28 +299,5 @@ StatusOr<EdgeSchema> AdHocSchemaManager::getAllLatestVerEdgeSchema(GraphSpaceID 
   return edgesSchema;
 }
 
-StatusOr<std::vector<nebula::meta::cpp2::ServiceClient>> AdHocSchemaManager::getServiceClients(
-    nebula::meta::cpp2::ExternalServiceType type) {
-  UNUSED(type);
-  return serviceClients_;
-}
-
-StatusOr<nebula::meta::cpp2::DrainerClientInfo> AdHocSchemaManager::getDrainerClient(GraphSpaceID,
-                                                                                     PartitionID) {
-  nebula::meta::cpp2::DrainerClientInfo dClientInfo;
-  return dClientInfo;
-}
-
-StatusOr<std::vector<nebula::meta::cpp2::DrainerInfo>> AdHocSchemaManager::getDrainerServer(
-    GraphSpaceID spaceId) {
-  UNUSED(spaceId);
-  std::vector<nebula::meta::cpp2::DrainerInfo> drainerServer;
-  return drainerServer;
-}
-
-void AdHocSchemaManager::addServiceClient(const nebula::meta::cpp2::ServiceClient& client) {
-  serviceClients_.emplace_back(client);
-}
-
 }  // namespace mock
 }  // namespace nebula

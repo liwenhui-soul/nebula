@@ -71,6 +71,7 @@ class StorageEnv {
  public:
   kvstore::KVStore* kvstore_{nullptr};
   meta::SchemaManager* schemaMan_{nullptr};
+  meta::ServiceManager* serviceMan_{nullptr};
   meta::IndexManager* indexMan_{nullptr};
   std::atomic<int32_t> onFlyingRequest_{0};
   std::unique_ptr<IndexGuard> rebuildIndexGuard_{nullptr};

@@ -147,36 +147,6 @@ StatusOr<EdgeSchema> ServerBasedSchemaManager::getAllLatestVerEdgeSchema(GraphSp
   return metaClient_->getAllLatestVerEdgeSchemaFromCache(space);
 }
 
-StatusOr<std::vector<nebula::meta::cpp2::ServiceClient>>
-ServerBasedSchemaManager::getServiceClients(meta::cpp2::ExternalServiceType type) {
-  auto ret = metaClient_->getServiceClientsFromCache(type);
-  if (!ret.ok()) {
-    return ret.status();
-  }
-  if (ret.value().empty()) {
-    return Status::Error("Service list is empty");
-  }
-  return std::move(ret).value();
-}
-
-StatusOr<nebula::meta::cpp2::DrainerClientInfo> ServerBasedSchemaManager::getDrainerClient(
-    GraphSpaceID space, PartitionID partId) {
-  auto ret = metaClient_->getDrainerClientFromCache(space, partId);
-  if (!ret.ok()) {
-    return ret.status();
-  }
-  return std::move(ret).value();
-}
-
-StatusOr<std::vector<cpp2::DrainerInfo>> ServerBasedSchemaManager::getDrainerServer(
-    GraphSpaceID space) {
-  auto ret = metaClient_->getDrainerFromCache(space);
-  if (!ret.ok()) {
-    return ret.status();
-  }
-  return std::move(ret).value();
-}
-
 StatusOr<std::pair<std::string, nebula::meta::cpp2::FTIndex>> ServerBasedSchemaManager::getFTIndex(
     GraphSpaceID spaceId, int32_t schemaId) {
   auto ret = metaClient_->getFTIndexBySpaceSchemaFromCache(spaceId, schemaId);

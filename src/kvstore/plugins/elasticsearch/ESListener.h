@@ -30,6 +30,7 @@ class ESListener : public Listener {
              std::shared_ptr<RaftClient> clientMan,
              std::shared_ptr<DiskManager> diskMan,
              meta::SchemaManager* schemaMan,
+             meta::ServiceManager* serviceMan,
              std::shared_ptr<DrainerClient> drainerClientMan)
       : Listener(spaceId,
                  partId,
@@ -41,7 +42,8 @@ class ESListener : public Listener {
                  snapshotMan,
                  clientMan,
                  diskMan,
-                 schemaMan) {
+                 schemaMan,
+                 serviceMan) {
     CHECK(!!schemaMan);
     UNUSED(drainerClientMan);
     lastApplyLogFile_ = std::make_unique<std::string>(

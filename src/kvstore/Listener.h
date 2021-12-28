@@ -8,6 +8,7 @@
 
 #include "common/base/Base.h"
 #include "common/meta/SchemaManager.h"
+#include "common/meta/ServiceManager.h"
 #include "kvstore/Common.h"
 #include "kvstore/raftex/Host.h"
 #include "kvstore/raftex/RaftPart.h"
@@ -97,7 +98,8 @@ class Listener : public raftex::RaftPart {
            std::shared_ptr<raftex::SnapshotManager> snapshotMan,
            std::shared_ptr<RaftClient> clientMan,
            std::shared_ptr<DiskManager> diskMan,
-           meta::SchemaManager* schemaMan);
+           meta::SchemaManager* schemaMan,
+           meta::ServiceManager* serviceMan);
 
   // Initialize listener, all Listener must call this method
   void start(std::vector<HostAddr>&& peers, bool asLearner = true) override;
@@ -177,6 +179,7 @@ class Listener : public raftex::RaftPart {
   int64_t lastApplyTime_ = 0;
   std::set<HostAddr> peers_;
   meta::SchemaManager* schemaMan_{nullptr};
+  meta::ServiceManager* serviceMan_{nullptr};
 };
 
 }  // namespace kvstore

@@ -10,7 +10,8 @@ namespace kvstore {
 
 meta::PartsMap MemPartManager::parts(const HostAddr&) { return partsMap_; }
 
-meta::ListenersMap MemPartManager::listeners(const HostAddr&) { return listenersMap_; }
+// Get all the listener information used by a host
+meta::ListenersMap MemPartManager::listeners(const HostAddr& host) { return listenersMap_[host]; }
 
 StatusOr<std::vector<meta::RemoteListenerInfo>> MemPartManager::listenerPeerExist(
     GraphSpaceID spaceId, PartitionID partId) {

@@ -18,6 +18,21 @@ namespace nebula {
 namespace storage {
 
 InternalStorageServiceHandler::InternalStorageServiceHandler(StorageEnv* env) : env_(env) {
+  if (FLAGS_reader_handlers_type == "io") {
+    auto tf = std::make_shared<folly::NamedThreadFactory>("reader-pool");
+    readerPool_ =
+        std::make_shared<folly::IOThreadPoolExecutor>(FLAGS_reader_handlers, std::move(tf));
+  } else {
+    if (FLAGS_reader_handlers_type != "cpu") {
+      LOG(WARNING) << "Unknown value for --reader_handlers_type, using `cpu'";
+    }
+    using TM = apache::thrift::concurrency::PriorityThreadManager;
+    auto pool = TM::newPriorityThreadManager(FLAGS_reader_handlers, true);
+    pool->setNamePrefix("reader-pool");
+    pool->start();
+    readerPool_ = std::move(pool);
+  }
+
   kSyncDataCounters.init("sync_data");
 }
 

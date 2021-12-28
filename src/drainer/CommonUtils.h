@@ -11,6 +11,7 @@
 #include "common/base/Base.h"
 #include "common/meta/IndexManager.h"
 #include "common/meta/SchemaManager.h"
+#include "common/meta/ServiceManager.h"
 #include "common/stats/StatsManager.h"
 #include "kvstore/KVStore.h"
 #include "kvstore/wal/FileBasedWal.h"
@@ -42,8 +43,12 @@ struct ProcessorCounters {
 class DrainerEnv {
  public:
   meta::SchemaManager *schemaMan_{nullptr};
+  meta::ServiceManager *serviceMan_{nullptr};
   meta::IndexManager *indexMan_{nullptr};
   meta::MetaClient *metaClient_{nullptr};
+
+  // local drainer host
+  HostAddr localHost_;
 
   // data/drainer/nebula
   std::string drainerPath_;

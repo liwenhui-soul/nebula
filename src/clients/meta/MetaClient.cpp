@@ -521,11 +521,17 @@ bool MetaClient::loadListeners(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCa
     return false;
   }
   Listeners listeners;
+  std::unordered_map<HostAddr, std::vector<std::pair<GraphSpaceID, std::string>>> metaListeners;
   for (auto& listener : listenerRet.value()) {
-    listeners[listener.get_host()].emplace_back(
-        std::make_pair(listener.get_part_id(), listener.get_type()));
+    if (listener.get_part_id() == 0 && listener.space_name_ref().has_value()) {
+      metaListeners[listener.get_host()].emplace_back(spaceId, *listener.space_name_ref());
+    } else {
+      listeners[listener.get_host()].emplace_back(
+          std::make_pair(listener.get_part_id(), listener.get_type()));
+    }
   }
   cache->listeners_ = std::move(listeners);
+  metaListeners_ = metaListeners;
   return true;
 }
 
@@ -537,7 +543,14 @@ bool MetaClient::loadListenerDrainers(GraphSpaceID spaceId, std::shared_ptr<Spac
     return false;
   }
 
-  cache->drainerclients_ = std::move(listenerDrainerRet.value());
+  auto listenerDrainerMap = listenerDrainerRet.value();
+  for (auto& drainerClient : listenerDrainerMap) {
+    if (drainerClient.first == 0) {
+      cache->metaDrainerClient_ = drainerClient.second;
+    }
+  }
+  listenerDrainerMap.erase(0);
+  cache->drainerclients_ = std::move(listenerDrainerMap);
   return true;
 }
 
@@ -934,6 +947,8 @@ Status MetaClient::handleResponse(const RESP& resp) {
       return Status::Error("Service not existed!");
     case nebula::cpp2::ErrorCode::E_DRAINER_NOT_FOUND:
       return Status::Error("Drainer not existed!");
+    case nebula::cpp2::ErrorCode::E_DRAINER_CLIENT_NOT_FOUND:
+      return Status::Error("Drainer client not existed!");
     case nebula::cpp2::ErrorCode::E_NO_VALID_DRAINER:
       return Status::Error("Invalid drainer!");
     case nebula::cpp2::ErrorCode::E_LISTENER_CONFLICT:
@@ -2475,19 +2490,21 @@ folly::Future<StatusOr<bool>> MetaClient::heartbeat() {
       options_.clusterId_ = FileBasedClusterIdMan::getClusterIdFromFile(FLAGS_cluster_id_path);
     }
     req.set_cluster_id(options_.clusterId_.load());
-    std::unordered_map<GraphSpaceID, std::vector<cpp2::LeaderInfo>> leaderIds;
-    if (listener_ != nullptr) {
-      listener_->fetchLeaderInfo(leaderIds);
-      if (leaderIds_ != leaderIds) {
-        {
-          folly::RWSpinLock::WriteHolder holder(leaderIdsLock_);
-          leaderIds_.clear();
-          leaderIds_ = leaderIds;
+    if (options_.role_ == cpp2::HostRole::STORAGE) {
+      std::unordered_map<GraphSpaceID, std::vector<cpp2::LeaderInfo>> leaderIds;
+      if (listener_ != nullptr) {
+        listener_->fetchLeaderInfo(leaderIds);
+        if (leaderIds_ != leaderIds) {
+          {
+            folly::RWSpinLock::WriteHolder holder(leaderIdsLock_);
+            leaderIds_.clear();
+            leaderIds_ = leaderIds;
+          }
         }
+        req.set_leader_partIds(std::move(leaderIds));
+      } else {
+        req.set_leader_partIds(std::move(leaderIds));
       }
-      req.set_leader_partIds(std::move(leaderIds));
-    } else {
-      req.set_leader_partIds(std::move(leaderIds));
     }
 
     kvstore::SpaceDiskPartsMap diskParts;
@@ -2887,12 +2904,16 @@ folly::Future<StatusOr<std::vector<cpp2::Snapshot>>> MetaClient::listSnapshots()
 
 folly::Future<StatusOr<bool>> MetaClient::addListener(GraphSpaceID spaceId,
                                                       cpp2::ListenerType type,
-                                                      std::vector<HostAddr> hosts,
+                                                      std::vector<HostAddr> storageHosts,
+                                                      const HostAddr* metaHost,
                                                       const std::string* spaceName) {
   cpp2::AddListenerReq req;
   req.set_space_id(spaceId);
   req.set_type(type);
-  req.set_hosts(std::move(hosts));
+  req.set_storage_hosts(std::move(storageHosts));
+  if (metaHost) {
+    req.set_meta_host(*metaHost);
+  }
   if (spaceName) {
     req.set_space_name(*spaceName);
   }
@@ -2985,6 +3006,37 @@ MetaClient::getListenersBySpaceHostFromCache(GraphSpaceID spaceId, const HostAdd
   } else {
     return iter->second;
   }
+}
+
+StatusOr<std::vector<std::pair<GraphSpaceID, std::string>>>
+MetaClient::getMetaListenerInfoFromCache(HostAddr host) {
+  if (!ready_) {
+    return Status::Error("Not ready!");
+  }
+  folly::RWSpinLock::ReadHolder holder(localCacheLock_);
+  auto iter = metaListeners_.find(host);
+  if (iter == metaListeners_.end()) {
+    VLOG(3) << "Meta listener not found!";
+    return Status::ListenerNotFound();
+  } else {
+    return iter->second;
+  }
+}
+
+StatusOr<cpp2::DrainerClientInfo> MetaClient::getMetaListenerDrainerOnSpaceFromCache(
+    GraphSpaceID space) {
+  if (!ready_) {
+    return Status::Error("Not ready!");
+  }
+
+  const ThreadLocalInfo& threadLocalInfo = getThreadLocalInfo();
+  auto spaceIt = threadLocalInfo.localCache_.find(space);
+  if (spaceIt == threadLocalInfo.localCache_.end()) {
+    VLOG(3) << "Space " << space << " not found!";
+    return Status::SpaceNotFound();
+  }
+
+  return spaceIt->second->metaDrainerClient_;
 }
 
 StatusOr<ListenersMap> MetaClient::getListenersByHostFromCache(const HostAddr& host) {
@@ -3885,6 +3937,26 @@ Status MetaClient::verifyVersion() {
     return Status::Error("Client verified failed: %s", resp.get_error_msg()->c_str());
   }
   return Status::OK();
+}
+
+folly::Future<StatusOr<bool>> MetaClient::syncData(ClusterID cluster,
+                                                   GraphSpaceID space,
+                                                   std::vector<std::string> data) {
+  cpp2::SyncDataReq req;
+  req.set_cluster(cluster);
+  req.set_space_id(space);
+  req.set_logs(std::move(data));
+
+  folly::Promise<StatusOr<bool>> promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_syncData(request); },
+      [](cpp2::ExecResp&& resp) -> bool {
+        return resp.get_code() == nebula::cpp2::ErrorCode::SUCCEEDED;
+      },
+      std::move(promise));
+  return future;
 }
 
 bool MetaClient::currentSpaceReadOnly(GraphSpaceID spaceId) {

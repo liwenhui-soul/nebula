@@ -580,6 +580,25 @@ std::string MetaKeyUtils::indexKey(GraphSpaceID spaceID, IndexID indexID) {
   return key;
 }
 
+bool MetaKeyUtils::isIndexKey(const std::string& key) {
+  if (key.size() < kIndexesTable.size() + sizeof(GraphSpaceID) + sizeof(IndexID)) {
+    return false;
+  }
+
+  auto indexestable = key.substr(0, kIndexesTable.size());
+  if (indexestable == kIndexesTable) {
+    return true;
+  }
+  return false;
+}
+
+std::string MetaKeyUtils::replaceIndexKey(GraphSpaceID space, const std::string& rawKey) {
+  auto key = rawKey.substr(0, kIndexesTable.size());
+  key.append(reinterpret_cast<const char*>(&space), sizeof(GraphSpaceID))
+      .append(rawKey.substr(kIndexesTable.size() + sizeof(GraphSpaceID)));
+  return key;
+}
+
 std::string MetaKeyUtils::indexVal(const nebula::meta::cpp2::IndexItem& item) {
   std::string value;
   apache::thrift::CompactSerializer::serialize(item, &value);
@@ -664,6 +683,92 @@ std::string MetaKeyUtils::indexTagKey(GraphSpaceID spaceId, const std::string& n
   return key;
 }
 
+bool MetaKeyUtils::isIndexTagKey(const std::string& key) {
+  if (key.size() <= kIndexTable.size() + sizeof(EntryType) + sizeof(GraphSpaceID)) {
+    return false;
+  }
+
+  auto indextable = key.substr(0, kIndexTable.size());
+  if (indextable != kIndexTable) {
+    return false;
+  }
+
+  auto type = *reinterpret_cast<const EntryType*>(key.data() + kIndexTable.size());
+  if (type == EntryType::TAG) {
+    return true;
+  }
+  return false;
+}
+
+std::string MetaKeyUtils::replaceTagEdgeIndexIndexKey(GraphSpaceID space,
+                                                      const std::string& rawKey) {
+  auto key = rawKey.substr(0, kIndexTable.size() + sizeof(EntryType));
+  key.append(reinterpret_cast<const char*>(&space), sizeof(GraphSpaceID))
+      .append(rawKey.substr(kIndexTable.size() + sizeof(EntryType) + sizeof(GraphSpaceID)));
+  return key;
+}
+
+GraphSpaceID MetaKeyUtils::getSpaceIdFromTagEdgeIndexIndexKey(const std::string& rawKey) {
+  return *reinterpret_cast<const GraphSpaceID*>(rawKey.data() + kIndexTable.size() +
+                                                sizeof(EntryType));
+}
+
+bool MetaKeyUtils::isSchemaTagKey(const std::string& key) {
+  if (key.size() < kTagsTable.size() + sizeof(GraphSpaceID) + sizeof(TagID) + sizeof(SchemaVer)) {
+    return false;
+  }
+
+  auto tagstable = key.substr(0, kTagsTable.size());
+  if (tagstable == kTagsTable) {
+    return true;
+  }
+  return false;
+}
+
+std::string MetaKeyUtils::replaceSchemaTagKey(GraphSpaceID space, const std::string& rawKey) {
+  auto key = rawKey.substr(0, kTagsTable.size());
+  key.append(reinterpret_cast<const char*>(&space), sizeof(GraphSpaceID))
+      .append(rawKey.substr(kTagsTable.size() + sizeof(GraphSpaceID)));
+  return key;
+}
+
+bool MetaKeyUtils::isSchemaEdgeKey(const std::string& key) {
+  auto size = kEdgesTable.size() + sizeof(GraphSpaceID) + sizeof(EdgeType) + sizeof(SchemaVer);
+  if (key.size() < size) {
+    return false;
+  }
+
+  auto edgestable = key.substr(0, kEdgesTable.size());
+  if (edgestable == kEdgesTable) {
+    return true;
+  }
+  return false;
+}
+
+std::string MetaKeyUtils::replaceSchemaEdgeKey(GraphSpaceID space, const std::string& rawKey) {
+  auto key = rawKey.substr(0, kEdgesTable.size());
+  key.append(reinterpret_cast<const char*>(&space), sizeof(GraphSpaceID))
+      .append(rawKey.substr(kEdgesTable.size() + sizeof(GraphSpaceID)));
+  return key;
+}
+
+bool MetaKeyUtils::isIndexEdgeKey(const std::string& key) {
+  if (key.size() <= kIndexTable.size() + sizeof(EntryType) + sizeof(GraphSpaceID)) {
+    return false;
+  }
+
+  auto indextable = key.substr(0, kIndexTable.size());
+  if (indextable != kIndexTable) {
+    return false;
+  }
+
+  auto type = *reinterpret_cast<const EntryType*>(key.data() + kIndexTable.size());
+  if (type == EntryType::EDGE) {
+    return true;
+  }
+  return false;
+}
+
 std::string MetaKeyUtils::indexEdgeKey(GraphSpaceID spaceId, const std::string& name) {
   EntryType type = EntryType::EDGE;
   std::string key;
@@ -689,6 +794,23 @@ std::string MetaKeyUtils::indexIndexKey(GraphSpaceID spaceID, const std::string&
       .append(reinterpret_cast<const char*>(&spaceID), sizeof(GraphSpaceID))
       .append(indexName);
   return key;
+}
+
+bool MetaKeyUtils::isIndexIndexKey(const std::string& key) {
+  if (key.size() <= kIndexTable.size() + sizeof(EntryType) + sizeof(GraphSpaceID)) {
+    return false;
+  }
+
+  auto indextable = key.substr(0, kIndexTable.size());
+  if (indextable != kIndexTable) {
+    return false;
+  }
+
+  auto type = *reinterpret_cast<const EntryType*>(key.data() + kIndexTable.size());
+  if (type == EntryType::INDEX) {
+    return true;
+  }
+  return false;
 }
 
 std::string MetaKeyUtils::indexGroupKey(const std::string& name) {

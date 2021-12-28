@@ -196,10 +196,19 @@ std::string AddListenerSentence::toString() const {
       break;
   }
 
-  buf += listeners_->toString();
-  if (type_ == meta::cpp2::ListenerType::SYNC && spaceName_) {
+  if (type_ == meta::cpp2::ListenerType::SYNC) {
+    buf += " META ";
+    buf += "\"";
+    buf += metaListener_->host;
+    buf += "\"";
+    buf += ":";
+    buf += std::to_string(metaListener_->port);
+    buf += " STORAGE ";
+    buf += storageListeners_->toString();
     buf += " TO SPACE ";
     buf += *spaceName_;
+  } else {
+    buf += storageListeners_->toString();
   }
   return buf;
 }

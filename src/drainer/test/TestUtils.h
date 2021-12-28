@@ -187,7 +187,7 @@ StatusOr<cpp2::AppendLogRequest> mockAppendLogReq(meta::SchemaManager* schemaMan
   req.set_part(partId);
   req.set_last_log_id_sent(0);
   req.set_log_term(1);
-  req.set_sending_snapshot(false);
+  req.set_cleanup_data(false);
   req.set_to_space_name(spaceName);
 
   auto verticesPart = mock::MockData::mockVerticesofPart(partNum);
@@ -246,7 +246,7 @@ StatusOr<cpp2::AppendLogRequest> mockAppendLogWithMetaClientReq(meta::SchemaMana
   req.set_part(partId);
   req.set_last_log_id_sent(0);
   req.set_log_term(1);
-  req.set_sending_snapshot(false);
+  req.set_cleanup_data(false);
   req.set_to_space_name(spaceName);
 
   auto verticesPart = mock::MockData::mockVerticesofPart(partNum);

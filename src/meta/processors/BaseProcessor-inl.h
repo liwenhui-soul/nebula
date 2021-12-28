@@ -480,6 +480,31 @@ void BaseProcessor<RESP>::doSyncMultiRemoveAndUpdate(std::vector<std::string> ke
 }
 
 template <typename RESP>
+void BaseProcessor<RESP>::doSyncAppendBatchAndUpdate(std::string batch) {
+  folly::Baton<true, std::atomic> baton;
+  auto ret = nebula::cpp2::ErrorCode::SUCCEEDED;
+  kvstore_->asyncAppendBatch(kDefaultSpaceId,
+                             kDefaultPartId,
+                             std::move(batch),
+                             [&ret, &baton](nebula::cpp2::ErrorCode code) {
+                               if (nebula::cpp2::ErrorCode::SUCCEEDED != code) {
+                                 ret = code;
+                                 LOG(INFO) << "appendBatch data error on meta server";
+                               }
+                               baton.post();
+                             });
+  baton.wait();
+  if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    this->handleErrorCode(ret);
+    this->onFinished();
+    return;
+  }
+  auto retCode = LastUpdateTimeMan::update(kvstore_, time::WallClock::fastNowInMilliSec());
+  this->handleErrorCode(retCode);
+  this->onFinished();
+}
+
+template <typename RESP>
 ErrorOr<nebula::cpp2::ErrorCode, std::vector<cpp2::IndexItem>> BaseProcessor<RESP>::getIndexes(
     GraphSpaceID spaceId, int32_t tagOrEdge) {
   std::vector<cpp2::IndexItem> items;
@@ -506,6 +531,7 @@ ErrorOr<nebula::cpp2::ErrorCode, std::vector<cpp2::IndexItem>> BaseProcessor<RES
   }
   return items;
 }
+
 template <typename RESP>
 ErrorOr<nebula::cpp2::ErrorCode, cpp2::FTIndex> BaseProcessor<RESP>::getFTIndex(
     GraphSpaceID spaceId, int32_t tagOrEdge) {
@@ -611,7 +637,8 @@ ErrorOr<nebula::cpp2::ErrorCode, ZoneID> BaseProcessor<RESP>::getZoneId(
 template <typename RESP>
 nebula::cpp2::ErrorCode BaseProcessor<RESP>::listenerExist(GraphSpaceID space,
                                                            cpp2::ListenerType& type,
-                                                           std::vector<HostAddr> hosts) {
+                                                           std::vector<HostAddr> storageHosts,
+                                                           HostAddr metaHost) {
   folly::SharedMutex::ReadHolder rHolder(LockUtils::listenerLock());
   const auto& prefix = MetaKeyUtils::listenerPrefix(space, type);
   auto ret = doPrefix(prefix);
@@ -624,26 +651,31 @@ nebula::cpp2::ErrorCode BaseProcessor<RESP>::listenerExist(GraphSpaceID space,
     return nebula::cpp2::ErrorCode::SUCCEEDED;
   }
 
-  if (!hosts.empty()) {
-    // Check the listener host, in the same space, a HostAddr can only be
-    // used as an es listener or a sync listener, not at the same time.
-    const auto& lPrefix = MetaKeyUtils::listenerPrefix(space);
-    ret = doPrefix(lPrefix);
-    if (!nebula::ok(ret)) {
-      return nebula::error(ret);
-    }
+  // Check the listener host, in the same space, a HostAddr can only be
+  // used as an es listener or a sync listener, not at the same time.
+  const auto& lPrefix = MetaKeyUtils::listenerPrefix(space);
+  ret = doPrefix(lPrefix);
+  if (!nebula::ok(ret)) {
+    return nebula::error(ret);
+  }
 
-    auto iter = nebula::value(ret).get();
-    std::unordered_set<HostAddr> listenerHosts;
-    if (iter->valid()) {
-      listenerHosts.emplace(MetaKeyUtils::parseListenerHost(iter->val()));
-      iter->next();
+  auto iter = nebula::value(ret).get();
+  std::unordered_set<HostAddr> listenerHosts;
+  if (iter->valid()) {
+    listenerHosts.emplace(MetaKeyUtils::parseListenerHost(iter->val()));
+    iter->next();
+  }
+
+  if (!listenerHosts.empty()) {
+    for (auto& host : storageHosts) {
+      if (std::find(listenerHosts.begin(), listenerHosts.end(), host) != listenerHosts.end()) {
+        return nebula::cpp2::ErrorCode::E_LISTENER_CONFLICT;
+      }
     }
-    if (!listenerHosts.empty()) {
-      for (auto& host : hosts) {
-        if (std::find(listenerHosts.begin(), listenerHosts.end(), host) != listenerHosts.end()) {
-          return nebula::cpp2::ErrorCode::E_LISTENER_CONFLICT;
-        }
+    if (metaHost != HostAddr("", 0)) {
+      if (std::find(listenerHosts.begin(), listenerHosts.end(), metaHost) != listenerHosts.end()) {
+        LOG(ERROR) << "meta listener conflicts!";
+        return nebula::cpp2::ErrorCode::E_LISTENER_CONFLICT;
       }
     }
   }

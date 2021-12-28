@@ -6,10 +6,9 @@
 #ifndef DRAINER_DRAINERSERVICEHANDLER_H_
 #define DRAINER_DRAINERSERVICEHANDLER_H_
 
-#include <folly/executors/IOThreadPoolExecutor.h>
-
 #include "common/base/Base.h"
 #include "drainer/CommonUtils.h"
+#include "drainer/DrainerFlags.h"
 #include "interface/gen-cpp2/DrainerService.h"
 
 namespace nebula {

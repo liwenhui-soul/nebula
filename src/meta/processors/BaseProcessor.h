@@ -230,6 +230,11 @@ class BaseProcessor {
   void doSyncMultiRemoveAndUpdate(std::vector<std::string> keys);
 
   /**
+   * Appen batch data.
+   * */
+  void doSyncAppendBatchAndUpdate(std::string batch);
+
+  /**
    * Check the edge or tag contains indexes when alter it.
    **/
   nebula::cpp2::ErrorCode indexCheck(const std::vector<cpp2::IndexItem>& items,
@@ -250,7 +255,8 @@ class BaseProcessor {
 
   nebula::cpp2::ErrorCode listenerExist(GraphSpaceID space,
                                         cpp2::ListenerType& type,
-                                        std::vector<HostAddr> hosts = {});
+                                        std::vector<HostAddr> storageHosts = {},
+                                        HostAddr metaHost = HostAddr{"", 0});
 
   // Used in the slave cluster
   nebula::cpp2::ErrorCode drainerExist(GraphSpaceID space);

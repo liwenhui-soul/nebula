@@ -2265,11 +2265,17 @@ TEST(MetaClientTest, DrainerServiceAndListenerTest) {
 
   std::vector<HostAddr> listenerHosts = {{"1", 0}, {"1", 1}, {"1", 2}, {"1", 3}};
   std::string toSpaceName("tospacename");
+  HostAddr metaListener{"2", 1};
   TestUtils::setupHB(kv, listenerHosts, cpp2::HostRole::STORAGE_LISTENER, gitInfoSha());
+  TestUtils::setupHB(kv, {{"2", 1}}, cpp2::HostRole::META_LISTENER, gitInfoSha());
+
   {
     // add sync listener，failed
     auto addRet =
-        client->addListener(space, cpp2::ListenerType::SYNC, listenerHosts, &toSpaceName).get();
+        client
+            ->addListener(
+                space, cpp2::ListenerType::SYNC, listenerHosts, &metaListener, &toSpaceName)
+            .get();
     ASSERT_FALSE(addRet.ok()) << addRet.status();
   }
   {
@@ -2287,15 +2293,27 @@ TEST(MetaClientTest, DrainerServiceAndListenerTest) {
   {
     // add sync listener，succeed
     auto addRet =
-        client->addListener(space, cpp2::ListenerType::SYNC, listenerHosts, &toSpaceName).get();
+        client
+            ->addListener(
+                space, cpp2::ListenerType::SYNC, listenerHosts, &metaListener, &toSpaceName)
+            .get();
     ASSERT_TRUE(addRet.ok()) << addRet.status();
   }
   {
     auto listRet = client->listListeners(space, cpp2::ListenerType::SYNC).get();
     ASSERT_TRUE(listRet.ok()) << listRet.status();
     auto listeners = listRet.value();
-    ASSERT_EQ(9, listeners.size());
+    ASSERT_EQ(10, listeners.size());
     std::vector<cpp2::ListenerInfo> expected;
+    // meta listener
+    cpp2::ListenerInfo ml;
+    ml.set_type(cpp2::ListenerType::SYNC);
+    ml.set_host(metaListener);
+    ml.set_part_id(0);
+    ml.set_status(cpp2::HostStatus::ONLINE);
+    ml.set_space_name(toSpaceName);
+    expected.emplace_back(std::move(ml));
+
     for (size_t i = 0; i < 9; i++) {
       cpp2::ListenerInfo l;
       l.set_type(cpp2::ListenerType::SYNC);
@@ -2305,6 +2323,7 @@ TEST(MetaClientTest, DrainerServiceAndListenerTest) {
       l.set_space_name(toSpaceName);
       expected.emplace_back(std::move(l));
     }
+
     ASSERT_EQ(expected, listeners);
   }
   {

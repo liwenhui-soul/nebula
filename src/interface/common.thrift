@@ -328,6 +328,7 @@ enum ErrorCode {
     E_STATS_NOT_FOUND                 = -19,
     E_SERVICE_NOT_FOUND               = -20,
     E_DRAINER_NOT_FOUND               = -21,
+    E_DRAINER_CLIENT_NOT_FOUND        = -22,
 
     // backup failed
     E_BACKUP_FAILED                   = -24,

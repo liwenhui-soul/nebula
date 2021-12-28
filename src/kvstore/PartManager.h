@@ -131,12 +131,55 @@ class MemPartManager final : public PartManager {
     pm.spaceId_ = spaceId;
     pm.partId_ = partId;
     pm.hosts_ = std::move(peers);
+    auto isNull = handler_ == nullptr ? true : false;
+    LOG(INFO) << "handler_ is null " << isNull;
     if (noSpace && handler_) {
+      LOG(INFO) << "add space  spaceId " << spaceId;
       handler_->addSpace(spaceId);
     }
     if (noPart && handler_) {
+      LOG(INFO) << "add part  spaceId " << spaceId << " part " << partId;
       handler_->addPart(spaceId, partId, false, {});
     }
+  }
+
+  // meta listener replica used
+  Status addListener(GraphSpaceID spaceId,
+                     PartitionID partId,
+                     meta::cpp2::ListenerType type,
+                     HostAddr listener,
+                     const std::vector<HostAddr>& peers) {
+    // The one listener host only has one listener type
+    // But there can be multiple meta listener hosts
+    auto iterHost = listenersMap_.find(listener);
+    if (iterHost != listenersMap_.end()) {
+      return Status::Error("Listener host conflict!");
+    }
+
+    // because FLAGS_meta_sync_listener is one host. so sync listener only has one.
+    listenersMap_[listener][spaceId][partId].emplace_back(type, peers);
+    return Status::OK();
+  }
+
+  // Normal meta replica use
+  Status addRemoteListener(GraphSpaceID spaceId,
+                           PartitionID partId,
+                           const meta::cpp2::ListenerType& type,
+                           const HostAddr& listener) {
+    auto& p = remoteListeners_[spaceId];
+    auto iter = p.find(partId);
+    if (iter != p.end()) {
+      auto remoteListenerInfo = iter->second;
+      for (auto& rListener : remoteListenerInfo) {
+        // A listener host can only have one listener type
+        if (rListener.first == listener) {
+          return Status::Error("Listener Host conflict!");
+        }
+      }
+    }
+    p[partId].emplace_back(listener, type);
+    LOG(INFO) << "Meta listener size is  " << p[partId].size();
+    return Status::OK();
   }
 
   void removePart(GraphSpaceID spaceId, PartitionID partId) {
@@ -153,6 +196,9 @@ class MemPartManager final : public PartManager {
     }
   }
 
+  // TODO
+  // void removeListener(GraphSpaceID spaceId, PartitionID partId) {}
+
   Status partExist(const HostAddr& host, GraphSpaceID spaceId, PartitionID partId) override;
 
   Status spaceExist(const HostAddr&, GraphSpaceID spaceId) override {
@@ -165,6 +211,7 @@ class MemPartManager final : public PartManager {
 
   meta::PartsMap& partsMap() { return partsMap_; }
 
+  // Get all the listener information used by a host
   meta::ListenersMap listeners(const HostAddr& host) override;
 
   StatusOr<std::vector<meta::RemoteListenerInfo>> listenerPeerExist(GraphSpaceID spaceId,
@@ -172,7 +219,11 @@ class MemPartManager final : public PartManager {
 
  private:
   meta::PartsMap partsMap_;
-  meta::ListenersMap listenersMap_;
+
+  // For multiple types of listeners, used for meta Listener replica.
+  std::unordered_map<HostAddr, meta::ListenersMap> listenersMap_;
+
+  // Normal meta replica used.
   meta::RemoteListeners remoteListeners_;
 };
 

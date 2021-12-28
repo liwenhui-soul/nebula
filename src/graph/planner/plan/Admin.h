@@ -376,9 +376,10 @@ class AddListener final : public SingleDependencyNode {
                            PlanNode* input,
                            meta::cpp2::ListenerType type,
                            std::vector<HostAddr> hosts,
+                           HostAddr* metaListener,
                            const std::string* spaceName) {
     return qctx->objPool()->add(
-        new AddListener(qctx, input, std::move(type), std::move(hosts), spaceName));
+        new AddListener(qctx, input, std::move(type), std::move(hosts), metaListener, spaceName));
   }
 
   const meta::cpp2::ListenerType& type() const { return type_; }
@@ -387,13 +388,18 @@ class AddListener final : public SingleDependencyNode {
 
   const std::string* spaceName() const { return spaceName_; }
 
+  const HostAddr* metaListener() const { return metaListener_; }
+
  private:
   explicit AddListener(QueryContext* qctx,
                        PlanNode* input,
                        meta::cpp2::ListenerType type,
                        std::vector<HostAddr> hosts,
+                       HostAddr* metaListener,
                        const std::string* spaceName)
-      : SingleDependencyNode(qctx, Kind::kAddListener, input), spaceName_(spaceName) {
+      : SingleDependencyNode(qctx, Kind::kAddListener, input),
+        metaListener_(metaListener),
+        spaceName_(spaceName) {
     type_ = std::move(type);
     hosts_ = std::move(hosts);
   }
@@ -401,6 +407,7 @@ class AddListener final : public SingleDependencyNode {
  private:
   meta::cpp2::ListenerType type_;
   std::vector<HostAddr> hosts_;
+  HostAddr* metaListener_;
   const std::string* spaceName_;
 };
 

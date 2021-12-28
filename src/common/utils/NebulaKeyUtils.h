@@ -63,6 +63,8 @@ class NebulaKeyUtils final {
    * */
   static std::string updatePartIdTagKey(PartitionID partId, const std::string& rawKey);
 
+  static std::string updatePartIdVertexKey(PartitionID partId, const std::string& rawKey);
+
   static std::string edgeKey(size_t vIdLen,
                              PartitionID partId,
                              const VertexID& srcId,
@@ -123,6 +125,15 @@ class NebulaKeyUtils final {
     return readInt<PartitionID>(rawKey.data(), sizeof(PartitionID)) >> 8;
   }
 
+  static bool isVertex(size_t vIdLen, const folly::StringPiece& rawKey) {
+    if (rawKey.size() != sizeof(PartitionID) + vIdLen) {
+      return false;
+    }
+    constexpr int32_t len = static_cast<int32_t>(sizeof(NebulaKeyType));
+    auto type = readInt<uint32_t>(rawKey.data(), len) & kTypeMask;
+    return static_cast<NebulaKeyType>(type) == NebulaKeyType::kVertex;
+  }
+
   static bool isTag(size_t vIdLen, const folly::StringPiece& rawKey) {
     if (rawKey.size() != kTagLen + vIdLen) {
       return false;
@@ -130,6 +141,14 @@ class NebulaKeyUtils final {
     constexpr int32_t len = static_cast<int32_t>(sizeof(NebulaKeyType));
     auto type = readInt<uint32_t>(rawKey.data(), len) & kTypeMask;
     return static_cast<NebulaKeyType>(type) == NebulaKeyType::kTag_;
+  }
+
+  static VertexIDSlice getVertexIdFromVertexKey(size_t vIdLen, const folly::StringPiece& rawKey) {
+    if (rawKey.size() != sizeof(PartitionID) + vIdLen) {
+      dumpBadKey(rawKey, sizeof(PartitionID) + vIdLen, vIdLen);
+    }
+    auto offset = sizeof(PartitionID);
+    return rawKey.subpiece(offset, vIdLen);
   }
 
   static VertexIDSlice getVertexId(size_t vIdLen, const folly::StringPiece& rawKey) {

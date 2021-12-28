@@ -23,7 +23,7 @@ namespace kvstore {
 
 using DrainerClient = thrift::ThriftClientManager<drainer::cpp2::DrainerServiceAsyncClient>;
 
-// The directory structure of the storge listener is as follows:
+// The directory structure of the storage listener is as follows:
 /* |--listenerPath_/spaceId/partId/wal
  * |------walxx
  * |------last_apply_log_partId(committedlogId + committedtermId + lastApplyLogId)
@@ -56,6 +56,7 @@ class SyncListener : public Listener {
                std::shared_ptr<RaftClient> clientMan,                 // nullptr
                std::shared_ptr<DiskManager> diskMan,                  // nullptr
                meta::SchemaManager* schemaMan,
+               meta::ServiceManager* serviceMan,
                std::shared_ptr<DrainerClient> drainerClientMan)
       : Listener(spaceId,
                  partId,
@@ -67,13 +68,15 @@ class SyncListener : public Listener {
                  snapshotMan,
                  clientMan,
                  diskMan,
-                 schemaMan),
+                 schemaMan,
+                 serviceMan),
         drainerClientMan_(drainerClientMan) {
     // Meta listener not check shemanMan
     if (spaceId == nebula::kDefaultSpaceId && partId == nebula::kDefaultPartId) {
       isMetaListener_ = true;
     }
     CHECK(!!schemaMan);
+    CHECK(!!serviceMan);
     CHECK(!!drainerClientMan_);
     walPath_ = walPath;
     lastApplyLogFile_ = folly::stringPrintf("%s/last_apply_log_%d", walPath.c_str(), partId);
@@ -92,7 +95,22 @@ class SyncListener : public Listener {
              LogID logIdToSend,
              TermID logTermToSend,
              LogID lastApplyLogId,
-             bool sendsnapshot = false);
+             bool cleanupData = false);
+
+  bool metaApply(const std::vector<nebula::cpp2::LogEntry>& data,
+                 GraphSpaceID spaceId,
+                 LogID logIdToSend,
+                 TermID logTermToSend,
+                 LogID lastApplyLogId,
+                 HostAddr& drainerClient,
+                 std::string tospaceName,
+                 LogID& nextApplyLogId);
+
+  void sendMetaListenerDataToDrainer();
+
+  nebula::StatusOr<LogID> spacelLastApplyLogId(std::string& path);
+
+  bool writespacelLastApplyLogId(std::string& path, LogID lastApplyLogId);
 
   std::pair<int64_t, int64_t> commitSnapshot(const std::vector<std::string>& rows,
                                              LogID committedLogId,
@@ -118,11 +136,15 @@ class SyncListener : public Listener {
       const std::vector<nebula::cpp2::LogEntry>& data,
       HostAddr& drainerClient,
       std::string& tospaceName,
-      bool sendsnapshot);
+      bool cleanupData);
 
   bool writeAppliedId(LogID lastId, TermID lastTerm, LogID lastApplyLogId);
 
   std::string encodeAppliedId(LogID lastId, TermID lastTerm, LogID lastApplyLogId) const noexcept;
+
+  StatusOr<GraphSpaceID> getSpaceIdInKey(const folly::StringPiece& rawKey);
+
+  bool writeSpaceLog(std::unordered_map<GraphSpaceID, std::vector<nebula::cpp2::LogEntry>>& logs);
 
  private:
   std::string walPath_;
@@ -156,6 +178,8 @@ class SyncListener : public Listener {
 
   // For storage listener
   int32_t lastAppendLogIdFd_ = -1;
+
+  std::atomic<bool> firstInSnapshot_{false};
 };
 
 }  // namespace kvstore

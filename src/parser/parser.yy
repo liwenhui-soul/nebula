@@ -3762,8 +3762,8 @@ add_listener_sentence
     : KW_ADD KW_LISTENER KW_ELASTICSEARCH host_list {
         $$ = new AddListenerSentence(meta::cpp2::ListenerType::ELASTICSEARCH, $4);
     }
-    | KW_ADD KW_LISTENER KW_SYNC host_list KW_TO KW_SPACE name_label  {
-        $$ = new AddListenerSentence(meta::cpp2::ListenerType::SYNC, $4, $7);
+    | KW_ADD KW_LISTENER KW_SYNC KW_META host_item KW_STORAGE host_list KW_TO KW_SPACE name_label  {
+        $$ = new AddListenerSentence(meta::cpp2::ListenerType::SYNC, $7, $5, $10);
     }
     ;
 

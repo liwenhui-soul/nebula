@@ -78,6 +78,7 @@ class StorageServer final {
   std::unique_ptr<nebula::hdfs::HdfsHelper> hdfsHelper_;
   std::unique_ptr<nebula::thread::GenericThreadPool> webWorkers_;
   std::unique_ptr<meta::SchemaManager> schemaMan_;
+  std::unique_ptr<meta::ServiceManager> serviceMan_;
   std::unique_ptr<meta::IndexManager> indexMan_;
   std::unique_ptr<storage::StorageEnv> env_;
 

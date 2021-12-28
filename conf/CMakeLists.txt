@@ -23,6 +23,7 @@ install(
   FILES
     nebula-metad.conf.default
     nebula-metad.conf.production
+    nebula-metad-listener.conf.production
   PERMISSIONS
     OWNER_READ
     GROUP_READ

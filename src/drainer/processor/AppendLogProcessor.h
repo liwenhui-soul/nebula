@@ -69,6 +69,8 @@ class AppendLogProcessor : public BaseProcessor<cpp2::AppendLogRequest, cpp2::Ap
   // Update lastLogRecv
   bool updateRecvLog(LogID lastLogIdRecv);
 
+  bool updateSendLog(LogID lastLogIdSend);
+
   // Get lastLogRecv and check
   nebula::cpp2::ErrorCode checkLastRecvLogId();
 
@@ -96,7 +98,8 @@ class AppendLogProcessor : public BaseProcessor<cpp2::AppendLogRequest, cpp2::Ap
   TermID term_;
   std::vector<nebula::cpp2::LogEntry> logStrs_;
 
-  bool sendSnapshot_;
+  // Used to receive snapshot data for the first time
+  bool cleanupData_;
 
   // format: master_clusterId, master_spaceId, slave_clusterId, slave_spaceId
   std::string clusterSpaceIdFile_;
@@ -105,6 +108,9 @@ class AppendLogProcessor : public BaseProcessor<cpp2::AppendLogRequest, cpp2::Ap
 
   // format: last_log_id_recv
   std::string recvLogFile_;
+
+  // format: last_log_id_send
+  std::string sendLogFile_;
 
   // The result of the response, next time hope to receive logId is (nextLastLogIdRecv_ + 1)
   LogID nextLastLogIdRecv_{0};

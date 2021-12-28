@@ -64,6 +64,9 @@ bool DrainerServer::start() {
   LOG(INFO) << "Init schema manager";
   schemaMan_ = meta::ServerBasedSchemaManager::create(metaClient_.get());
 
+  LOG(INFO) << "Init service manager";
+  serviceMan_ = meta::ServiceManager::create(metaClient_.get());
+
   LOG(INFO) << "Init index manager";
   indexMan_ = meta::ServerBasedIndexManager::create(metaClient_.get());
   if (!initWebService()) {
@@ -73,9 +76,11 @@ bool DrainerServer::start() {
 
   env_ = std::make_unique<drainer::DrainerEnv>();
   env_->schemaMan_ = schemaMan_.get();
+  env_->serviceMan_ = serviceMan_.get();
   env_->indexMan_ = indexMan_.get();
   env_->metaClient_ = metaClient_.get();
   env_->drainerPath_ = dataPath_;
+  env_->localHost_ = localHost_;
 
   taskMgr_ = DrainerTaskManager::instance();
   if (!taskMgr_->init(env_.get(), ioThreadPool_)) {

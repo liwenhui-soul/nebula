@@ -68,14 +68,6 @@ class ServerBasedSchemaManager : public SchemaManager {
   // get all latest version of all edges
   StatusOr<EdgeSchema> getAllLatestVerEdgeSchema(GraphSpaceID space) override;
 
-  StatusOr<std::vector<nebula::meta::cpp2::ServiceClient>> getServiceClients(
-      cpp2::ExternalServiceType type) override;
-
-  StatusOr<nebula::meta::cpp2::DrainerClientInfo> getDrainerClient(GraphSpaceID space,
-                                                                   PartitionID partId) override;
-
-  StatusOr<std::vector<cpp2::DrainerInfo>> getDrainerServer(GraphSpaceID spaceId) override;
-
   StatusOr<std::pair<std::string, nebula::meta::cpp2::FTIndex>> getFTIndex(
       GraphSpaceID spaceId, int32_t schemaId) override;
 

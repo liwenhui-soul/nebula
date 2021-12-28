@@ -17,4 +17,4 @@ DEFINE_bool(auto_remove_invalid_drainer_space,
 
 DEFINE_int32(request_to_sync_retry_times, 3, "Retry times if drainer sync data request failed");
 
-DEFINE_uint32(drainer_task_run_interval, 5, "The running interval of each round of drainer task");
+DEFINE_uint32(drainer_task_run_interval, 10, "The running interval of each round of drainer task");

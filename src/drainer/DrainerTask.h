@@ -35,6 +35,20 @@ class DrainerSubTask {
   PartitionID partId_;
 };
 
+// Receive wal log data sent from the sync listener of the master cluster.
+// drainer use tospace spaceId and master cluster partId as directory name.
+// This class only processes files related to receiving data.
+// The directory structure of the data is as follows:
+/* |--data/drainer
+ * |----nebula
+ * |------toSpaceId
+ * |--------cluster_space_id (clusterId_spaceId_parts from master and clusterId from slave)
+ * |--------partId1(from master space)
+ * |----------wal
+ * |----------recv.log(last_log_id_recv)
+ * |----------send.log(last_log_id_sent) // when the drainer has sent data, the send.log exists.
+ * |--------partId2
+ */
 // A drainer task processes all parts under the space
 class DrainerTask {
   using SubTaskQueue = folly::UnboundedBlockingQueue<DrainerSubTask>;
@@ -55,17 +69,61 @@ class DrainerTask {
         masterClusterId_(masterClusterId),
         slaveClusterId_(slaveClusterId) {}
 
-  virtual ~DrainerTask() { LOG(INFO) << "Release Drainer Task"; }
-
-  nebula::cpp2::ErrorCode getSchemas(GraphSpaceID spaceId);
+  virtual ~DrainerTask() { VLOG(3) << "Release Drainer Task"; }
 
   // Process all parts under the space, one part generates a DrainerSubTask.
   virtual ErrorOr<nebula::cpp2::ErrorCode, std::vector<DrainerSubTask>> genSubTasks();
 
-  nebula::cpp2::ErrorCode genSubTask(GraphSpaceID space,
-                                     PartitionID part,
-                                     nebula::wal::FileBasedWal* wal);
+  // Read the wal file of this part, process it, and then send it through storageclient or meta
+  // client. Write send.log file after success.
+  // Send in batches to storage client or meta client.
+  nebula::cpp2::ErrorCode genSubTask(PartitionID part, nebula::wal::FileBasedWal* wal);
 
+  // Unified interface for processing data.
+  StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> ProcessData(
+      PartitionID part, const std::string& log);
+
+  // For storage data
+  // Check schema and repart operation. One log, decode once.
+  StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> ProcessStorageData(
+      PartitionID part, const std::string& log);
+
+  // For meta data
+  // replace spaceId. One log, decode once.
+  StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> ProcessMetaData(
+      const std::string& log);
+
+  // For storage data, check tag, edge, index information and repart
+  StatusOr<std::pair<PartitionID, std::string>> checkSchemaAndRepartition(
+      PartitionID part,
+      const folly::StringPiece& rawKey,
+      const folly::StringPiece& rawVal,
+      bool checkSchema);
+
+  StatusOr<std::pair<PartitionID, std::string>> checkTagSchemaAndRepart(
+      PartitionID part,
+      const folly::StringPiece& rawKey,
+      const folly::StringPiece& rawVal,
+      bool checkSchema);
+
+  StatusOr<std::pair<PartitionID, std::string>> vertexRepart(PartitionID part,
+                                                             const folly::StringPiece& rawKey);
+
+  StatusOr<std::pair<PartitionID, std::string>> checkEdgeSchemaAndRepart(
+      PartitionID part,
+      const folly::StringPiece& rawKey,
+      const folly::StringPiece& rawVal,
+      bool checkSchema);
+
+  StatusOr<std::pair<PartitionID, std::string>> checkIndexAndRepart(
+      PartitionID part, const folly::StringPiece& rawKey);
+
+  // Send data to meta client or storage client according to part.
+  virtual Status sendData(std::unordered_map<PartitionID, std::vector<std::string>>& logs,
+                          PartitionID part);
+
+  // For meta data, perform replacement spaceid.
+  StatusOr<std::string> adjustSpaceIdInKey(GraphSpaceID space, const folly::StringPiece& rawKey);
   // update send.log(last_log_id_sent)
   bool updateSendLog(const std::string& sendLogFile,
                      GraphSpaceID spaceId,
@@ -73,6 +131,7 @@ class DrainerTask {
                      LogID lastLogIdSend);
 
   // read send.log(last_log_id_sent)
+  // If send log file not exists, return 0.
   StatusOr<LogID> readSendLog(const std::string& sendLogFile,
                               GraphSpaceID spaceId,
                               PartitionID part);
@@ -105,26 +164,6 @@ class DrainerTask {
     rc_.compare_exchange_strong(suc, nebula::cpp2::ErrorCode::E_USER_CANCEL);
   }
 
-  // The drainer server regroups the data according to the partNum of tospace
-  virtual Status processorAndSend(std::vector<std::string> logs, PartitionID part);
-
-  StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> rePartitionData(
-      std::vector<std::string>& logs, PartitionID part);
-
-  // Get the new partId, and replace the partId in the key
-  StatusOr<std::pair<PartitionID, std::string>> getPartIdAndNewKey(
-      const folly::StringPiece& rawKey);
-
-  std::pair<PartitionID, std::string> getVertexPartIdAndNewKey(const folly::StringPiece& rawKey);
-
-  std::pair<PartitionID, std::string> getEdgePartIdAndNewKey(const folly::StringPiece& rawKey);
-
-  // Replace the spaceId of schema data
-  StatusOr<std::vector<std::string>> adjustSpaceId(GraphSpaceID space,
-                                                   std::vector<std::string> data);
-
-  StatusOr<std::string> adjustSpaceIdInKey(GraphSpaceID space, const folly::StringPiece& rawKey);
-
  public:
   std::atomic<size_t> unFinishedSubTask_;
   SubTaskQueue subtasks_;
@@ -152,6 +191,9 @@ class DrainerTask {
 
   // The number of this space part of the slave cluster
   int32_t newPartNum_;
+
+  // The number of this space part of the master cluster
+  bool repart_ = false;
 
   size_t vIdLen_;
 };

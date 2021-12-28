@@ -17,8 +17,10 @@ void AddListenerProcessor::process(const cpp2::AddListenerReq& req) {
   auto space = req.get_space_id();
   CHECK_SPACE_ID_AND_RETURN(space);
   auto type = req.get_type();
+  const auto& storageHosts = req.get_storage_hosts();
 
-  if (type == cpp2::ListenerType::SYNC && !req.space_name_ref().has_value()) {
+  if (type == cpp2::ListenerType::SYNC &&
+      (!req.meta_host_ref().has_value() || !req.space_name_ref().has_value())) {
     LOG(ERROR) << "Add listener failed, invalid listener parameter.";
     auto ret = nebula::cpp2::ErrorCode::E_INVALID_PARM;
     handleErrorCode(ret);
@@ -26,8 +28,12 @@ void AddListenerProcessor::process(const cpp2::AddListenerReq& req) {
     return;
   }
 
-  const auto& hosts = req.get_hosts();
-  auto ret = listenerExist(space, type, hosts);
+  HostAddr metaHost;
+  if (type == cpp2::ListenerType::SYNC) {
+    metaHost = *req.meta_host_ref();
+  }
+
+  auto ret = listenerExist(space, type, storageHosts, metaHost);
   if (ret != nebula::cpp2::ErrorCode::E_LISTENER_NOT_FOUND) {
     if (ret == nebula::cpp2::ErrorCode::SUCCEEDED) {
       LOG(ERROR) << "Add listener failed, listener already exists.";
@@ -69,6 +75,9 @@ void AddListenerProcessor::process(const cpp2::AddListenerReq& req) {
     auto sRet = doGet(serviceKey);
     if (!nebula::ok(sRet)) {
       auto retCode = nebula::error(sRet);
+      if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+        retCode = nebula::cpp2::ErrorCode::E_DRAINER_CLIENT_NOT_FOUND;
+      }
       LOG(ERROR) << "List drainer service failed, error: "
                  << apache::thrift::util::enumNameSafe(retCode);
       handleErrorCode(retCode);
@@ -94,7 +103,7 @@ void AddListenerProcessor::process(const cpp2::AddListenerReq& req) {
 
   for (size_t i = 0; i < parts.size(); i++) {
     data.emplace_back(MetaKeyUtils::listenerKey(space, parts[i], type),
-                      MetaKeyUtils::listenerVal(hosts[i % hosts.size()], spaceName));
+                      MetaKeyUtils::listenerVal(storageHosts[i % storageHosts.size()], spaceName));
 
     // use the specified drainer client
     // TODO(pandasheep) drainer maybe use user and passwd
@@ -104,6 +113,17 @@ void AddListenerProcessor::process(const cpp2::AddListenerReq& req) {
       auto val = MetaKeyUtils::listenerDrainerVal(drainerClient.get_host(), spaceName);
       data.emplace_back(std::move(key), std::move(val));
     }
+  }
+
+  // For meta listener, spaceId is space, partId is 0
+  if (type == cpp2::ListenerType::SYNC) {
+    data.emplace_back(MetaKeyUtils::listenerKey(space, 0, type),
+                      MetaKeyUtils::listenerVal(metaHost, spaceName));
+    auto key = MetaKeyUtils::listenerDrainerKey(space, 0);
+    // use first drainer client
+    auto drainerClient = drainerClients[0];
+    auto val = MetaKeyUtils::listenerDrainerVal(drainerClient.get_host(), spaceName);
+    data.emplace_back(std::move(key), std::move(val));
   }
 
   doSyncPutAndUpdate(std::move(data));
@@ -196,27 +216,51 @@ void ListListenersProcessor::process(const cpp2::ListListenersReq& req) {
     onFinished();
     return;
   }
+  auto activeHosts = std::move(nebula::value(activeHostsRet));
+
+  auto metaActiveHostsRet =
+      ActiveHostsMan::getActiveHosts(kvstore_,
+                                     FLAGS_heartbeat_interval_secs * FLAGS_expired_time_factor,
+                                     cpp2::HostRole::META_LISTENER);
+  if (!nebula::ok(metaActiveHostsRet)) {
+    handleErrorCode(nebula::error(metaActiveHostsRet));
+    onFinished();
+    return;
+  }
+  auto metaActiveHosts = std::move(nebula::value(metaActiveHostsRet));
 
   std::vector<cpp2::ListenerInfo> listeners;
-  auto activeHosts = std::move(nebula::value(activeHostsRet));
   auto iter = nebula::value(iterRet).get();
   while (iter->valid()) {
+    auto partId = MetaKeyUtils::parseListenerPart(iter->key());
+    auto listenerType = MetaKeyUtils::parseListenerType(iter->key());
+
     cpp2::ListenerInfo listener;
-    if (type == cpp2::ListenerType::SYNC) {
+    if (listenerType == cpp2::ListenerType::SYNC) {
       listener.set_space_name(MetaKeyUtils::parseListenerSpacename(iter->val()));
     }
-    listener.set_type(MetaKeyUtils::parseListenerType(iter->key()));
+    listener.set_type(listenerType);
     listener.set_host(MetaKeyUtils::parseListenerHost(iter->val()));
-    listener.set_part_id(MetaKeyUtils::parseListenerPart(iter->key()));
-    if (std::find(activeHosts.begin(), activeHosts.end(), *listener.host_ref()) !=
-        activeHosts.end()) {
-      listener.set_status(cpp2::HostStatus::ONLINE);
+    listener.set_part_id(partId);
+    if (partId == 0) {
+      if (std::find(metaActiveHosts.begin(), metaActiveHosts.end(), *listener.host_ref()) !=
+          metaActiveHosts.end()) {
+        listener.set_status(cpp2::HostStatus::ONLINE);
+      } else {
+        listener.set_status(cpp2::HostStatus::OFFLINE);
+      }
     } else {
-      listener.set_status(cpp2::HostStatus::OFFLINE);
+      if (std::find(activeHosts.begin(), activeHosts.end(), *listener.host_ref()) !=
+          activeHosts.end()) {
+        listener.set_status(cpp2::HostStatus::ONLINE);
+      } else {
+        listener.set_status(cpp2::HostStatus::OFFLINE);
+      }
     }
     listeners.emplace_back(std::move(listener));
     iter->next();
   }
+
   resp_.set_listeners(std::move(listeners));
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
@@ -228,6 +272,7 @@ void ListListenerDrainersProcessor::process(const cpp2::ListListenerDrainersReq&
   CHECK_SPACE_ID_AND_RETURN(space);
   folly::SharedMutex::ReadHolder rHolder(LockUtils::listenerLock());
 
+  // meta listener partId is 0
   auto prefix = MetaKeyUtils::listenerDrainerPrefix(space);
   auto iterRet = doPrefix(prefix);
   if (!nebula::ok(iterRet)) {

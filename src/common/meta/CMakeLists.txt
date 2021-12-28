@@ -11,4 +11,5 @@ nebula_add_library(
     ServerBasedSchemaManager.cpp
     IndexManager.cpp
     ServerBasedIndexManager.cpp
+    ServiceManager.cpp
 )

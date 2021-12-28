@@ -13,6 +13,7 @@
 
 #include "common/fs/FileUtils.h"
 #include "common/network/NetworkUtils.h"
+#include "common/utils/MetaKeyUtils.h"
 #include "kvstore/NebulaSnapshotManager.h"
 #include "kvstore/RocksEngine.h"
 
@@ -24,10 +25,13 @@ DEFINE_int32(custom_filter_interval_secs,
 DEFINE_int32(num_workers, 4, "Number of worker threads");
 DEFINE_int32(clean_wal_interval_secs, 600, "interval to trigger clean expired wal");
 DEFINE_bool(auto_remove_invalid_space, false, "whether remove data of invalid space when restart");
+DEFINE_int32(sync_meta_listener_interval_secs, 60, "inerval to sync meta listener");
 
 DECLARE_bool(rocksdb_disable_wal);
 DECLARE_int32(rocksdb_backup_interval_secs);
 DECLARE_int32(wal_ttl);
+DECLARE_int32(heartbeat_interval_secs);
+DECLARE_uint32(expired_time_factor);
 
 namespace nebula {
 namespace kvstore {
@@ -65,7 +69,13 @@ bool NebulaStore::init() {
   if (!isListener()) {
     loadPartFromDataPath();
     loadPartFromPartManager();
-    loadRemoteListenerFromPartManager();
+    if (options_.isMeta_) {
+      storeWorker_->addRepeatTask(FLAGS_sync_meta_listener_interval_secs * 1000,
+                                  &NebulaStore::checkRemoteMetaListeners,
+                                  this);
+    } else {
+      loadRemoteListenerFromPartManager();
+    }
   } else {
     loadLocalListenerFromPartManager();
   }
@@ -73,6 +83,7 @@ bool NebulaStore::init() {
   storeWorker_->addDelayTask(FLAGS_clean_wal_interval_secs * 1000, &NebulaStore::cleanWAL, this);
   storeWorker_->addRepeatTask(
       FLAGS_rocksdb_backup_interval_secs * 1000, &NebulaStore::backup, this);
+
   LOG(INFO) << "Register handler...";
   options_.partMan_->registerHandler(this);
   return true;
@@ -490,6 +501,7 @@ std::shared_ptr<Listener> NebulaStore::newListener(GraphSpaceID spaceId,
                                                   nullptr,
                                                   nullptr,
                                                   options_.schemaMan_,
+                                                  options_.serviceMan_,
                                                   drainerClientMan_);
   raftService_->addPartition(listener);
   // add raft group as learner
@@ -1213,6 +1225,55 @@ void NebulaStore::registerOnNewPartAdded(
     }
   }
   onNewPartAdded_.insert(std::make_pair(funcName, func));
+}
+
+nebula::cpp2::ErrorCode NebulaStore::checkRemoteMetaListeners() {
+  // Get meta listener hosts
+  std::vector<HostAddr> metaListenerHosts;
+  const auto& hostPre = MetaKeyUtils::hostPrefix();
+  std::unique_ptr<kvstore::KVIterator> iter;
+  auto retCode = prefix(nebula::kDefaultSpaceId, nebula::kDefaultPartId, hostPre, &iter, true);
+  if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    LOG(ERROR) << "Failed to get Hosts, error " << apache::thrift::util::enumNameSafe(retCode);
+    return retCode;
+  }
+  int64_t threshold = FLAGS_heartbeat_interval_secs * FLAGS_expired_time_factor * 1000;
+  auto now = time::WallClock::fastNowInMilliSec();
+
+  while (iter->valid()) {
+    auto hostRet = decodeHost(iter->val());
+    if (!nebula::ok(hostRet)) {
+      iter->next();
+      continue;
+    }
+
+    auto roleAndLastHBTime = nebula::value(hostRet);
+    if (roleAndLastHBTime.first == nebula::meta::cpp2::HostRole::META_LISTENER &&
+        now - roleAndLastHBTime.second < threshold) {
+      auto host = MetaKeyUtils::parseHostKey(iter->key());
+      metaListenerHosts.emplace_back(host.host, host.port);
+    }
+    iter->next();
+  }
+
+  checkRemoteListeners(nebula::kDefaultSpaceId, nebula::kDefaultPartId, metaListenerHosts);
+  return nebula::cpp2::ErrorCode::SUCCEEDED;
+}
+
+ErrorOr<nebula::cpp2::ErrorCode, std::pair<meta::cpp2::HostRole, int64_t>> NebulaStore::decodeHost(
+    const folly::StringPiece& data) {
+  size_t offset = sizeof(int8_t);
+
+  auto lastHBTimeInMilliSec = *reinterpret_cast<const int64_t*>(data.data() + offset);
+  offset += sizeof(int64_t);
+
+  if (data.size() - offset < sizeof(meta::cpp2::HostRole)) {
+    LOG(ERROR) << folly::sformat(
+        "decode out of range, offset=%zu, actual=%zu", offset, data.size());
+    return nebula::cpp2::ErrorCode::E_INVALID_DATA;
+  }
+  auto role = *reinterpret_cast<const meta::cpp2::HostRole*>(data.data() + offset);
+  return std::make_pair(role, lastHBTimeInMilliSec);
 }
 
 }  // namespace kvstore

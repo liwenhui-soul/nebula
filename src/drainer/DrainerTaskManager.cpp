@@ -85,7 +85,7 @@ void DrainerTaskManager::schedule() {
     auto statusCode = drainerTask->status();
     if (statusCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
       // remove cancelled tasks
-      LOG(INFO) << folly::sformat("Remove drainer task %d genSubTask failed, err={}",
+      LOG(INFO) << folly::sformat("Remove drainer task {} genSubTask failed, err={}",
                                   spaceId,
                                   apache::thrift::util::enumNameSafe(statusCode));
       tasks_.erase(spaceId);
@@ -96,7 +96,7 @@ void DrainerTaskManager::schedule() {
     auto errOrSubTasks = drainerTask->genSubTasks();
     if (!nebula::ok(errOrSubTasks)) {
       LOG(ERROR) << folly::sformat(
-          "Drainer task %d genSubTask failed, err={}",
+          "Drainer task {} genSubTask failed, err={}",
           spaceId,
           apache::thrift::util::enumNameSafe(nebula::error(errOrSubTasks)));
       drainerTask->finish(nebula::error(errOrSubTasks));
@@ -221,15 +221,18 @@ Status DrainerTaskManager::addAsyncTask() {
         // Assuming that the wal logId from sync listener to drainer is continuous
         // That is, the wal log contains heartbeat information
         auto walPath = folly::stringPrintf("%s/wal", partDir.c_str());
-        env_->wals_[spaceId][partId] = wal::FileBasedWal::getWal(
-            walPath,
-            std::move(info),
-            std::move(policy),
-            [this](LogID logId, TermID logTermId, ClusterID logClusterId, const std::string& log) {
-              return this->preProcessLog(logId, logTermId, logClusterId, log);
-            },
-            env_->diskMan_,
-            true);
+        env_->wals_[spaceId].emplace(
+            partId,
+            wal::FileBasedWal::getWal(
+                walPath,
+                std::move(info),
+                std::move(policy),
+                [this](
+                    LogID logId, TermID logTermId, ClusterID logClusterId, const std::string& log) {
+                  return this->preProcessLog(logId, logTermId, logClusterId, log);
+                },
+                env_->diskMan_,
+                true));
       }
     } catch (std::exception& e) {
       LOG(FATAL) << "Invalid data directory \"" << sdir << "\"";
