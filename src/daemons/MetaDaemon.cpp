@@ -11,6 +11,7 @@
 #include "common/base/Base.h"
 #include "common/base/SignalHandler.h"
 #include "common/encryption/License.h"
+#include "common/fs/FileUtils.h"
 #include "common/hdfs/HdfsCommandHelper.h"
 #include "common/hdfs/HdfsHelper.h"
 #include "common/meta/ServerBasedSchemaManager.h"
@@ -160,7 +161,8 @@ std::unique_ptr<nebula::kvstore::KVStore> initKV(std::vector<nebula::HostAddr> p
   }
 
   kvOptions.isMeta_ = true;
-  kvOptions.dataPaths_ = {FLAGS_data_path};
+  auto absolute = boost::filesystem::absolute(FLAGS_data_path);
+  kvOptions.dataPaths_ = {absolute.string()};
   kvOptions.listenerPath_ = FLAGS_listener_path;
   kvOptions.partMan_ = std::move(partMan);
 

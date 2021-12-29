@@ -565,7 +565,8 @@ enum HostRole {
     DRAINER          = 0x03,
     META_LISTENER    = 0x04,
     STORAGE_LISTENER = 0x05,
-    UNKNOWN          = 0x06,
+    AGENT            = 0x06,
+    UNKNOWN          = 0x07,
 } (cpp.enum_strict)
 
 struct LeaderInfo {
@@ -578,15 +579,40 @@ struct PartitionList {
 }
 
 struct HBReq {
-    1: HostRole   role,
-    2: common.HostAddr host,
-    3: ClusterID cluster_id,
+    1: HostRole                 role,
+    2: common.HostAddr          host,
+    3: ClusterID                cluster_id,
     4: optional map<common.GraphSpaceID, list<LeaderInfo>>
         (cpp.template = "std::unordered_map") leader_partIds;
-    5: binary     git_info_sha,
+    5: binary                   git_info_sha,
     6: optional map<common.GraphSpaceID, map<binary, PartitionList>
         (cpp.template = "std::unordered_map")>
         (cpp.template = "std::unordered_map") disk_parts;
+    7: optional common.DirInfo  dir,
+    // version of binary
+    8: optional binary          version,
+}
+
+// service(agent/metad/storaged/graphd) info
+struct ServiceInfo {
+    1: common.DirInfo    dir,
+    2: common.HostAddr   addr,
+    3: HostRole          role,
+}
+
+struct AgentHBReq {
+    1: common.HostAddr host,
+    2: binary          git_info_sha,
+    // version of binary
+    3: optional binary version,
+}
+
+struct AgentHBResp {
+    1: common.ErrorCode   code,
+    2: common.HostAddr    leader,
+    // metad/graphd/storaged may in the same host
+    // do not include agent it self
+    3: list<ServiceInfo>   service_list,
 }
 
 struct IndexFieldDef {
@@ -979,25 +1005,26 @@ struct GetStatsResp {
     3: StatsItem        stats,
 }
 
-struct BackupInfo {
-    1: common.HostAddr host,
-    2: list<common.CheckpointInfo> info,
+struct HostBackupInfo {
+    1: common.HostAddr             host,
+    // each for one data path
+    2: list<common.CheckpointInfo> checkpoints,
 }
 
 struct SpaceBackupInfo {
-    1: SpaceDesc           space,
-    2: list<BackupInfo>    info,
+    1: SpaceDesc             space,
+    2: list<HostBackupInfo>  host_backups,
 }
 
 struct BackupMeta {
     // space_name => SpaceBackupInfo
-    1: map<common.GraphSpaceID, SpaceBackupInfo> (cpp.template = "std::unordered_map")  backup_info,
+    1: map<common.GraphSpaceID, SpaceBackupInfo>(cpp.template = "std::unordered_map")  space_backups,
     // sst file
     2: list<binary>                               meta_files,
     // backup
     3: binary                                     backup_name,
     4: bool                                       full,
-    5: bool                                       include_system_space,
+    5: bool                                       all_spaces,
     6: i64                                        create_time,
 }
 
@@ -1192,10 +1219,9 @@ struct ReportTaskReq {
 }
 
 struct ListClusterInfoResp {
-    1: common.ErrorCode         code,
-    2: common.HostAddr          leader,
-    3: list<common.HostAddr>    meta_servers,
-    4: list<common.NodeInfo>    storage_servers,
+    1: common.ErrorCode  code,
+    2: common.HostAddr   leader,
+    3: map<string, list<ServiceInfo>>(cpp.template = "std::unordered_map") host_services,
 }
 
 struct ListClusterInfoReq {
@@ -1323,6 +1349,7 @@ service MetaService {
     ExecResp changePassword(1: ChangePasswordReq req);
 
     HBResp           heartBeat(1: HBReq req);
+    AgentHBResp  agentHeartbeat(1: AgentHBReq req);
 
     ExecResp regConfig(1: RegConfigReq req);
     GetConfigResp getConfig(1: GetConfigReq req);
@@ -1342,8 +1369,6 @@ service MetaService {
     GetZoneResp    getZone(1: GetZoneReq req);
     ListZonesResp  listZones(1: ListZonesReq req);
 
-    CreateBackupResp         createBackup(1: CreateBackupReq req);
-    ExecResp                 restoreMeta(1: RestoreMetaReq req);
     ExecResp                 addListener(1: AddListenerReq req);
     ExecResp                 removeListener(1: RemoveListenerReq req);
     ListListenersResp        listListeners(1: ListListenersReq req);
@@ -1375,6 +1400,9 @@ service MetaService {
 
     ExecResp reportTaskFinish(1: ReportTaskReq req);
 
+    // Interfaces for backup and restore
+    CreateBackupResp createBackup(1: CreateBackupReq req);
+    ExecResp       restoreMeta(1: RestoreMetaReq req);
     ListClusterInfoResp listCluster(1: ListClusterInfoReq req);
     GetMetaDirInfoResp getMetaDirInfo(1: GetMetaDirInfoReq req);
 
