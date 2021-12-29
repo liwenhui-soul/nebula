@@ -39,10 +39,10 @@ Feature: User & privilege Test
       SHOW USERS
       """
     Then the result should contain:
-      | Account |
-      | "root"  |
-      | "user1" |
-      | "user2" |
+      | Account | IP Whitelist |
+      | "root"  | ""           |
+      | "user1" | ""           |
+      | "user2" | ""           |
 
   Scenario: Alter user
     When executing query:
@@ -313,10 +313,10 @@ Feature: User & privilege Test
       SHOW USERS
       """
     Then the result should contain:
-      | Account |
-      | "root"  |
-      | "user1" |
-      | "user2" |
+      | Account | IP Whitelist |
+      | "root"  | ""           |
+      | "user1" | ""           |
+      | "user2" | ""           |
     When executing query:
       """
       DESC USER root
@@ -366,3 +366,53 @@ Feature: User & privilege Test
       DESC USER root
       """
     Then a PermissionError should be raised at runtime:
+
+  Scenario: Create User With IP Whitelist
+    When executing query:
+      """
+      DROP USER IF EXISTS user_ip
+      """
+    Then the execution should be successful
+    When executing query:
+      """
+      CREATE USER user_ip WITH PASSWORD "pwd1" WITH IP WHITELIST 192.168.11.6,192.168.10.189
+      """
+    Then the execution should be successful
+    When executing query:
+      """
+      GRANT ROLE GUEST ON user_tmp_space_4 TO user_ip
+      """
+    Then the execution should be successful
+    And wait 10 seconds
+    When executing query:
+      """
+      SHOW USERS
+      """
+    Then the result should contain:
+      | Account   | IP Whitelist                  |
+      | "user_ip" | "192.168.11.6,192.168.10.189" |
+    When executing query with user user_ip with password pwd1:
+      """
+      show spaces
+      """
+    Then an error should be raised at authenticate time:
+    When executing query:
+      """
+      ALTER USER user_ip WITH PASSWORD "pwd1"
+      """
+    Then the execution should be successful
+    And wait 10 seconds
+    When executing query with user user_ip with password pwd1:
+      """
+      show spaces
+      """
+    Then the result should contain:
+      | Name               |
+      | "user_tmp_space_4" |
+    When executing query:
+      """
+      SHOW USERS
+      """
+    Then the result should contain:
+      | Account   | IP Whitelist |
+      | "user_ip" | ""           |

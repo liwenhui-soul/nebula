@@ -21,6 +21,7 @@ set(OPTIMIZER_TEST_LIB
     $<TARGET_OBJECTS:conf_obj>
     $<TARGET_OBJECTS:fs_obj>
     $<TARGET_OBJECTS:thrift_obj>
+    $<TARGET_OBJECTS:network_obj>
     $<TARGET_OBJECTS:common_thrift_obj>
     $<TARGET_OBJECTS:thread_obj>
     $<TARGET_OBJECTS:file_based_cluster_id_man_obj>

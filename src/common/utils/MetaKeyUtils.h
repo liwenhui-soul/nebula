@@ -283,6 +283,14 @@ class MetaKeyUtils final {
 
   static std::string parseUserPwd(folly::StringPiece val);
 
+  static std::string ipWhitelistKey(const std::string& account);
+
+  static std::string ipWhitelistVal(const std::unordered_set<std::string>& whitelist);
+
+  static std::string parseIpWhitelistKey(folly::StringPiece key);
+
+  static std::unordered_set<std::string> parseIpWhitelist(folly::StringPiece val);
+
   static std::string roleKey(GraphSpaceID spaceId, const std::string& account);
 
   static std::string roleVal(meta::cpp2::RoleType roleType);

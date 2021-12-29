@@ -5,11 +5,13 @@
 
 #include "common/utils/MetaKeyUtils.h"
 
+#include <folly/String.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/protocol/CompactProtocol.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include <boost/stacktrace.hpp>
+#include <unordered_set>
 
 #include "common/network/NetworkUtils.h"
 
@@ -48,6 +50,7 @@ static const std::unordered_map<
                  {"index", {"__index__", nullptr}},
                  {"index_status", {"__index_status__", MetaKeyUtils::parseIndexStatusKeySpaceID}},
                  {"roles", {"__roles__", MetaKeyUtils::parseRoleSpace}},
+                 {"ip_whitelist", {"__ip_whitelist__", nullptr}},
                  {"leaders", {"__leaders__", nullptr}},
                  {"leader_terms", {"__leader_terms__", nullptr}},
                  {"listener", {"__listener__", nullptr}},
@@ -75,6 +78,7 @@ static const std::string kIndexTable          = tableMaps.at("index").first;    
 static const std::string kIndexStatusTable    = tableMaps.at("index_status").first;   // NOLINT
 static const std::string kUsersTable          = systemTableMaps.at("users").first;          // NOLINT
 static const std::string kRolesTable          = tableMaps.at("roles").first;          // NOLINT
+static const std::string kIpWhitelistTable    = tableMaps.at("ip_whitelist").first;          // NOLINT
 static const std::string kConfigsTable        = systemTableMaps.at("configs").first;        // NOLINT
 static const std::string kSnapshotsTable      = systemTableMaps.at("snapshots").first;      // NOLINT
 static const std::string kLeadersTable        = tableMaps.at("leaders").first;              // NOLINT
@@ -911,6 +915,34 @@ std::string MetaKeyUtils::parseUser(folly::StringPiece key) {
 std::string MetaKeyUtils::parseUserPwd(folly::StringPiece val) {
   auto len = *reinterpret_cast<const size_t*>(val.data());
   return val.subpiece(sizeof(size_t), len).str();
+}
+
+std::string MetaKeyUtils::ipWhitelistKey(const std::string& account) {
+  std::string key;
+  key.reserve(kIpWhitelistTable.size() + account.size());
+  key.append(kIpWhitelistTable.data(), kIpWhitelistTable.size()).append(account);
+  return key;
+}
+
+std::string MetaKeyUtils::ipWhitelistVal(const std::unordered_set<std::string>& whitelist) {
+  std::string val, serial_str;
+  apache::thrift::CompactSerializer::serialize(whitelist, &serial_str);
+  auto ipWhitelistLen = serial_str.size();
+  val.reserve(sizeof(int64_t) + ipWhitelistLen);
+  val.append(reinterpret_cast<const char*>(&ipWhitelistLen), sizeof(size_t)).append(serial_str);
+  return val;
+}
+
+std::string MetaKeyUtils::parseIpWhitelistKey(folly::StringPiece key) {
+  return key.subpiece(kIpWhitelistTable.size(), key.size() - kIpWhitelistTable.size()).str();
+}
+
+std::unordered_set<std::string> MetaKeyUtils::parseIpWhitelist(folly::StringPiece val) {
+  auto len = *reinterpret_cast<const size_t*>(val.data());
+  std::unordered_set<std::string> whitelist;
+  apache::thrift::CompactSerializer::deserialize(val.subpiece(sizeof(size_t), len).str(),
+                                                 whitelist);
+  return whitelist;
 }
 
 std::string MetaKeyUtils::roleKey(GraphSpaceID spaceId, const std::string& account) {

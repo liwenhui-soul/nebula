@@ -6,6 +6,9 @@
 #ifndef PARSER_USERSENTENCES_H_
 #define PARSER_USERSENTENCES_H_
 
+#include <string>
+#include <unordered_set>
+
 #include "interface/gen-cpp2/meta_types.h"
 #include "parser/Clauses.h"
 #include "parser/Sentence.h"
@@ -52,9 +55,13 @@ class AclItemClause final {
 
 class CreateUserSentence final : public Sentence {
  public:
-  CreateUserSentence(std::string* account, std::string* password, bool ifNotExists) {
+  CreateUserSentence(std::string* account,
+                     std::string* password,
+                     bool ifNotExists,
+                     std::unordered_set<std::string>* ipWhitelist) {
     account_.reset(account);
     password_.reset(password);
+    ipWhitelist_.reset(ipWhitelist);
     ifNotExists_ = ifNotExists;
     kind_ = Kind::kCreateUser;
   }
@@ -62,6 +69,8 @@ class CreateUserSentence final : public Sentence {
   const std::string* getAccount() const { return account_.get(); }
 
   const std::string* getPassword() const { return password_.get(); }
+
+  const std::unordered_set<std::string>* getIpWhitelist() const { return ipWhitelist_.get(); }
 
   bool ifNotExists() const { return ifNotExists_; }
 
@@ -71,13 +80,17 @@ class CreateUserSentence final : public Sentence {
   bool ifNotExists_{false};
   std::unique_ptr<std::string> account_;
   std::unique_ptr<std::string> password_;
+  std::unique_ptr<std::unordered_set<std::string>> ipWhitelist_;
 };
 
 class AlterUserSentence final : public Sentence {
  public:
-  explicit AlterUserSentence(std::string* account, std::string* password) {
+  explicit AlterUserSentence(std::string* account,
+                             std::string* password,
+                             std::unordered_set<std::string>* ipWhitelist) {
     account_.reset(account);
     password_.reset(password);
+    ipWhitelist_.reset(ipWhitelist);
     kind_ = Kind::kAlterUser;
   }
 
@@ -85,11 +98,14 @@ class AlterUserSentence final : public Sentence {
 
   const std::string* getPassword() const { return password_.get(); }
 
+  const std::unordered_set<std::string>* getIpWhitelist() const { return ipWhitelist_.get(); }
+
   std::string toString() const override;
 
  private:
   std::unique_ptr<std::string> account_;
   std::unique_ptr<std::string> password_;
+  std::unique_ptr<std::unordered_set<std::string>> ipWhitelist_;
 };
 
 class DropUserSentence final : public Sentence {

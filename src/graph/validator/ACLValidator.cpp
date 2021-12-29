@@ -30,8 +30,16 @@ Status CreateUserValidator::validateImpl() {
 
 Status CreateUserValidator::toPlan() {
   auto sentence = static_cast<CreateUserSentence *>(sentence_);
-  return genSingleNodePlan<CreateUser>(
-      sentence->getAccount(), sentence->getPassword(), sentence->ifNotExists());
+  for (auto &ip : *sentence->getIpWhitelist()) {
+    auto status = network::NetworkUtils::validateIP(ip);
+    if (!status.ok()) {
+      return Status::SemanticError(status.toString());
+    }
+  }
+  return genSingleNodePlan<CreateUser>(sentence->getAccount(),
+                                       sentence->getPassword(),
+                                       sentence->ifNotExists(),
+                                       sentence->getIpWhitelist());
 }
 
 // drop user
@@ -65,7 +73,14 @@ Status UpdateUserValidator::validateImpl() {
 
 Status UpdateUserValidator::toPlan() {
   auto sentence = static_cast<AlterUserSentence *>(sentence_);
-  return genSingleNodePlan<UpdateUser>(sentence->getAccount(), sentence->getPassword());
+  for (auto &ip : *sentence->getIpWhitelist()) {
+    auto status = network::NetworkUtils::validateIP(ip);
+    if (!status.ok()) {
+      return Status::SemanticError(status.toString());
+    }
+  }
+  return genSingleNodePlan<UpdateUser>(
+      sentence->getAccount(), sentence->getPassword(), sentence->getIpWhitelist());
 }
 
 // show users

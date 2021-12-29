@@ -120,6 +120,8 @@ static constexpr size_t kCommentLengthLimit = 256;
     nebula::EdgeKeys                       *edge_keys;
     nebula::EdgeKeyRef                     *edge_key_ref;
     nebula::GroupClause                    *group_clause;
+    std::unordered_set<std::string>        *with_ip_whitelist;
+    std::unordered_set<std::string>        *IPV4_list;
     nebula::HostList                       *host_list;
     nebula::HostAddr                       *host_item;
     nebula::ZoneNameList                   *zone_name_list;
@@ -187,7 +189,7 @@ static constexpr size_t kCommentLengthLimit = 256;
 %token KW_JOBS KW_JOB KW_RECOVER KW_FLUSH KW_COMPACT KW_REBUILD KW_SUBMIT KW_STATS KW_STATUS
 %token KW_BIDIRECT
 %token KW_USER KW_USERS KW_ACCOUNT
-%token KW_PASSWORD KW_CHANGE KW_ROLE KW_ROLES
+%token KW_PASSWORD KW_CHANGE KW_ROLE KW_ROLES KW_IP KW_WHITELIST
 %token KW_GOD KW_ADMIN KW_DBA KW_GUEST KW_GRANT KW_REVOKE KW_ON
 %token KW_OUT KW_BOTH KW_SUBGRAPH
 %token KW_EXPLAIN KW_PROFILE KW_FORMAT
@@ -295,6 +297,8 @@ static constexpr size_t kCommentLengthLimit = 256;
 %type <to_clause> to_clause
 %type <find_path_upto_clause> find_path_upto_clause
 %type <group_clause> group_clause
+%type <with_ip_whitelist> with_ip_whitelist
+%type <IPV4_list> IPV4_list
 %type <host_list> host_list
 %type <host_item> host_item
 %type <integer_list> integer_list
@@ -453,6 +457,8 @@ unreserved_keyword
     | KW_USER               { $$ = new std::string("user"); }
     | KW_USERS              { $$ = new std::string("users"); }
     | KW_PASSWORD           { $$ = new std::string("password"); }
+    | KW_IP                 { $$ = new std::string("ip"); }
+    | KW_WHITELIST          { $$ = new std::string("whitelist"); }
     | KW_ROLE               { $$ = new std::string("role"); }
     | KW_ROLES              { $$ = new std::string("roles"); }
     | KW_GOD                { $$ = new std::string("god"); }
@@ -3590,17 +3596,37 @@ drop_space_sentence
 //  User manager sentences.
 
 create_user_sentence
-    : KW_CREATE KW_USER opt_if_not_exists name_label KW_WITH KW_PASSWORD STRING {
-        $$ = new CreateUserSentence($4, $7, $3);
+    : KW_CREATE KW_USER opt_if_not_exists name_label KW_WITH KW_PASSWORD STRING with_ip_whitelist {
+        $$ = new CreateUserSentence($4, $7, $3, $8);
     }
-    | KW_CREATE KW_USER opt_if_not_exists name_label {
-        $$ = new CreateUserSentence($4, new std::string(""), $3);
+    | KW_CREATE KW_USER opt_if_not_exists name_label with_ip_whitelist {
+        $$ = new CreateUserSentence($4, new std::string(""), $3, $5);
+    }
+    ;
+
+with_ip_whitelist
+    : %empty { 
+        $$ = new std::unordered_set<std::string> (); 
+    }
+    | KW_WITH KW_IP KW_WHITELIST IPV4_list {
+        $$ = $4;
+    }
+    ;
+
+IPV4_list
+    : IPV4 {
+        $$ = new std::unordered_set<std::string> ();
+        $$->emplace(*$1);
+    }
+    | IPV4_list COMMA IPV4 {
+        $$ = $1;
+        $$->emplace(*$3);
     }
     ;
 
 alter_user_sentence
-    : KW_ALTER KW_USER name_label KW_WITH KW_PASSWORD STRING {
-        $$ = new AlterUserSentence($3, $6);
+    : KW_ALTER KW_USER name_label KW_WITH KW_PASSWORD STRING with_ip_whitelist {
+        $$ = new AlterUserSentence($3, $6, $7);
     }
     ;
 

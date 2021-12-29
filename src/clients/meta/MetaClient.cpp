@@ -150,13 +150,26 @@ bool MetaClient::loadUsersAndRoles() {
     LOG(ERROR) << "List users failed, status:" << userRoleRet.status();
     return false;
   }
+
+  auto userIpWhitelistRet = listIpWhitelists().get();
+  if (!userIpWhitelistRet.ok()) {
+    LOG(ERROR) << "List ip whitelist failed, status:" << userIpWhitelistRet.status();
+    return false;
+  }
+
   decltype(userRolesMap_) userRolesMap;
   decltype(userPasswordMap_) userPasswordMap;
+  decltype(userIpWhitelistMap_) userIpWhitelistMap;
+
   for (auto& user : userRoleRet.value()) {
     auto rolesRet = getUserRoles(user.first).get();
     if (!rolesRet.ok()) {
       LOG(ERROR) << "List role by user failed, user : " << user.first;
       return false;
+    }
+    auto iter = userIpWhitelistRet.value().find(user.first);
+    if (iter != userIpWhitelistRet.value().end() && !iter->second.empty()) {
+      userIpWhitelistMap[user.first] = iter->second;
     }
     userRolesMap[user.first] = rolesRet.value();
     userPasswordMap[user.first] = user.second;
@@ -165,6 +178,7 @@ bool MetaClient::loadUsersAndRoles() {
     folly::RWSpinLock::WriteHolder holder(localCacheLock_);
     userRolesMap_ = std::move(userRolesMap);
     userPasswordMap_ = std::move(userPasswordMap);
+    userIpWhitelistMap_ = std::move(userIpWhitelistMap);
   }
   return true;
 }
@@ -637,6 +651,7 @@ const MetaClient::ThreadLocalInfo& MetaClient::getThreadLocalInfo() {
     threadLocalInfo.storageHosts_ = storageHosts_;
     threadLocalInfo.fulltextIndexMap_ = fulltextIndexMap_;
     threadLocalInfo.userPasswordMap_ = userPasswordMap_;
+    threadLocalInfo.userIpWhitelistMap_ = userIpWhitelistMap_;
   }
 
   return threadLocalInfo;
@@ -2420,6 +2435,19 @@ bool MetaClient::authCheckFromCache(const std::string& account, const std::strin
   return iter->second == password;
 }
 
+bool MetaClient::checkIpWhitelistFromCache(const std::string& account,
+                                           const std::string& clientIp) {
+  if (!ready_) {
+    return false;
+  }
+  const ThreadLocalInfo& threadLocalInfo = getThreadLocalInfo();
+  auto iter = threadLocalInfo.userIpWhitelistMap_.find(account);
+  if (iter == threadLocalInfo.userIpWhitelistMap_.end() || iter->second.empty()) {
+    return true;
+  }
+  return iter->second.find(clientIp) != iter->second.end();
+}
+
 bool MetaClient::checkShadowAccountFromCache(const std::string& account) {
   if (!ready_) {
     return false;
@@ -2577,11 +2605,13 @@ folly::Future<StatusOr<bool>> MetaClient::heartbeat() {
 
 folly::Future<StatusOr<bool>> MetaClient::createUser(std::string account,
                                                      std::string password,
-                                                     bool ifNotExists) {
+                                                     bool ifNotExists,
+                                                     std::unordered_set<std::string> ipWhitelist) {
   cpp2::CreateUserReq req;
   req.set_account(std::move(account));
   req.set_encoded_pwd(std::move(password));
   req.set_if_not_exists(ifNotExists);
+  req.set_ip_whitelist(std::move(ipWhitelist));
   folly::Promise<StatusOr<bool>> promise;
   auto future = promise.getFuture();
   getResponse(
@@ -2610,10 +2640,13 @@ folly::Future<StatusOr<bool>> MetaClient::dropUser(std::string account, bool ifE
   return future;
 }
 
-folly::Future<StatusOr<bool>> MetaClient::alterUser(std::string account, std::string password) {
+folly::Future<StatusOr<bool>> MetaClient::alterUser(std::string account,
+                                                    std::string password,
+                                                    std::unordered_set<std::string> ipWhitelist) {
   cpp2::AlterUserReq req;
   req.set_account(std::move(account));
   req.set_encoded_pwd(std::move(password));
+  req.set_ip_whitelist(std::move(ipWhitelist));
   folly::Promise<StatusOr<bool>> promise;
   auto future = promise.getFuture();
   getResponse(
@@ -2664,6 +2697,22 @@ folly::Future<StatusOr<std::unordered_map<std::string, std::string>>> MetaClient
       std::move(req),
       [](auto client, auto request) { return client->future_listUsers(request); },
       [](cpp2::ListUsersResp&& resp) -> decltype(auto) { return std::move(resp).get_users(); },
+      std::move(promise));
+  return future;
+}
+
+folly::Future<StatusOr<std::unordered_map<std::string, std::unordered_set<std::string>>>>
+MetaClient::listIpWhitelists() {
+  cpp2::ListIpWhitelistsReq req;
+  folly::Promise<StatusOr<std::unordered_map<std::string, std::unordered_set<std::string>>>>
+      promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_listIpWhitelists(request); },
+      [](cpp2::ListIpWhitelistsResp&& resp) -> decltype(auto) {
+        return std::move(resp).get_ip_whitelists();
+      },
       std::move(promise));
   return future;
 }

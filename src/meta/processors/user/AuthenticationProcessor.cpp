@@ -7,6 +7,9 @@
 
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
+#include <unordered_set>
+#include <vector>
+
 namespace nebula {
 namespace meta {
 
@@ -14,6 +17,7 @@ void CreateUserProcessor::process(const cpp2::CreateUserReq& req) {
   folly::SharedMutex::WriteHolder wHolder(LockUtils::userLock());
   const auto& account = req.get_account();
   const auto& password = req.get_encoded_pwd();
+  const auto& ipWhitelist = req.get_ip_whitelist();
 
   auto retCode = userExist(account);
   if (retCode != nebula::cpp2::ErrorCode::E_USER_NOT_FOUND) {
@@ -33,6 +37,8 @@ void CreateUserProcessor::process(const cpp2::CreateUserReq& req) {
 
   std::vector<kvstore::KV> data;
   data.emplace_back(MetaKeyUtils::userKey(account), MetaKeyUtils::userVal(password));
+  data.emplace_back(MetaKeyUtils::ipWhitelistKey(account),
+                    MetaKeyUtils::ipWhitelistVal(ipWhitelist));
   doSyncPutAndUpdate(std::move(data));
 }
 
@@ -40,6 +46,8 @@ void AlterUserProcessor::process(const cpp2::AlterUserReq& req) {
   folly::SharedMutex::WriteHolder wHolder(LockUtils::userLock());
   const auto& account = req.get_account();
   const auto& password = req.get_encoded_pwd();
+  const auto& ipWhitelist = req.get_ip_whitelist();
+
   auto userKey = MetaKeyUtils::userKey(account);
   auto userVal = MetaKeyUtils::userVal(password);
 
@@ -58,6 +66,8 @@ void AlterUserProcessor::process(const cpp2::AlterUserReq& req) {
 
   std::vector<kvstore::KV> data;
   data.emplace_back(std::move(userKey), std::move(userVal));
+  data.emplace_back(MetaKeyUtils::ipWhitelistKey(account),
+                    MetaKeyUtils::ipWhitelistVal(ipWhitelist));
   doSyncPutAndUpdate(std::move(data));
 }
 
@@ -84,6 +94,7 @@ void DropUserProcessor::process(const cpp2::DropUserReq& req) {
 
   std::vector<std::string> keys;
   keys.emplace_back(MetaKeyUtils::userKey(account));
+  keys.emplace_back(MetaKeyUtils::ipWhitelistKey(account));
 
   // Collect related roles by user.
   auto prefix = MetaKeyUtils::rolesPrefix();
@@ -248,6 +259,56 @@ void ListUsersProcessor::process(const cpp2::ListUsersReq& req) {
     iter->next();
   }
   resp_.set_users(std::move(users));
+  handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+  onFinished();
+}
+
+void ListIpWhitelistsProcessor::process(const cpp2::ListIpWhitelistsReq& req) {
+  UNUSED(req);
+  folly::SharedMutex::ReadHolder rHolder(LockUtils::userLock());
+  auto ipWhitelistsRet = doPrefix("__ip_whitelist__");
+  if (!nebula::ok(ipWhitelistsRet)) {
+    auto retCode = nebula::error(ipWhitelistsRet);
+    LOG(ERROR) << "List IP Whitelists failed, error: "
+               << apache::thrift::util::enumNameSafe(retCode);
+    handleErrorCode(retCode);
+    onFinished();
+    return;
+  }
+
+  auto iter = nebula::value(ipWhitelistsRet).get();
+  std::unordered_map<std::string, std::unordered_set<std::string>> ipWhitelists;
+  while (iter->valid()) {
+    auto account = MetaKeyUtils::parseIpWhitelistKey(iter->key());
+    auto ipWhitelist = MetaKeyUtils::parseIpWhitelist(iter->val());
+    ipWhitelists.emplace(std::move(account), std::move(ipWhitelist));
+    iter->next();
+  }
+
+  std::string prefix = "__users__";
+  auto ret = doPrefix(prefix);
+  if (!nebula::ok(ret)) {
+    auto retCode = nebula::error(ret);
+    LOG(ERROR) << "List User failed, error: " << apache::thrift::util::enumNameSafe(retCode);
+    handleErrorCode(retCode);
+    onFinished();
+    return;
+  }
+
+  auto userIter = nebula::value(ret).get();
+  std::unordered_map<std::string, std::unordered_set<std::string>> usersIpWhitelists;
+  while (userIter->valid()) {
+    auto account = MetaKeyUtils::parseUser(userIter->key());
+    auto item = ipWhitelists.find(account);
+    if (item != ipWhitelists.end()) {
+      usersIpWhitelists.emplace(std::move(account), item->second);
+    } else {
+      std::unordered_set<std::string> uset;
+      usersIpWhitelists.emplace(std::move(account), uset);
+    }
+    userIter->next();
+  }
+  resp_.set_ip_whitelists(std::move(usersIpWhitelists));
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }

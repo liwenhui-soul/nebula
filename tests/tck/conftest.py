@@ -15,6 +15,7 @@ import json
 from nebula2.common.ttypes import NList, NMap, Value, ErrorCode
 from nebula2.data.DataObject import ValueWrapper
 from pytest_bdd import given, parsers, then, when
+from nebula2.Exception import AuthFailedException
 
 from tests.common.dataset_printer import DataSetPrinter
 from tests.common.comparator import DataSetComparator, CmpType
@@ -362,10 +363,32 @@ def executing_query(query, graph_spaces, session, request):
 
 @when(parse("executing query with user {username} with password {password}:\n{query}"))
 def executing_query(username, password, conn_pool_to_first_graph_service, query, graph_spaces, request):
-    sess = conn_pool_to_first_graph_service.get_session(username, password)
-    ngql = combine_query(query)
-    exec_query(request, ngql, sess, graph_spaces)
-    sess.release()
+    try:
+        sess = conn_pool_to_first_graph_service.get_session(username, password)
+        ngql = combine_query(query)
+        exec_query(request, ngql, sess, graph_spaces)
+    except AuthFailedException as e:
+        graph_spaces["result_set"] = "Fail to create a new session from connection pool, fail to authenticate, error: Bad username/password or clientIp not in ip whitelist"
+        graph_spaces["ngql"] = query;
+    finally:
+        if 'sess' in locals():
+            sess.release()
+
+@then(rparse(r"an error should be raised at authenticate time:(?P<error_msg>.*)"))
+def raised_authenticate_error(error_msg, graph_spaces):
+    res = graph_spaces["result_set"]
+    ngql = graph_spaces["ngql"]
+    msg = error_msg.strip()
+    if(isinstance(res, str)):
+        res_msg = res
+    else:
+        assert not res.is_succeeded(), f"Authenticate should be failed: ngql:{ngql}"
+        res_msg = res.error_msg()
+    m = res_msg.startswith(msg)
+    assert (
+        m
+    ), f'Could not find "{msg}" in "{res_msg}" when authenticate and execute query: "{ngql}"'
+
 
 @when(parse("profiling query:\n{query}"))
 def profiling_query(query, graph_spaces, session, request):

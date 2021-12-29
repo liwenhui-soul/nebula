@@ -15,6 +15,7 @@
 #include "common/time/TimezoneInfo.h"
 #include "graph/service/CloudAuthenticator.h"
 #include "graph/service/GraphFlags.h"
+#include "graph/service/IpWhitelistCheck.h"
 #include "graph/service/LdapAuthenticator.h"
 #include "graph/service/PasswordAuthenticator.h"
 #include "graph/service/RequestContext.h"
@@ -67,12 +68,18 @@ folly::Future<AuthResponse> GraphService::future_authenticate(const std::string&
   auto clientIp = peer->getAddressStr();
   LOG(INFO) << "Authenticating user " << username << " from " << peer->describe();
 
+  if (peer->isIPv4Mapped()) {
+    folly::IPAddress v6map(clientIp);
+    clientIp = folly::IPAddress::createIPv4(v6map).str();
+  }
+
   auto ctx = std::make_unique<RequestContext<AuthResponse>>();
   auto future = ctx->future();
   // check username and password failed
-  if (!auth(username, password)) {
+  if (!auth(username, password, clientIp)) {
     ctx->resp().errorCode = ErrorCode::E_BAD_USERNAME_PASSWORD;
-    ctx->resp().errorMsg.reset(new std::string("Bad username/password"));
+    ctx->resp().errorMsg.reset(
+        new std::string("Bad username/password or clientIp not in ip whitelist"));
     ctx->finish();
     stats::StatsManager::addValue(kNumAuthFailedSessions);
     stats::StatsManager::addValue(kNumAuthFailedSessionsBadUserNamePassword);
@@ -228,11 +235,17 @@ folly::Future<std::string> GraphService::future_executeJsonWithParameter(
   });
 }
 
-bool GraphService::auth(const std::string& username, const std::string& password) {
+bool GraphService::auth(const std::string& username,
+                        const std::string& password,
+                        const std::string& clientIp) {
   if (!FLAGS_enable_authorize) {
     return true;
   }
+  auto ipWhiteListChecker = std::make_unique<IpWhitelistCheck>(queryEngine_->metaClient());
 
+  if (!ipWhiteListChecker->check(username, clientIp)) {
+    return false;
+  }
   if (FLAGS_auth_type == "password") {
     auto authenticator = std::make_unique<PasswordAuthenticator>(queryEngine_->metaClient());
     return authenticator->auth(username, encryption::MD5Utils::md5Encode(password));

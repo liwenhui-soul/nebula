@@ -14,6 +14,8 @@
 #include <gtest/gtest_prod.h>
 
 #include <atomic>
+#include <string>
+#include <unordered_set>
 
 #include "common/base/Base.h"
 #include "common/base/ObjectPool.h"
@@ -163,6 +165,8 @@ using IndexStatus = std::tuple<std::string, std::string, std::string>;
 using UserRolesMap = std::unordered_map<std::string, std::vector<cpp2::RoleItem>>;
 // get user password by account
 using UserPasswordMap = std::unordered_map<std::string, std::string>;
+// get user ipWhitelist by account
+using UserIpWhitelistMap = std::unordered_map<std::string, std::unordered_set<std::string>>;
 
 // config cache, get config via module and name
 using MetaConfigMap =
@@ -403,17 +407,23 @@ class MetaClient {
   // Operations for users.
   folly::Future<StatusOr<bool>> createUser(std::string account,
                                            std::string password,
-                                           bool ifNotExists);
+                                           bool ifNotExists,
+                                           std::unordered_set<std::string> ipWhitelist);
 
   folly::Future<StatusOr<bool>> dropUser(std::string account, bool ifExists);
 
-  folly::Future<StatusOr<bool>> alterUser(std::string account, std::string password);
+  folly::Future<StatusOr<bool>> alterUser(std::string account,
+                                          std::string password,
+                                          std::unordered_set<std::string> ipWhitelist);
 
   folly::Future<StatusOr<bool>> grantToUser(cpp2::RoleItem roleItem);
 
   folly::Future<StatusOr<bool>> revokeFromUser(cpp2::RoleItem roleItem);
 
   folly::Future<StatusOr<std::unordered_map<std::string, std::string>>> listUsers();
+
+  folly::Future<StatusOr<std::unordered_map<std::string, std::unordered_set<std::string>>>>
+  listIpWhitelists();
 
   folly::Future<StatusOr<std::vector<cpp2::RoleItem>>> listRoles(GraphSpaceID space);
 
@@ -637,6 +647,8 @@ class MetaClient {
   std::vector<cpp2::RoleItem> getRolesByUserFromCache(const std::string& user);
 
   bool authCheckFromCache(const std::string& account, const std::string& password);
+
+  bool checkIpWhitelistFromCache(const std::string& account, const std::string& clientIp);
 
   StatusOr<std::vector<std::pair<GraphSpaceID, std::string>>> getMetaListenerInfoFromCache(
       HostAddr host);
@@ -869,6 +881,7 @@ class MetaClient {
     std::vector<HostAddr> storageHosts_;
     FTIndexMap fulltextIndexMap_;
     UserPasswordMap userPasswordMap_;
+    UserIpWhitelistMap userIpWhitelistMap_;
   };
 
   const ThreadLocalInfo& getThreadLocalInfo();
@@ -890,6 +903,7 @@ class MetaClient {
 
   UserRolesMap userRolesMap_;
   UserPasswordMap userPasswordMap_;
+  UserIpWhitelistMap userIpWhitelistMap_;
 
   NameIndexMap tagNameIndexMap_;
   NameIndexMap edgeNameIndexMap_;

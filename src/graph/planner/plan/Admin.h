@@ -6,6 +6,8 @@
 #ifndef GRAPH_PLANNER_PLAN_ADMIN_H_
 #define GRAPH_PLANNER_PLAN_ADMIN_H_
 
+#include <unordered_set>
+
 #include "clients/meta/MetaClient.h"
 #include "graph/planner/plan/Query.h"
 #include "interface/gen-cpp2/meta_types.h"
@@ -538,8 +540,10 @@ class CreateUser final : public CreateNode {
                           PlanNode* dep,
                           const std::string* username,
                           const std::string* password,
-                          bool ifNotExists) {
-    return qctx->objPool()->add(new CreateUser(qctx, dep, username, password, ifNotExists));
+                          bool ifNotExists,
+                          const std::unordered_set<std::string>* ipWhitelist) {
+    return qctx->objPool()->add(
+        new CreateUser(qctx, dep, username, password, ifNotExists, ipWhitelist));
   }
 
   std::unique_ptr<PlanNodeDescription> explain() const override;
@@ -548,19 +552,24 @@ class CreateUser final : public CreateNode {
 
   const std::string* password() const { return password_; }
 
+  const std::unordered_set<std::string>* ipWhitelist() const { return ipWhitelist_; }
+
  private:
   CreateUser(QueryContext* qctx,
              PlanNode* dep,
              const std::string* username,
              const std::string* password,
-             bool ifNotExists)
+             bool ifNotExists,
+             const std::unordered_set<std::string>* ipWhitelist)
       : CreateNode(qctx, Kind::kCreateUser, dep, ifNotExists),
         username_(username),
-        password_(password) {}
+        password_(password),
+        ipWhitelist_(ipWhitelist) {}
 
  private:
   const std::string* username_;
   const std::string* password_;
+  const std::unordered_set<std::string>* ipWhitelist_;
 };
 
 class DropUser final : public DropNode {
@@ -589,8 +598,9 @@ class UpdateUser final : public SingleDependencyNode {
   static UpdateUser* make(QueryContext* qctx,
                           PlanNode* dep,
                           const std::string* username,
-                          const std::string* password) {
-    return qctx->objPool()->add(new UpdateUser(qctx, dep, username, password));
+                          const std::string* password,
+                          const std::unordered_set<std::string>* ipWhitelist) {
+    return qctx->objPool()->add(new UpdateUser(qctx, dep, username, password, ipWhitelist));
   }
 
   std::unique_ptr<PlanNodeDescription> explain() const override;
@@ -599,18 +609,23 @@ class UpdateUser final : public SingleDependencyNode {
 
   const std::string* password() const { return password_; }
 
+  const std::unordered_set<std::string>* ipWhitelist() const { return ipWhitelist_; }
+
  private:
   UpdateUser(QueryContext* qctx,
              PlanNode* dep,
              const std::string* username,
-             const std::string* password)
+             const std::string* password,
+             const std::unordered_set<std::string>* ipWhitelist)
       : SingleDependencyNode(qctx, Kind::kUpdateUser, dep),
         username_(username),
-        password_(password) {}
+        password_(password),
+        ipWhitelist_(ipWhitelist) {}
 
  private:
   const std::string* username_;
   const std::string* password_;
+  const std::unordered_set<std::string>* ipWhitelist_;
 };
 
 class GrantRole final : public SingleDependencyNode {

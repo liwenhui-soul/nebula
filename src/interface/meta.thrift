@@ -701,9 +701,10 @@ struct RebuildIndexReq {
 }
 
 struct CreateUserReq {
-    1: binary	account,
-    2: binary   encoded_pwd,
-    3: bool     if_not_exists,
+    1: binary	    account,
+    2: binary       encoded_pwd,
+    3: bool         if_not_exists,
+    4: set<binary> (cpp.template = "std::unordered_set")   ip_whitelist,
 }
 
 struct DropUserReq {
@@ -712,8 +713,9 @@ struct DropUserReq {
 }
 
 struct AlterUserReq {
-    1: binary	account,
-    2: binary   encoded_pwd,
+    1: binary	    account,
+    2: binary       encoded_pwd,
+    3: set<binary> (cpp.template = "std::unordered_set")    ip_whitelist,
 }
 
 struct GrantRoleReq {
@@ -733,6 +735,17 @@ struct ListUsersResp {
     2: common.HostAddr  leader,
     // map<account, encoded password>
     3: map<binary, binary> (cpp.template = "std::unordered_map") users,
+}
+
+struct ListIpWhitelistsReq {
+}
+
+struct ListIpWhitelistsResp {
+    1: common.ErrorCode code,
+    // Valid if ret equals E_LEADER_CHANGED.
+    2: common.HostAddr  leader,
+    // map<account，ipWhitelist>
+    4: map<binary, set<binary> (cpp.template = "std::unordered_set")> (cpp.template = "std::unordered_map") ip_whitelists,
 }
 
 struct ListRolesReq {
@@ -1344,6 +1357,7 @@ service MetaService {
     ExecResp grantRole(1: GrantRoleReq req);
     ExecResp revokeRole(1: RevokeRoleReq req);
     ListUsersResp listUsers(1: ListUsersReq req);
+    ListIpWhitelistsResp listIpWhitelists(1: ListIpWhitelistsReq req);
     ListRolesResp listRoles(1: ListRolesReq req);
     ListRolesResp getUserRoles(1: GetUserRolesReq req);
     ExecResp changePassword(1: ChangePasswordReq req);

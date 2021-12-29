@@ -63,8 +63,8 @@ class TestUsers(NebulaTestSuite):
         self.check_resp_succeeded(resp)
 
         query = 'SHOW USERS'
-        expected_column_names = ['Account']
-        expected_result = [[['root']], [['user1']], [['user2']]]
+        expected_column_names = ['Account', 'IP Whitelist']
+        expected_result = [[['root', '']], [['user1', '']], [['user2', ''],]]
         resp = self.execute(query)
         self.check_resp_succeeded(resp)
         self.check_column_names(resp, expected_column_names)
@@ -99,8 +99,8 @@ class TestUsers(NebulaTestSuite):
         self.check_resp_succeeded(resp)
 
         query = 'SHOW USERS'
-        expected_column_names = ['Account']
-        expected_result = [[['root']], [['user1']], [['user2']]]
+        expected_column_names = ['Account', 'IP Whitelist']
+        expected_result = [[['root', '']], [['user1', '']], [['user2', ''],]]
         resp = self.execute(query)
         self.check_resp_succeeded(resp)
         self.check_column_names(resp, expected_column_names)
@@ -149,8 +149,8 @@ class TestUsers(NebulaTestSuite):
         self.check_resp_failed(resp)
 
         query = 'SHOW USERS'
-        expected_column_names = ['Account']
-        expected_result = [[['root']], [['user1']], [['user2']]]
+        expected_column_names = ['Account', 'IP Whitelist']
+        expected_result = [[['root', '']], [['user1', '']], [['user2', ''],]]
         resp = self.execute(query)
         self.check_resp_succeeded(resp)
         self.check_column_names(resp, expected_column_names)

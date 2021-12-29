@@ -24,6 +24,7 @@ TEST(AuthProcessorTest, CreateUserTest) {
     req.set_if_not_exists(false);
     req.set_account("user1");
     req.set_encoded_pwd("password");
+    req.set_ip_whitelist({"127.0.0.1"});
     auto* processor = CreateUserProcessor::instance(kv.get());
     auto f = processor->getFuture();
     processor->process(req);
@@ -156,6 +157,39 @@ TEST(AuthProcessorTest, DropUserTest) {
     auto retCode =
         kv->get(kDefaultSpaceId, kDefaultPartId, MetaKeyUtils::userKey("user1"), &userVal);
     ASSERT_EQ(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND, retCode);
+  }
+}
+
+TEST(AuthProcessorTest, IpWhitelistTest) {
+  fs::TempDir rootPath("/tmp/IpWhitelistTest.XXXXXX");
+  std::unique_ptr<kvstore::KVStore> kv(MockCluster::initMetaKV(rootPath.path()));
+  TestUtils::createSomeHosts(kv.get());
+  // create a user1.
+  {
+    cpp2::CreateUserReq req;
+    req.set_if_not_exists(false);
+    req.set_account("user1");
+    req.set_encoded_pwd("password");
+    req.set_ip_whitelist({"127.0.0.1"});
+    auto* processor = CreateUserProcessor::instance(kv.get());
+    auto f = processor->getFuture();
+    processor->process(req);
+    auto resp = std::move(f).get();
+    ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+  }
+  // check ip whitelist.
+  {
+    cpp2::ListIpWhitelistsReq req;
+    auto* processor = ListIpWhitelistsProcessor::instance(kv.get());
+    auto f = processor->getFuture();
+    processor->process(req);
+    auto resp = std::move(f).get();
+    ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+    ASSERT_EQ(1, resp.get_ip_whitelists().size());
+    auto iter = resp.get_ip_whitelists().find("user1");
+    ASSERT_NE(iter, resp.get_ip_whitelists().end());
+    auto iter2 = iter->second.find("127.0.0.1");
+    ASSERT_NE(iter2, iter->second.end());
   }
 }
 

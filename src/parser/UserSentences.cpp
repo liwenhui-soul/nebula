@@ -5,6 +5,8 @@
 
 #include "parser/UserSentences.h"
 
+#include <folly/String.h>
+
 namespace nebula {
 
 std::string RoleTypeClause::toString() const {
@@ -49,6 +51,11 @@ std::string CreateUserSentence::toString() const {
     buf += *password_;
     buf += "\"";
   }
+  if (!ipWhitelist_->empty()) {
+    buf += " WITH IP WHITELIST ";
+    auto whitelist_str = folly::join(",", *ipWhitelist_);
+    buf += whitelist_str;
+  }
   return buf;
 }
 
@@ -57,9 +64,16 @@ std::string AlterUserSentence::toString() const {
   buf.reserve(256);
   buf = "ALTER USER ";
   buf += *account_;
-  buf += " WITH PASSWORD \"";
-  buf += *password_;
-  buf += "\"";
+  if (!password_->empty()) {
+    buf += " WITH PASSWORD \"";
+    buf += *password_;
+    buf += "\"";
+  }
+  if (!ipWhitelist_->empty()) {
+    buf += " WITH IP WHITELIST ";
+    auto whitelist_str = folly::join(",", *ipWhitelist_);
+    buf += whitelist_str;
+  }
   return buf;
 }
 

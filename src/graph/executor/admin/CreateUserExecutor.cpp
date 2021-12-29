@@ -23,7 +23,8 @@ folly::Future<Status> CreateUserExecutor::createUser() {
       ->getMetaClient()
       ->createUser(*cuNode->username(),
                    encryption::MD5Utils::md5Encode(*cuNode->password()),
-                   cuNode->ifNotExist())
+                   cuNode->ifNotExist(),
+                   *cuNode->ipWhitelist())
       .via(runner())
       .thenValue([this](StatusOr<bool> resp) {
         SCOPED_TIMER(&execTime_);

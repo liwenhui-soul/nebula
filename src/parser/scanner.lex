@@ -162,6 +162,8 @@ LABEL_FULL_WIDTH            {CN_EN_FULL_WIDTH}{CN_EN_NUM_FULL_WIDTH}*
 "PROFILE"                   { return TokenType::KW_PROFILE; }
 "FORMAT"                    { return TokenType::KW_FORMAT; }
 "CASE"                      { return TokenType::KW_CASE; }
+"IP"                        { return TokenType::KW_IP; }
+"WHITELIST"                 { return TokenType::KW_WHITELIST; }
 
  /**
   * TODO(dutor) Manage the dynamic allocated objects with an object pool,

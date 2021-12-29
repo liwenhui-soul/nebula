@@ -25,5 +25,6 @@ nebula_add_library(
     PasswordAuthenticator.cpp
     CloudAuthenticator.cpp
     LdapAuthenticator.cpp
+    IpWhitelistCheck.cpp
 )
 

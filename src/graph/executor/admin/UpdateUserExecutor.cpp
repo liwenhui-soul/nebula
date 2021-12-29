@@ -21,7 +21,9 @@ folly::Future<Status> UpdateUserExecutor::updateUser() {
   auto *uuNode = asNode<UpdateUser>(node());
   return qctx()
       ->getMetaClient()
-      ->alterUser(*uuNode->username(), encryption::MD5Utils::md5Encode(*uuNode->password()))
+      ->alterUser(*uuNode->username(),
+                  encryption::MD5Utils::md5Encode(*uuNode->password()),
+                  *uuNode->ipWhitelist())
       .via(runner())
       .thenValue([this](StatusOr<bool> resp) {
         SCOPED_TIMER(&execTime_);
