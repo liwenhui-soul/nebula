@@ -6,6 +6,7 @@
 #ifndef GRAPH_REQUESTCONTEXT_H_
 #define GRAPH_REQUESTCONTEXT_H_
 
+#include "audit/AuditLogging.h"
 #include "common/base/Base.h"
 #include "common/cpp/helpers.h"
 #include "common/time/Duration.h"
@@ -73,6 +74,8 @@ class RequestContext final : public cpp::NonCopyable, public cpp::NonMovable {
 
   const std::unordered_map<std::string, Value>& parameterMap() const { return parameterMap_; }
 
+  AuditContext& auditContext() { return auditContext_; }
+
  private:
   time::Duration duration_;
   std::string query_;
@@ -82,6 +85,7 @@ class RequestContext final : public cpp::NonCopyable, public cpp::NonMovable {
   folly::Executor* runner_{nullptr};
   GraphSessionManager* sessionMgr_{nullptr};
   std::unordered_map<std::string, Value> parameterMap_;
+  AuditContext auditContext_;
 };
 
 }  // namespace graph

@@ -81,6 +81,51 @@
 # System memory high watermark ratio, cancel the memory checking when the ratio greater than 1.0
 --system_memory_high_watermark_ratio=0.8
 
+########## audit ##########
+# This variable is used to enable audit. The value can be 'true' or 'false'.
+--enable_audit=false
+# This variable is used to configure where the audit log will be written. Optional：[ file | es ]
+# If it is set to 'file', the log will be written into a file specified by audit_log_file variable.
+# If it is set to 'es', the audit log will be written to Elasticsearch.
+--audit_log_handler=file
+# This variable is used to specify the filename that’s going to store the audit log.
+# It can contain the path relative to the install dir or absolute path.
+# This variable has effect only when audit_log_handler is set to 'file'.
+--audit_log_file=./logs/audit/audit.log
+# This variable is used to specify the audit log strategy, Optional：[ asynchronous｜ synchronous ]
+# asynchronous: log using memory buffer, do not block the main thread
+# synchronous: log directly to file, flush and sync every event
+# Caution: For performance reasons, when the buffer is full and has not been flushed to the disk,
+# the 'asynchronous' mode will discard subsequent requests.
+# This variable has effect only when audit_log_handler is set to 'file'.
+--audit_log_strategy=synchronous
+# This variable can be used to specify the size of memory buffer used for logging,
+# used when audit_log_strategy variable is set to 'asynchronous' values.
+# This variable has effect only when audit_log_handler is set to 'file'. Uint: B
+--audit_log_max_buffer_size=1048576
+# This variable is used to specify the audit log format. Supports three log formats [ xml | json | csv ]
+# This variable has effect only when audit_log_handler is set to 'file'.
+--audit_log_format=xml
+# This variable can be used to specify the comma-seperated list of Elasticsearch addresses,
+# eg, '192.168.0.1:7001, 192.168.0.2:7001'.
+# This variable has effect only when audit_log_handler is set to 'es'.
+--audit_log_es_address=
+# This variable can be used to specify the user name of the Elasticsearch.
+# This variable has effect only when audit_log_handler is set to 'es'.
+--audit_log_es_user=
+# This variable can be used to specify the user password of the Elasticsearch.
+# This variable has effect only when audit_log_handler is set to 'es'.
+--audit_log_es_password=
+# This variable can be used to specify the number of logs which are sent to Elasticsearch at one time.
+# This variable has effect only when audit_log_handler is set to 'es'.
+--audit_log_es_batch_size=1000
+# This variable is used to specify the list of spaces for not tracking.
+# The value can be comma separated list of spaces, ie, 'nba, basketball'.
+--audit_log_exclude_spaces=
+# This variable is used to specify the list of log categories for tracking, eg, 'login, ddl'.
+# There are eight categories for tracking. There are: [ login | exit | ddl | dql | dml | dcl | util | unknown ].
+--audit_log_categories=login,exit
+
 ########## experimental feature ##########
 # if use experimental features
 --enable_experimental_feature=false

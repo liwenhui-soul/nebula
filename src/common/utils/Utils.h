@@ -48,6 +48,57 @@ class Utils final {
     }
     return HostAddr(adminAddr.host, adminAddr.port - 2);
   }
+
+  static std::string getLocalTime() {
+    time_t now = std::time(NULL);
+    struct tm p;
+    localtime_r(&now, &p);
+    char tmp_buff[50];
+    strftime(tmp_buff, sizeof(tmp_buff), "%Y-%m-%d %H:%M:%S", &p);
+    return std::string(tmp_buff);
+  }
+
+  static int runCommand(const std::string& command, int& exitCode, std::string& out) {
+    FILE* f = popen(command.c_str(), "r");
+    if (f == nullptr) {
+      return -1;
+    }
+
+    char buf[1025];
+    size_t len;
+    std::string tempOut = "";
+    do {
+      len = fread(buf, 1, 1024, f);
+      if (len > 0) {
+        buf[len] = '\0';
+        tempOut += buf;
+      }
+    } while (len == 1024);
+
+    if (ferror(f)) {
+      // Something is wrong
+      fclose(f);
+      return -1;
+    }
+
+    out = tempOut;
+    exitCode = pclose(f);
+    return 0;
+  }
+
+  // transform ` to '
+  static std::string processSpecChar(const std::string& in) {
+    std::string out;
+    out.reserve(in.size());
+    for (auto& c : in) {
+      if (c == '`') {
+        out.push_back('\'');
+      } else {
+        out.push_back(c);
+      }
+    }
+    return out;
+  }
 };
 }  // namespace nebula
 #endif  // COMMON_UTILS_UTILS_H_

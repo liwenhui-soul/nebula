@@ -5,6 +5,7 @@
 
 #include "graph/service/QueryInstance.h"
 
+#include "audit/AuditLogging.h"
 #include "common/base/Base.h"
 #include "common/stats/StatsManager.h"
 #include "common/time/ScopedTimer.h"
@@ -103,9 +104,10 @@ void QueryInstance::onFinish() {
   auto latency = rctx->duration().elapsedInUSec();
   rctx->resp().latencyInUs = latency;
   addSlowQueryStats(latency, spaceName);
+  auditQuery(rctx->auditContext(), ErrorCode::SUCCEEDED, "");
   rctx->finish();
-
   rctx->session()->deleteQuery(qctx_.get());
+
   // The `QueryInstance' is the root node holding all resources during the
   // execution. When the whole query process is done, it's safe to release this
   // object, as long as no other contexts have chances to access these resources
@@ -169,6 +171,7 @@ void QueryInstance::onError(Status status) {
       stats::StatsManager::counterWithLabels(kNumQueryErrors, {{"space", spaceName}}));
   addSlowQueryStats(latency, spaceName);
   rctx->session()->deleteQuery(qctx_.get());
+  auditQuery(rctx->auditContext(), rctx->resp().errorCode, *(rctx->resp().errorMsg));
   rctx->finish();
   delete this;
 }

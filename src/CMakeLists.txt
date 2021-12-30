@@ -2,6 +2,7 @@
 #
 # This source code is licensed under Apache 2.0 License.
 
+nebula_add_subdirectory(audit)
 nebula_add_subdirectory(clients)
 nebula_add_subdirectory(codec)
 nebula_add_subdirectory(common)

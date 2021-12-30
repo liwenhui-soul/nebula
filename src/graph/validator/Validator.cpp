@@ -43,6 +43,8 @@
 namespace nebula {
 namespace graph {
 
+extern std::string auditCategory(Sentence::Kind kind);
+
 Validator::Validator(Sentence* sentence, QueryContext* qctx)
     : sentence_(DCHECK_NOTNULL(sentence)),
       qctx_(DCHECK_NOTNULL(qctx)),
@@ -347,6 +349,13 @@ Status Validator::validate() {
 
   auto vidType = space_.spaceDesc.vid_type_ref().value().type_ref().value();
   vidType_ = SchemaUtil::propTypeToValueType(vidType);
+
+  if (FLAGS_enable_audit) {
+    std::string auditCategory = nebula::graph::auditCategory(sentence_->kind());
+    if (auditCategory != "") {  // @TODO(zhaohaifei): Set priority
+      qctx_->rctx()->auditContext().category_ = auditCategory;
+    }
+  }
 
   NG_RETURN_IF_ERROR(validateImpl());
 

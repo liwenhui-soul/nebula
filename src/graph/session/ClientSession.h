@@ -56,6 +56,11 @@ class ClientSession final {
     return session_.get_user_name();
   }
 
+  const std::string& clientIp() const {
+    folly::RWSpinLock::ReadHolder rHolder(rwSpinLock_);
+    return session_.get_client_ip();
+  }
+
   const std::unordered_map<GraphSpaceID, meta::cpp2::RoleType>& roles() const {
     folly::RWSpinLock::ReadHolder rHolder(rwSpinLock_);
     return roles_;

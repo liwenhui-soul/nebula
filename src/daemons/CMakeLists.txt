@@ -112,6 +112,7 @@ nebula_add_executable(
         GraphDaemon.cpp
         SetupLogging.cpp
         SetupBreakpad.cpp
+        SetupAuditLog.cpp
     OBJECTS
         $<TARGET_OBJECTS:graph_stats_obj>
         $<TARGET_OBJECTS:meta_client_stats_obj>
@@ -139,6 +140,7 @@ nebula_add_executable(
         $<TARGET_OBJECTS:charset_obj>
         $<TARGET_OBJECTS:graph_obj>
         $<TARGET_OBJECTS:ft_es_graph_adapter_obj>
+        $<TARGET_OBJECTS:audit_obj>
         ${common_deps}
     LIBRARIES
         ${PROXYGEN_LIBRARIES}

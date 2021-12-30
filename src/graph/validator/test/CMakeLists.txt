@@ -90,3 +90,13 @@ nebula_add_test(
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
 )
+
+nebula_add_test(
+    NAME
+        audit_category_test
+    SOURCES
+        AuditCategoryTest.cpp
+        ../AuditCategory.cpp
+    LIBRARIES
+        gtest
+)

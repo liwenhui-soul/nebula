@@ -36,6 +36,7 @@ static Status setupSignalHandler();
 extern Status setupLogging();
 static void printHelp(const char *prog);
 static void setupThreadManager();
+extern Status setupAuditLog();
 #if defined(__x86_64__)
 extern Status setupBreakpad();
 #endif
@@ -99,6 +100,15 @@ int main(int argc, char *argv[]) {
   } else {
     // Write the current pid into the pid file
     status = ProcessUtils::makePidFile(pidPath);
+    if (!status.ok()) {
+      LOG(ERROR) << status;
+      return EXIT_FAILURE;
+    }
+  }
+
+  // The audit log must be started after graphd daemonized.
+  if (FLAGS_enable_audit) {
+    status = setupAuditLog();
     if (!status.ok()) {
       LOG(ERROR) << status;
       return EXIT_FAILURE;

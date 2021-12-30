@@ -107,6 +107,44 @@ DEFINE_int32(num_rows_to_check_memory, 1024, "number rows to check memory");
 // License file path
 DEFINE_string(license_path, "/nebula.license", "File path to license file");
 
+// audit
+DEFINE_bool(enable_audit, false, "Whether to enable the audit log.");
+DEFINE_string(audit_log_handler, "file", "Where to write the audit log. Optional: [ file | es ]");
+DEFINE_string(audit_log_file,
+              "./logs/audit/audit.log",
+              "When audit_log_handler is 'file', the name of the log file.");
+DEFINE_string(audit_log_strategy,
+              "synchronous",
+              "When audit_log_handler is 'file', audit log flush strategy."
+              "Optional: [ synchronous｜ asynchronous ]."
+              "Caution: For performance reasons, when the buffer is full and has not been "
+              "flushed to the disk, the 'asynchronous' mode will discard subsequent requests.");
+DEFINE_uint64(audit_log_max_buffer_size,
+              1048576,
+              "When audit_log_strategy is 'asynchronous', the maximum size "
+              "of the memory buffer. Uint: B");
+DEFINE_string(audit_log_format,
+              "xml",
+              "When audit_log_handler is 'file', specify the log format."
+              "Optional: [ xml | json | csv ]");
+DEFINE_string(audit_log_es_address,
+              "",
+              "When audit_log_handler is 'es', specify the comma-seperated list of "
+              "Elasticsearch addresses, eg, 192.168.0.1:7001, 192.168.0.2:7001");
+DEFINE_string(audit_log_es_user, "", "Specify the user name of the Elasticsearch.");
+DEFINE_string(audit_log_es_password, "", "Specify the user password of the Elasticsearch.");
+DEFINE_uint64(audit_log_es_batch_size,
+              1000,
+              "The number of logs which are sent to Elasticsearch at one time.");
+DEFINE_string(audit_log_exclude_spaces,
+              "",
+              "Specify the list of spaces for not tracking. The value can be "
+              "comma separated list of spaces, ie, 'nba, basketball'.");
+DEFINE_string(audit_log_categories,
+              "login,exit",
+              "Specify the list of log categories for tracking, eg, 'login, ddl'."
+              "Categories contains [ login | exit | ddl | dql | dml | dcl | util | unknown ].");
+
 // Sanity-checking Flag Values
 static bool ValidateSessIdleTimeout(const char* flagname, int32_t value) {
   // The max timeout is 604800 seconds(a week)

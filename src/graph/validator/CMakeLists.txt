@@ -29,6 +29,7 @@ nebula_add_library(
     MatchValidator.cpp
     DownloadValidator.cpp
     IngestValidator.cpp
+    AuditCategory.cpp
 )
 
 nebula_add_subdirectory(test)

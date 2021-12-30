@@ -70,4 +70,18 @@ DECLARE_int32(num_rows_to_check_memory);
 // License file
 DECLARE_string(license_path);
 
+// audit
+DECLARE_bool(enable_audit);
+DECLARE_string(audit_log_handler);
+DECLARE_string(audit_log_file);
+DECLARE_string(audit_log_strategy);
+DECLARE_uint64(audit_log_max_buffer_size);
+DECLARE_string(audit_log_format);
+DECLARE_string(audit_log_es_address);
+DECLARE_string(audit_log_es_user);
+DECLARE_string(audit_log_es_password);
+DECLARE_uint64(audit_log_es_batch_size);
+DECLARE_string(audit_log_exclude_spaces);
+DECLARE_string(audit_log_categories);
+
 #endif  // GRAPH_GRAPHFLAGS_H_

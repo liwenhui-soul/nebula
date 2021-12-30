@@ -7,12 +7,14 @@
 
 #include <boost/filesystem.hpp>
 
+#include "audit/AuditLogging.h"
 #include "clients/storage/StorageClient.h"
 #include "common/base/Base.h"
 #include "common/encryption/MD5Utils.h"
 #include "common/stats/StatsManager.h"
 #include "common/time/Duration.h"
 #include "common/time/TimezoneInfo.h"
+#include "common/utils/Utils.h"
 #include "graph/service/CloudAuthenticator.h"
 #include "graph/service/GraphFlags.h"
 #include "graph/service/IpWhitelistCheck.h"
@@ -75,11 +77,17 @@ folly::Future<AuthResponse> GraphService::future_authenticate(const std::string&
 
   auto ctx = std::make_unique<RequestContext<AuthResponse>>();
   auto future = ctx->future();
+  if (FLAGS_enable_audit) {
+    ctx->auditContext().category_ = "login";
+    ctx->auditContext().user_ = username;
+    ctx->auditContext().clientHost_ = clientIp;
+  }
   // check username and password failed
   if (!auth(username, password, clientIp)) {
     ctx->resp().errorCode = ErrorCode::E_BAD_USERNAME_PASSWORD;
     ctx->resp().errorMsg.reset(
         new std::string("Bad username/password or clientIp not in ip whitelist"));
+    auditLogin(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
     ctx->finish();
     stats::StatsManager::addValue(kNumAuthFailedSessions);
     stats::StatsManager::addValue(kNumAuthFailedSessionsBadUserNamePassword);
@@ -89,6 +97,7 @@ folly::Future<AuthResponse> GraphService::future_authenticate(const std::string&
   if (!sessionManager_->isOutOfConnections()) {
     ctx->resp().errorCode = ErrorCode::E_TOO_MANY_CONNECTIONS;
     ctx->resp().errorMsg.reset(new std::string("Too many connections in the cluster"));
+    auditLogin(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
     ctx->finish();
     stats::StatsManager::addValue(kNumAuthFailedSessions);
     stats::StatsManager::addValue(kNumAuthFailedSessionsOutOfMaxAllowed);
@@ -103,6 +112,7 @@ folly::Future<AuthResponse> GraphService::future_authenticate(const std::string&
                  << " failed: " << ret.status();
       ctx->resp().errorCode = ErrorCode::E_SESSION_INVALID;
       ctx->resp().errorMsg.reset(new std::string(ret.status().toString()));
+      auditLogin(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
       return ctx->finish();
     }
     auto sessionPtr = std::move(ret).value();
@@ -110,6 +120,7 @@ folly::Future<AuthResponse> GraphService::future_authenticate(const std::string&
       LOG(ERROR) << "Get session for sessionId is nullptr";
       ctx->resp().errorCode = ErrorCode::E_SESSION_INVALID;
       ctx->resp().errorMsg.reset(new std::string("Get session for sessionId is nullptr"));
+      auditLogin(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
       return ctx->finish();
     }
     stats::StatsManager::addValue(kNumOpenedSessions);
@@ -120,6 +131,8 @@ folly::Future<AuthResponse> GraphService::future_authenticate(const std::string&
         new int32_t(time::Timezone::getGlobalTimezone().utcOffsetSecs()));
     ctx->resp().timeZoneName.reset(
         new std::string(time::Timezone::getGlobalTimezone().stdZoneName()));
+    ctx->auditContext().connectionId_ = ctx->session()->id();
+    auditLogin(ctx->auditContext(), ErrorCode::SUCCEEDED, "");
     return ctx->finish();
   };
 
@@ -129,6 +142,21 @@ folly::Future<AuthResponse> GraphService::future_authenticate(const std::string&
 
 void GraphService::signout(int64_t sessionId) {
   VLOG(2) << "Sign out session " << sessionId;
+  if (FLAGS_enable_audit) {
+    AuditContext auditCtx;
+    auditCtx.category_ = "exit";
+    auditCtx.connectionId_ = sessionId;
+    // In order not to affect the main thread, findSessionFromCache() is called here
+    // instead of findSession(). If session is not obtained, audit would not record user,
+    // client ip. In that case, users can distinguish different records by sessionId.
+    std::shared_ptr<ClientSession> clientSessionPtr =
+        sessionManager_->findSessionFromCache(sessionId);
+    if (clientSessionPtr != nullptr) {
+      auditCtx.user_ = clientSessionPtr->user();
+      auditCtx.clientHost_ = clientSessionPtr->clientIp();
+    }
+    auditExit(auditCtx);
+  }
   sessionManager_->removeSession(sessionId);
   stats::StatsManager::decValue(kNumActiveSessions);
 }
@@ -144,11 +172,27 @@ folly::Future<ExecutionResponse> GraphService::future_executeWithParameter(
   auto future = ctx->future();
   stats::StatsManager::addValue(kNumQueries);
   stats::StatsManager::addValue(kNumActiveQueries);
+  if (FLAGS_enable_audit) {
+    ctx->auditContext().connectionId_ = sessionId;
+    ctx->auditContext().query_ = query;
+    // In order not to affect the main thread, findSessionFromCache() is called here
+    // instead of findSession(). If session is not obtained, audit would not record user,
+    // client ip and space. In that case, users can distinguish different records by sessionId.
+    std::shared_ptr<ClientSession> clientSessionPtr =
+        sessionManager_->findSessionFromCache(sessionId);
+    if (clientSessionPtr != nullptr) {
+      ctx->auditContext().user_ = clientSessionPtr->user();
+      ctx->auditContext().clientHost_ = clientSessionPtr->clientIp();
+      ctx->auditContext().space_ = clientSessionPtr->spaceName();
+    }
+  }
   // When the sessionId is 0, it means the clients to ping the connection is ok
   if (sessionId == 0) {
     ctx->resp().errorCode = ErrorCode::E_SESSION_INVALID;
     ctx->resp().errorMsg = std::make_unique<std::string>("Invalid session id");
     ctx->finish();
+    // Before connecting to graphd, clients will ping whether the network is ok.
+    // Therefore, these ping operations are no need to audite.
     return future;
   }
   auto cb = [this, sessionId, ctx = std::move(ctx), parameterMap = std::move(parameterMap)](
@@ -158,6 +202,7 @@ folly::Future<ExecutionResponse> GraphService::future_executeWithParameter(
       ctx->resp().errorCode = ErrorCode::E_SESSION_INVALID;
       ctx->resp().errorMsg.reset(new std::string(folly::stringPrintf(
           "Get sessionId[%ld] failed: %s", sessionId, ret.status().toString().c_str())));
+      auditQuery(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
       return ctx->finish();
     }
     auto sessionPtr = std::move(ret).value();
@@ -166,6 +211,7 @@ folly::Future<ExecutionResponse> GraphService::future_executeWithParameter(
       ctx->resp().errorCode = ErrorCode::E_SESSION_INVALID;
       ctx->resp().errorMsg.reset(
           new std::string(folly::stringPrintf("SessionId[%ld] does not exist", sessionId)));
+      auditQuery(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
       return ctx->finish();
     }
     ctx->setSession(std::move(sessionPtr));
@@ -185,11 +231,27 @@ folly::Future<ExecutionResponse> GraphService::future_execute(int64_t sessionId,
   auto future = ctx->future();
   stats::StatsManager::addValue(kNumQueries);
   stats::StatsManager::addValue(kNumActiveQueries);
+  if (FLAGS_enable_audit) {
+    ctx->auditContext().connectionId_ = sessionId;
+    ctx->auditContext().query_ = query;
+    // In order not to affect the main thread, findSessionFromCache() is called here
+    // instead of findSession(). If session is not obtained, audit would not record user,
+    // client ip and space. In that case, users can distinguish different records by sessionId.
+    std::shared_ptr<ClientSession> clientSessionPtr =
+        sessionManager_->findSessionFromCache(sessionId);
+    if (clientSessionPtr != nullptr) {
+      ctx->auditContext().user_ = clientSessionPtr->user();
+      ctx->auditContext().clientHost_ = clientSessionPtr->clientIp();
+      ctx->auditContext().space_ = clientSessionPtr->spaceName();
+    }
+  }
   // When the sessionId is 0, it means the clients to ping the connection is ok
   if (sessionId == 0) {
     ctx->resp().errorCode = ErrorCode::E_SESSION_INVALID;
     ctx->resp().errorMsg = std::make_unique<std::string>("Invalid session id");
     ctx->finish();
+    // Before connecting to graphd, clients will ping whether the network is ok.
+    // Therefore, these ping operations are no need to audite.
     return future;
   }
   auto cb = [this, sessionId, ctx = std::move(ctx)](
@@ -199,6 +261,7 @@ folly::Future<ExecutionResponse> GraphService::future_execute(int64_t sessionId,
       ctx->resp().errorCode = ErrorCode::E_SESSION_INVALID;
       ctx->resp().errorMsg.reset(new std::string(folly::stringPrintf(
           "Get sessionId[%ld] failed: %s", sessionId, ret.status().toString().c_str())));
+      auditQuery(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
       return ctx->finish();
     }
     auto sessionPtr = std::move(ret).value();
@@ -207,6 +270,7 @@ folly::Future<ExecutionResponse> GraphService::future_execute(int64_t sessionId,
       ctx->resp().errorCode = ErrorCode::E_SESSION_INVALID;
       ctx->resp().errorMsg.reset(
           new std::string(folly::stringPrintf("SessionId[%ld] does not exist", sessionId)));
+      auditQuery(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
       return ctx->finish();
     }
     stats::StatsManager::addValue(kNumQueries);
