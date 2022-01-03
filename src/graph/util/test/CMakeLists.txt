@@ -55,4 +55,5 @@ nebula_add_test(
         gtest_main
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
+        ${Ldap_LIBRARIES}
 )

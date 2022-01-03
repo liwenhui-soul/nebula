@@ -57,9 +57,9 @@ void GetVariableProcessor::process(const cpp2::GetVariableReq& req) {
     onFinished();
     return;
   }
-  item.set_name(varName);
-  item.set_value(val);
-  resp_.set_item(std::move(item));
+  item.name_ref() = varName;
+  item.value_ref() = val;
+  resp_.item_ref() = std::move(item);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }
@@ -146,7 +146,7 @@ void ListVariablesProcessor::process(const cpp2::ListVariablesReq& req) {
     data.emplace(varName, val);
   }
 
-  resp_.set_variables(std::move(data));
+  resp_.variables_ref() = std::move(data);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }

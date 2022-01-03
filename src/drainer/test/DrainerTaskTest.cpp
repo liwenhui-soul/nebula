@@ -824,53 +824,53 @@ TEST(DrainerTaskTest, PartNumNotSameOnePartTest) {
 
     std::vector<meta::cpp2::ColumnDef> columns;
     columns.emplace_back();
-    columns.back().set_name("name");
-    columns.back().type.set_type(PropertyType::STRING);
+    columns.back().name_ref() = "name";
+    columns.back().type.type_ref() = PropertyType::STRING;
 
     columns.emplace_back();
-    columns.back().set_name("age");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "age";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("playing");
-    columns.back().type.set_type(PropertyType::BOOL);
+    columns.back().name_ref() = "playing";
+    columns.back().type.type_ref() = PropertyType::BOOL;
 
     columns.emplace_back();
-    columns.back().set_name("career");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "career";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("startYear");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "startYear";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("endYear");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "endYear";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("games");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "games";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("avgScore");
-    columns.back().type.set_type(PropertyType::DOUBLE);
+    columns.back().name_ref() = "avgScore";
+    columns.back().type.type_ref() = PropertyType::DOUBLE;
 
     columns.emplace_back();
-    columns.back().set_name("serveTeams");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "serveTeams";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("country");
-    columns.back().type.set_type(PropertyType::STRING);
-    columns.back().set_nullable(true);
+    columns.back().name_ref() = "country";
+    columns.back().type.type_ref() = PropertyType::STRING;
+    columns.back().nullable_ref() = true;
 
     columns.emplace_back();
-    columns.back().set_name("champions");
-    columns.back().type.set_type(PropertyType::INT64);
-    columns.back().set_nullable(true);
+    columns.back().name_ref() = "champions";
+    columns.back().type.type_ref() = PropertyType::INT64;
+    columns.back().nullable_ref() = true;
 
     meta::cpp2::Schema schema;
-    schema.set_columns(std::move(columns));
+    schema.columns_ref() = std::move(columns);
     ret = mClient->createTagSchema(space, "player", schema).get();
     ASSERT_TRUE(ret.ok());
     tagId = std::move(ret).value();
@@ -1092,53 +1092,53 @@ TEST(DrainerTaskTest, PartNumNotSameMultiPartTest) {
 
     std::vector<meta::cpp2::ColumnDef> columns;
     columns.emplace_back();
-    columns.back().set_name("name");
-    columns.back().type.set_type(PropertyType::STRING);
+    columns.back().name_ref() = "name";
+    columns.back().type.type_ref() = PropertyType::STRING;
 
     columns.emplace_back();
-    columns.back().set_name("age");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "age";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("playing");
-    columns.back().type.set_type(PropertyType::BOOL);
+    columns.back().name_ref() = "playing";
+    columns.back().type.type_ref() = PropertyType::BOOL;
 
     columns.emplace_back();
-    columns.back().set_name("career");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "career";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("startYear");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "startYear";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("endYear");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "endYear";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("games");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "games";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("avgScore");
-    columns.back().type.set_type(PropertyType::DOUBLE);
+    columns.back().name_ref() = "avgScore";
+    columns.back().type.type_ref() = PropertyType::DOUBLE;
 
     columns.emplace_back();
-    columns.back().set_name("serveTeams");
-    columns.back().type.set_type(PropertyType::INT64);
+    columns.back().name_ref() = "serveTeams";
+    columns.back().type.type_ref() = PropertyType::INT64;
 
     columns.emplace_back();
-    columns.back().set_name("country");
-    columns.back().type.set_type(PropertyType::STRING);
-    columns.back().set_nullable(true);
+    columns.back().name_ref() = "country";
+    columns.back().type.type_ref() = PropertyType::STRING;
+    columns.back().nullable_ref() = true;
 
     columns.emplace_back();
-    columns.back().set_name("champions");
-    columns.back().type.set_type(PropertyType::INT64);
-    columns.back().set_nullable(true);
+    columns.back().name_ref() = "champions";
+    columns.back().type.type_ref() = PropertyType::INT64;
+    columns.back().nullable_ref() = true;
 
     meta::cpp2::Schema schema;
-    schema.set_columns(std::move(columns));
+    schema.columns_ref() = std::move(columns);
     ret = mClient->createTagSchema(space, "player", schema).get();
     ASSERT_TRUE(ret.ok());
     tagId = std::move(ret).value();

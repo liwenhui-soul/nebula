@@ -76,7 +76,7 @@ void ListServiceClientsProcessor::process(const cpp2::ListServiceClientsReq& req
     serviceClients.emplace(type, MetaKeyUtils::parseServiceClients(nebula::value(ret)));
   }
 
-  resp_.set_clients(std::move(serviceClients));
+  resp_.clients_ref() = std::move(serviceClients);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }
@@ -160,7 +160,7 @@ void ListSpaceServiceClientsProcessor::process(const cpp2::ListSpaceServiceClien
     serviceClients.emplace(type, MetaKeyUtils::parseServiceClients(nebula::value(ret)));
   }
 
-  resp_.set_clients(std::move(serviceClients));
+  resp_.clients_ref() = std::move(serviceClients);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }

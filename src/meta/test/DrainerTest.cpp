@@ -24,7 +24,7 @@ TEST(DrainerTest, DrainerTest) {
   {
     cpp2::AddHostsReq req;
     std::vector<HostAddr> hosts = {{"0", 0}, {"1", 1}, {"2", 2}, {"3", 3}};
-    req.set_hosts(std::move(hosts));
+    req.hosts_ref() = std::move(hosts);
     auto* processor = AddHostsProcessor::instance(kv.get());
     auto f = processor->getFuture();
     processor->process(req);
@@ -50,13 +50,13 @@ TEST(DrainerTest, DrainerTest) {
   {
     // Add Drainer, space not exist, failed
     cpp2::AddDrainerReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
 
     std::vector<HostAddr> hosts;
     for (int32_t i = 0; i < 3; i++) {
       hosts.emplace_back(std::to_string(i), i);
     }
-    req.set_hosts(std::move(hosts));
+    req.hosts_ref() = std::move(hosts);
     auto* processor = AddDrainerProcessor::instance(kv.get());
     auto f = processor->getFuture();
     processor->process(req);
@@ -66,11 +66,11 @@ TEST(DrainerTest, DrainerTest) {
   {
     // Create space, succeeded
     cpp2::SpaceDesc properties;
-    properties.set_space_name("first_space");
-    properties.set_partition_num(9);
-    properties.set_replica_factor(1);
+    properties.space_name_ref() = "first_space";
+    properties.partition_num_ref() = 9;
+    properties.replica_factor_ref() = 1;
     cpp2::CreateSpaceReq req;
-    req.set_properties(std::move(properties));
+    req.properties_ref() = std::move(properties);
 
     auto* processor = CreateSpaceProcessor::instance(kv.get());
     auto f = processor->getFuture();
@@ -82,12 +82,12 @@ TEST(DrainerTest, DrainerTest) {
   {
     // Add Drainer, space exists, succeeded
     cpp2::AddDrainerReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
     std::vector<HostAddr> hosts;
     for (int32_t i = 0; i < 3; i++) {
       hosts.emplace_back(std::to_string(i), i);
     }
-    req.set_hosts(std::move(hosts));
+    req.hosts_ref() = std::move(hosts);
 
     auto* processor = AddDrainerProcessor::instance(kv.get());
     auto f = processor->getFuture();
@@ -98,12 +98,12 @@ TEST(DrainerTest, DrainerTest) {
   {
     // Add Drainer, drainer exists in space, failed
     cpp2::AddDrainerReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
     std::vector<HostAddr> hosts;
     for (int32_t i = 0; i < 3; i++) {
       hosts.emplace_back(std::to_string(i), i);
     }
-    req.set_hosts(std::move(hosts));
+    req.hosts_ref() = std::move(hosts);
 
     auto* processor = AddDrainerProcessor::instance(kv.get());
     auto f = processor->getFuture();
@@ -114,7 +114,7 @@ TEST(DrainerTest, DrainerTest) {
   {
     // List drainer
     cpp2::ListDrainersReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
     auto* processor = ListDrainersProcessor::instance(kv.get());
     auto f = processor->getFuture();
     processor->process(req);
@@ -132,7 +132,7 @@ TEST(DrainerTest, DrainerTest) {
   {
     // remove drainer
     cpp2::RemoveDrainerReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
     auto* processor = RemoveDrainerProcessor::instance(kv.get());
     auto f = processor->getFuture();
     processor->process(req);
@@ -142,7 +142,7 @@ TEST(DrainerTest, DrainerTest) {
   {
     // List drainer, succeed, drainers is empty
     cpp2::ListDrainersReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
     auto* processor = ListDrainersProcessor::instance(kv.get());
     auto f = processor->getFuture();
     processor->process(req);

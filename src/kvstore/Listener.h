@@ -107,7 +107,9 @@ class Listener : public raftex::RaftPart {
   // Stop listener
   void stop() override;
 
-  LogID getApplyId() { return lastApplyLogId_; }
+  LogID getApplyId() {
+    return lastApplyLogId_;
+  }
 
   void cleanup() override {
     CHECK(!raftLock_.try_lock());
@@ -130,11 +132,17 @@ class Listener : public raftex::RaftPart {
 
   virtual bool persist(LogID, TermID, LogID) = 0;
 
-  void onLostLeadership(TermID) override { LOG(FATAL) << "Should not reach here"; }
+  void onLostLeadership(TermID) override {
+    LOG(FATAL) << "Should not reach here";
+  }
 
-  void onElected(TermID) override { LOG(FATAL) << "Should not reach here"; }
+  void onElected(TermID) override {
+    LOG(FATAL) << "Should not reach here";
+  }
 
-  void onLeaderReady(TermID) override { LOG(FATAL) << "Should not reach here"; }
+  void onLeaderReady(TermID) override {
+    LOG(FATAL) << "Should not reach here";
+  }
 
   void onDiscoverNewLeader(HostAddr nLeader) override {
     LOG(INFO) << idStr_ << "Find the new leader " << nLeader;

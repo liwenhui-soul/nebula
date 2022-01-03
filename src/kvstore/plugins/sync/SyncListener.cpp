@@ -129,8 +129,8 @@ void SyncListener::processLogs() {
         // logMsg format in wal log: Timestamp(int64_t）+ LogType(1 char)
         // + sizeof(uint32_t val count)
         nebula::cpp2::LogEntry le;
-        le.set_cluster(iter->logSource());
-        le.set_log_str(iter->logMsg().toString());
+        le.cluster_ref() = iter->logSource();
+        le.log_str_ref() = iter->logMsg().toString();
         logs.emplace_back(std::move(le));
         logIdToSend = iter->logId();
       }
@@ -215,8 +215,8 @@ void SyncListener::processLogs() {
           }
           auto spaceId = ret.value();
           nebula::cpp2::LogEntry entry;
-          entry.set_cluster(clusterId);
-          entry.set_log_str(log);
+          entry.cluster_ref() = clusterId;
+          entry.log_str_ref() = log;
           logs[spaceId].emplace_back(std::move(entry));
           break;
         }
@@ -234,8 +234,8 @@ void SyncListener::processLogs() {
             auto spaceId = ret.value();
             auto newlog = encodeMultiValues(OP_PUT, std::move(key), kvs[i + 1]);
             nebula::cpp2::LogEntry entry;
-            entry.set_cluster(clusterId);
-            entry.set_log_str(newlog);
+            entry.cluster_ref() = clusterId;
+            entry.log_str_ref() = newlog;
             logs[spaceId].emplace_back(std::move(entry));
           }
           break;
@@ -248,8 +248,8 @@ void SyncListener::processLogs() {
           }
           auto spaceId = ret.value();
           nebula::cpp2::LogEntry entry;
-          entry.set_cluster(clusterId);
-          entry.set_log_str(log);
+          entry.cluster_ref() = clusterId;
+          entry.log_str_ref() = log;
           logs[spaceId].emplace_back(std::move(entry));
           break;
         }
@@ -264,8 +264,8 @@ void SyncListener::processLogs() {
             auto spaceId = ret.value();
             auto newlog = encodeSingleValue(OP_REMOVE, key);
             nebula::cpp2::LogEntry entry;
-            entry.set_cluster(clusterId);
-            entry.set_log_str(newlog);
+            entry.cluster_ref() = clusterId;
+            entry.log_str_ref() = newlog;
             logs[spaceId].emplace_back(std::move(entry));
           }
           break;
@@ -290,8 +290,8 @@ void SyncListener::processLogs() {
               auto spaceId = ret.value();
               auto newlog = encodeMultiValues(OP_PUT, key, op.second.second);
               nebula::cpp2::LogEntry entry;
-              entry.set_cluster(clusterId);
-              entry.set_log_str(newlog);
+              entry.cluster_ref() = clusterId;
+              entry.log_str_ref() = newlog;
               logs[spaceId].emplace_back(std::move(entry));
             } else if (op.first == BatchLogType::OP_BATCH_REMOVE) {
               auto key = op.second.first;
@@ -302,8 +302,8 @@ void SyncListener::processLogs() {
               auto spaceId = ret.value();
               auto newlog = encodeSingleValue(OP_REMOVE, key);
               nebula::cpp2::LogEntry entry;
-              entry.set_cluster(clusterId);
-              entry.set_log_str(newlog);
+              entry.cluster_ref() = clusterId;
+              entry.log_str_ref() = newlog;
               logs[spaceId].emplace_back(std::move(entry));
             } else if (op.first == BatchLogType::OP_BATCH_REMOVE_RANGE) {
               // Can only ignore for now
@@ -443,8 +443,8 @@ void SyncListener::sendMetaListenerDataToDrainer() {
         // logMsg format in wal log: Timestamp(int64_t）+ LogType(1 char)
         // + sizeof(uint32_t val count)
         nebula::cpp2::LogEntry le;
-        le.set_cluster(iter->logSource());
-        le.set_log_str(iter->logMsg().toString());
+        le.cluster_ref() = iter->logSource();
+        le.log_str_ref() = iter->logMsg().toString();
         logs.emplace_back(std::move(le));
         logIdToSend = iter->logId();
       }
@@ -656,8 +656,8 @@ std::pair<int64_t, int64_t> SyncListener::commitSnapshot(const std::vector<std::
       auto spaceId = ret.value();
       auto newlog = encodeMultiValues(OP_PUT, kv.first, kv.second);
       nebula::cpp2::LogEntry entry;
-      entry.set_cluster(clusterId_);
-      entry.set_log_str(newlog);
+      entry.cluster_ref() = clusterId_;
+      entry.log_str_ref() = newlog;
       logs[spaceId].emplace_back(std::move(entry));
     }
 
@@ -760,8 +760,8 @@ bool SyncListener::apply(const std::vector<KV>& data) {
 
   std::vector<nebula::cpp2::LogEntry> logs;
   nebula::cpp2::LogEntry le;
-  le.set_cluster(clusterId_);
-  le.set_log_str(std::move(log));
+  le.cluster_ref() = clusterId_;
+  le.log_str_ref() = std::move(log);
   logs.emplace_back(std::move(le));
 
   // Only the first time the snapshot sends data, then cleanup data
@@ -840,31 +840,31 @@ folly::Future<nebula::drainer::cpp2::AppendLogResponse> SyncListener::send(
           << ", cleanupData " << cleanupData;
 
   nebula::drainer::cpp2::AppendLogRequest req;
-  req.set_clusterId(clusterId_);
+  req.clusterId_ref() = clusterId_;
 
   if (partId == 0) {
-    req.set_sync_meta(true);
-    req.set_space(spaceId);
+    req.sync_meta_ref() = true;
+    req.space_ref() = spaceId;
     auto partIter = partNums_.find(spaceId);
     if (partIter == partNums_.end()) {
       LOG(FATAL) << "Shouldn't be here, space " << spaceId;
     }
-    req.set_part_num(partIter->second);
+    req.part_num_ref() = partIter->second;
   } else {
-    req.set_sync_meta(false);
-    req.set_space(spaceId);
-    req.set_part_num(partNum_);
-    req.set_space_vid_type(vIdType_);
-    req.set_space_vid_len(vIdLen_);
+    req.sync_meta_ref() = false;
+    req.space_ref() = spaceId;
+    req.part_num_ref() = partNum_;
+    req.space_vid_type_ref() = vIdType_;
+    req.space_vid_len_ref() = vIdLen_;
   }
 
-  req.set_part(partId);
-  req.set_last_log_id_to_send(lastLogIdToSend);
-  req.set_last_log_id_sent(lastLogIdSent);
-  req.set_log_term(lastLogTermToSend);
-  req.set_log_str_list(data);
-  req.set_cleanup_data(cleanupData);
-  req.set_to_space_name(tospaceName);
+  req.part_ref() = partId;
+  req.last_log_id_to_send_ref() = lastLogIdToSend;
+  req.last_log_id_sent_ref() = lastLogIdSent;
+  req.log_term_ref() = lastLogTermToSend;
+  req.log_str_list_ref() = data;
+  req.cleanup_data_ref() = cleanupData;
+  req.to_space_name_ref() = tospaceName;
 
   auto* evb = ioThreadPool_->getEventBase();
   return folly::via(evb, [this, evb, drainerClient, req = std::move(req)]() mutable {

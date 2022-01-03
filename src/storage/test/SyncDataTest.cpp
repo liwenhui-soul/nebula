@@ -46,8 +46,8 @@ StatusOr<cpp2::SyncDataRequest> mockSyncDataReq(meta::SchemaManager* schemaMan,
                                                 PartitionID partId,
                                                 int32_t vidLen) {
   cpp2::SyncDataRequest req;
-  req.set_cluster(cluster);
-  req.set_space_id(space);
+  req.cluster_ref() = cluster;
+  req.space_id_ref() = space;
 
   auto verticesPart = mock::MockData::mockVerticesofPart(partNum);
   std::vector<nebula::mock::VertexData> data = verticesPart[partId];

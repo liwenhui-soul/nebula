@@ -92,7 +92,9 @@ class PartManager {
   /**
    * Register Handler
    * */
-  void registerHandler(Handler* handler) { handler_ = handler; }
+  void registerHandler(Handler* handler) {
+    handler_ = handler;
+  }
 
  protected:
   Handler* handler_ = nullptr;
@@ -209,7 +211,9 @@ class MemPartManager final : public PartManager {
     }
   }
 
-  meta::PartsMap& partsMap() { return partsMap_; }
+  meta::PartsMap& partsMap() {
+    return partsMap_;
+  }
 
   // Get all the listener information used by a host
   meta::ListenersMap listeners(const HostAddr& host) override;

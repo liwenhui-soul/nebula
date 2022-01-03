@@ -64,6 +64,7 @@ SET(EXEC_QUERY_TEST_LIBS
     gtest
     wangle
     ${PROXYGEN_LIBRARIES}
+    ${Ldap_LIBRARIES}
 )
 
 nebula_add_test(

@@ -23,7 +23,7 @@ TEST(VariableTest, VariableTest) {
   {
     cpp2::AddHostsReq req;
     std::vector<HostAddr> hosts = {{"0", 0}, {"1", 1}, {"2", 2}, {"3", 3}};
-    req.set_hosts(std::move(hosts));
+    req.hosts_ref() = std::move(hosts);
     auto* processor = AddHostsProcessor::instance(kv.get());
     auto f = processor->getFuture();
     processor->process(req);
@@ -41,10 +41,10 @@ TEST(VariableTest, VariableTest) {
   {
     // get variable, space not exist, failed
     cpp2::GetVariableReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
     cpp2::VariableItem item;
-    item.set_name("read_only");
-    req.set_item(std::move(item));
+    item.name_ref() = "read_only";
+    req.item_ref() = std::move(item);
 
     auto* processor = GetVariableProcessor::instance(kv.get());
     auto f = processor->getFuture();
@@ -55,11 +55,11 @@ TEST(VariableTest, VariableTest) {
   {
     // set variable, space not exist, failed
     cpp2::SetVariableReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
     cpp2::VariableItem item;
-    item.set_name("read_only");
-    item.set_value(Value(true));
-    req.set_item(std::move(item));
+    item.name_ref() = "read_only";
+    item.value_ref() = Value(true);
+    req.item_ref() = std::move(item);
 
     auto* processor = SetVariableProcessor::instance(kv.get());
     auto f = processor->getFuture();
@@ -70,11 +70,11 @@ TEST(VariableTest, VariableTest) {
   {
     // Create space, succeeded
     cpp2::SpaceDesc properties;
-    properties.set_space_name("first_space");
-    properties.set_partition_num(9);
-    properties.set_replica_factor(1);
+    properties.space_name_ref() = "first_space";
+    properties.partition_num_ref() = 9;
+    properties.replica_factor_ref() = 1;
     cpp2::CreateSpaceReq req;
-    req.set_properties(std::move(properties));
+    req.properties_ref() = std::move(properties);
 
     auto* processor = CreateSpaceProcessor::instance(kv.get());
     auto f = processor->getFuture();
@@ -86,10 +86,10 @@ TEST(VariableTest, VariableTest) {
   {
     // get variable default value
     cpp2::GetVariableReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
     cpp2::VariableItem item;
-    item.set_name("read_only");
-    req.set_item(std::move(item));
+    item.name_ref() = "read_only";
+    req.item_ref() = std::move(item);
 
     auto* processor = GetVariableProcessor::instance(kv.get());
     auto f = processor->getFuture();
@@ -102,11 +102,11 @@ TEST(VariableTest, VariableTest) {
   {
     // set variable, success
     cpp2::SetVariableReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
     cpp2::VariableItem item;
-    item.set_name("read_only");
-    item.set_value(Value(true));
-    req.set_item(std::move(item));
+    item.name_ref() = "read_only";
+    item.value_ref() = Value(true);
+    req.item_ref() = std::move(item);
 
     auto* processor = SetVariableProcessor::instance(kv.get());
     auto f = processor->getFuture();
@@ -117,10 +117,10 @@ TEST(VariableTest, VariableTest) {
   {
     // get variable value
     cpp2::GetVariableReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
     cpp2::VariableItem item;
-    item.set_name("read_only");
-    req.set_item(std::move(item));
+    item.name_ref() = "read_only";
+    req.item_ref() = std::move(item);
 
     auto* processor = GetVariableProcessor::instance(kv.get());
     auto f = processor->getFuture();
@@ -133,7 +133,7 @@ TEST(VariableTest, VariableTest) {
   {
     // list variables
     cpp2::ListVariablesReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
 
     auto* processor = ListVariablesProcessor::instance(kv.get());
     auto f = processor->getFuture();
@@ -146,10 +146,10 @@ TEST(VariableTest, VariableTest) {
   {
     // get not exist variable
     cpp2::GetVariableReq req;
-    req.set_space_id(1);
+    req.space_id_ref() = 1;
     cpp2::VariableItem item;
-    item.set_name("read");
-    req.set_item(std::move(item));
+    item.name_ref() = "read";
+    req.item_ref() = std::move(item);
 
     auto* processor = GetVariableProcessor::instance(kv.get());
     auto f = processor->getFuture();

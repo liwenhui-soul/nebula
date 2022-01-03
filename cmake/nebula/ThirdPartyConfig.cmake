@@ -6,7 +6,7 @@ message(">>>> Configuring third party for '${PROJECT_NAME}' <<<<")
 #   4. /opt/vesoft/third-party, if exists
 #   5. At last, one copy will be downloaded and installed to ${CMAKE_BINARY_DIR}/third-party/install
 
-set(NEBULA_THIRDPARTY_VERSION "2.0")
+set(NEBULA_THIRDPARTY_VERSION "3.0")
 
 if(${DISABLE_CXX11_ABI})
     SET(NEBULA_THIRDPARTY_ROOT ${CMAKE_BINARY_DIR}/third-party-98/install)
@@ -91,6 +91,8 @@ if(ENABLE_JEMALLOC)
 endif()
 if(ENABLE_LDAP)
     find_package(Ldap REQUIRED)
+    find_package(Sasl REQUIRED)
+    find_package(BerkeleyDB REQUIRED)
 endif()
 find_package(Libevent REQUIRED)
 find_package(Proxygen REQUIRED)
@@ -113,13 +115,12 @@ if (${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "x86_64")
     find_package(Breakpad REQUIRED)
 endif()
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L ${NEBULA_THIRDPARTY_ROOT}/lib")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L ${NEBULA_THIRDPARTY_ROOT}/lib64")
+set(CMAKE_EXE_LINKER_FLAGS "-L ${NEBULA_THIRDPARTY_ROOT}/lib ${CMAKE_EXE_LINKER_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS "-L ${NEBULA_THIRDPARTY_ROOT}/lib64 ${CMAKE_EXE_LINKER_FLAGS}")
 
 # All thrift libraries
 set(THRIFT_LIBRARIES
     thriftcpp2
-    rocketupgrade
     async
     thriftprotocol
     transport

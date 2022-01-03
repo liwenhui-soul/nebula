@@ -323,7 +323,9 @@ Status Validator::appendPlan(PlanNode* node, PlanNode* appended) {
   return Status::OK();
 }
 
-Status Validator::appendPlan(PlanNode* root) { return appendPlan(tail_, root); }
+Status Validator::appendPlan(PlanNode* root) {
+  return appendPlan(tail_, root);
+}
 
 Status Validator::validate() {
   if (!vctx_) {
@@ -372,7 +374,9 @@ Status Validator::validate() {
   return Status::OK();
 }
 
-bool Validator::spaceChosen() { return vctx_->spaceChosen(); }
+bool Validator::spaceChosen() {
+  return vctx_->spaceChosen();
+}
 
 StatusOr<Value::Type> Validator::deduceExprType(const Expression* expr) const {
   DeduceTypeVisitor visitor(qctx_, vctx_, inputs_, space_.id);

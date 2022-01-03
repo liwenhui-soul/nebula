@@ -88,6 +88,9 @@ macro(nebula_link_libraries target)
         boost_program_options
         event
         ldap
+        lber
+        ${Sasl_LIBRARIES}
+        ${Bdb_LIBRARIES}
         double-conversion
         s2
         ${OPENSSL_SSL_LIBRARY}

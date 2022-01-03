@@ -725,7 +725,9 @@ class MetaClient {
 
   HostAddr getMetaLeader() { return leader_; }
 
-  int64_t HeartbeatTime() { return heartbeatTime_; }
+  int64_t HeartbeatTime() {
+    return heartbeatTime_;
+  }
 
   nebula::ClusterID getClusterId() { return options_.clusterId_.load(); }
 

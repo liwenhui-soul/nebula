@@ -258,7 +258,7 @@ void ListUsersProcessor::process(const cpp2::ListUsersReq& req) {
     users.emplace(std::move(account), std::move(password));
     iter->next();
   }
-  resp_.set_users(std::move(users));
+  resp_.users_ref() = std::move(users);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }
@@ -308,7 +308,7 @@ void ListIpWhitelistsProcessor::process(const cpp2::ListIpWhitelistsReq& req) {
     }
     userIter->next();
   }
-  resp_.set_ip_whitelists(std::move(usersIpWhitelists));
+  resp_.ip_whitelists_ref() = std::move(usersIpWhitelists);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }
@@ -334,13 +334,13 @@ void ListRolesProcessor::process(const cpp2::ListRolesReq& req) {
     auto account = MetaKeyUtils::parseRoleUser(iter->key());
     auto val = iter->val();
     cpp2::RoleItem role;
-    role.set_user_id(std::move(account));
-    role.set_space_id(spaceId);
-    role.set_role_type(*reinterpret_cast<const cpp2::RoleType*>(val.begin()));
+    role.user_id_ref() = std::move(account);
+    role.space_id_ref() = spaceId;
+    role.role_type_ref() = *reinterpret_cast<const cpp2::RoleType*>(val.begin());
     roles.emplace_back(std::move(role));
     iter->next();
   }
-  resp_.set_roles(std::move(roles));
+  resp_.roles_ref() = std::move(roles);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }
@@ -367,14 +367,14 @@ void GetUserRolesProcessor::process(const cpp2::GetUserRolesReq& req) {
     if (account == act) {
       auto val = iter->val();
       cpp2::RoleItem role;
-      role.set_user_id(std::move(account));
-      role.set_space_id(spaceId);
-      role.set_role_type(*reinterpret_cast<const cpp2::RoleType*>(val.begin()));
+      role.user_id_ref() = std::move(account);
+      role.space_id_ref() = spaceId;
+      role.role_type_ref() = *reinterpret_cast<const cpp2::RoleType*>(val.begin());
       roles.emplace_back(std::move(role));
     }
     iter->next();
   }
-  resp_.set_roles(std::move(roles));
+  resp_.roles_ref() = std::move(roles);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }

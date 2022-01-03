@@ -42,7 +42,7 @@ class ClientSession final {
     {
       folly::RWSpinLock::WriteHolder wHolder(rwSpinLock_);
       space_ = std::move(space);
-      session_.set_space_name(space_.name);
+      session_.space_name_ref() = space_.name;
     }
   }
 
@@ -108,7 +108,7 @@ class ClientSession final {
   void setTimezone(int32_t timezone) {
     {
       folly::RWSpinLock::WriteHolder wHolder(rwSpinLock_);
-      session_.set_timezone(timezone);
+      session_.timezone_ref() = timezone;
       // TODO: if support ngql to set client's timezone,
       //  need to update the timezone config to metad when timezone executor
     }
@@ -120,7 +120,7 @@ class ClientSession final {
       if (session_.get_graph_addr() == hostAddr) {
         return;
       }
-      session_.set_graph_addr(hostAddr);
+      session_.graph_addr_ref() = hostAddr;
     }
   }
 
@@ -139,7 +139,7 @@ class ClientSession final {
 
   void updateSpaceName(const std::string& spaceName) {
     folly::RWSpinLock::WriteHolder wHolder(rwSpinLock_);
-    session_.set_space_name(spaceName);
+    session_.space_name_ref() = spaceName;
   }
 
   void addQuery(QueryContext* qctx);

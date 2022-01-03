@@ -8,7 +8,9 @@
 namespace nebula {
 namespace kvstore {
 
-meta::PartsMap MemPartManager::parts(const HostAddr&) { return partsMap_; }
+meta::PartsMap MemPartManager::parts(const HostAddr&) {
+  return partsMap_;
+}
 
 // Get all the listener information used by a host
 meta::ListenersMap MemPartManager::listeners(const HostAddr& host) { return listenersMap_[host]; }

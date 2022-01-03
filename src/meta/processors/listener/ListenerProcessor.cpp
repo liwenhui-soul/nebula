@@ -237,31 +237,31 @@ void ListListenersProcessor::process(const cpp2::ListListenersReq& req) {
 
     cpp2::ListenerInfo listener;
     if (listenerType == cpp2::ListenerType::SYNC) {
-      listener.set_space_name(MetaKeyUtils::parseListenerSpacename(iter->val()));
+      listener.space_name_ref() = MetaKeyUtils::parseListenerSpacename(iter->val());
     }
-    listener.set_type(listenerType);
-    listener.set_host(MetaKeyUtils::parseListenerHost(iter->val()));
-    listener.set_part_id(partId);
+    listener.type_ref() = listenerType;
+    listener.host_ref() = MetaKeyUtils::parseListenerHost(iter->val());
+    listener.part_id_ref() = partId;
     if (partId == 0) {
       if (std::find(metaActiveHosts.begin(), metaActiveHosts.end(), *listener.host_ref()) !=
           metaActiveHosts.end()) {
-        listener.set_status(cpp2::HostStatus::ONLINE);
+        listener.status_ref() = cpp2::HostStatus::ONLINE;
       } else {
-        listener.set_status(cpp2::HostStatus::OFFLINE);
+        listener.status_ref() = cpp2::HostStatus::OFFLINE;
       }
     } else {
       if (std::find(activeHosts.begin(), activeHosts.end(), *listener.host_ref()) !=
           activeHosts.end()) {
-        listener.set_status(cpp2::HostStatus::ONLINE);
+        listener.status_ref() = cpp2::HostStatus::ONLINE;
       } else {
-        listener.set_status(cpp2::HostStatus::OFFLINE);
+        listener.status_ref() = cpp2::HostStatus::OFFLINE;
       }
     }
     listeners.emplace_back(std::move(listener));
     iter->next();
   }
 
-  resp_.set_listeners(std::move(listeners));
+  resp_.listeners_ref() = std::move(listeners);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }
@@ -289,12 +289,12 @@ void ListListenerDrainersProcessor::process(const cpp2::ListListenerDrainersReq&
   while (iter->valid()) {
     auto partId = MetaKeyUtils::parseListenerDrainerPart(iter->key());
     cpp2::DrainerClientInfo drainClientInfo;
-    drainClientInfo.set_host(MetaKeyUtils::parseListenerDrainerHost(iter->val()));
-    drainClientInfo.set_space_name(MetaKeyUtils::parseListenerDrainerSpacename(iter->val()));
+    drainClientInfo.host_ref() = MetaKeyUtils::parseListenerDrainerHost(iter->val());
+    drainClientInfo.space_name_ref() = MetaKeyUtils::parseListenerDrainerSpacename(iter->val());
     drainerClients.emplace(partId, std::move(drainClientInfo));
     iter->next();
   }
-  resp_.set_drainerClients(std::move(drainerClients));
+  resp_.drainerClients_ref() = std::move(drainerClients);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }

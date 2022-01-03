@@ -124,17 +124,17 @@ void ListDrainersProcessor::process(const cpp2::ListDrainersReq& req) {
     auto activeHosts = std::move(nebula::value(activeHostsRet));
     for (auto& host : drainerHosts) {
       cpp2::DrainerInfo drainer;
-      drainer.set_host(host);
+      drainer.host_ref() = host;
       if (std::find(activeHosts.begin(), activeHosts.end(), *drainer.host_ref()) !=
           activeHosts.end()) {
-        drainer.set_status(cpp2::HostStatus::ONLINE);
+        drainer.status_ref() = cpp2::HostStatus::ONLINE;
       } else {
-        drainer.set_status(cpp2::HostStatus::OFFLINE);
+        drainer.status_ref() = cpp2::HostStatus::OFFLINE;
       }
       drainers.emplace_back(std::move(drainer));
     }
   }
-  resp_.set_drainers(std::move(drainers));
+  resp_.drainers_ref() = std::move(drainers);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
   onFinished();
 }

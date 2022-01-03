@@ -516,7 +516,7 @@ nebula::cpp2::ErrorCode AppendLogProcessor::appendWalData() {
 
 void AppendLogProcessor::onProcessFinished() {
   if (nextLastLogIdRecv_ != 0) {
-    resp_.set_last_log_id(std::move(nextLastLogIdRecv_));
+    resp_.last_log_id_ref() = std::move(nextLastLogIdRecv_);
   }
 }
 

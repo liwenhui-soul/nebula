@@ -179,16 +179,16 @@ StatusOr<cpp2::AppendLogRequest> mockAppendLogReq(meta::SchemaManager* schemaMan
                                                   int32_t vidLen,
                                                   nebula::cpp2::PropertyType vidType) {
   cpp2::AppendLogRequest req;
-  req.set_clusterId(1);
-  req.set_space(space);
-  req.set_space_vid_type(vidType);
-  req.set_space_vid_len(vidLen);
-  req.set_part_num(partNum);
-  req.set_part(partId);
-  req.set_last_log_id_sent(0);
-  req.set_log_term(1);
-  req.set_cleanup_data(false);
-  req.set_to_space_name(spaceName);
+  req.clusterId_ref() = 1;
+  req.space_ref() = space;
+  req.space_vid_type_ref() = vidType;
+  req.space_vid_len_ref() = vidLen;
+  req.part_num_ref() = partNum;
+  req.part_ref() = partId;
+  req.last_log_id_sent_ref() = 0;
+  req.log_term_ref() = 1;
+  req.cleanup_data_ref() = false;
+  req.to_space_name_ref() = spaceName;
 
   auto verticesPart = mock::MockData::mockVerticesofPart(partNum);
   std::vector<nebula::mock::VertexData> data = verticesPart[partId];
@@ -203,7 +203,7 @@ StatusOr<cpp2::AppendLogRequest> mockAppendLogReq(meta::SchemaManager* schemaMan
 
   for (auto& vertex : data) {
     nebula::cpp2::LogEntry log;
-    log.set_cluster(1);
+    log.cluster_ref() = 1;
     TagID tagId = vertex.tId_;
     std::string value;
     auto key = NebulaKeyUtils::tagKey(vidLen, partId, vertex.vId_, tagId);
@@ -217,12 +217,12 @@ StatusOr<cpp2::AppendLogRequest> mockAppendLogReq(meta::SchemaManager* schemaMan
       LOG(ERROR) << "Encode failed, tagid %d" << tagId;
       return Status::Error("Encode failed, tagid %d", tagId);
     }
-    log.set_log_str(encodeMultiValues(kvstore::OP_PUT, key, value));
+    log.log_str_ref() = encodeMultiValues(kvstore::OP_PUT, key, value);
     logStrVec.emplace_back(std::move(log));
     count++;
   }
-  req.set_log_str_list(std::move(logStrVec));
-  req.set_last_log_id_to_send(count);
+  req.log_str_list_ref() = std::move(logStrVec);
+  req.last_log_id_to_send_ref() = count;
 
   EXPECT_EQ(sourceDataSize, count);
   return req;
@@ -238,16 +238,16 @@ StatusOr<cpp2::AppendLogRequest> mockAppendLogWithMetaClientReq(meta::SchemaMana
                                                                 nebula::cpp2::PropertyType vidType,
                                                                 TagID tagId) {
   cpp2::AppendLogRequest req;
-  req.set_clusterId(1);
-  req.set_space(space);
-  req.set_space_vid_type(vidType);
-  req.set_space_vid_len(vidLen);
-  req.set_part_num(partNum);
-  req.set_part(partId);
-  req.set_last_log_id_sent(0);
-  req.set_log_term(1);
-  req.set_cleanup_data(false);
-  req.set_to_space_name(spaceName);
+  req.clusterId_ref() = 1;
+  req.space_ref() = space;
+  req.space_vid_type_ref() = vidType;
+  req.space_vid_len_ref() = vidLen;
+  req.part_num_ref() = partNum;
+  req.part_ref() = partId;
+  req.last_log_id_sent_ref() = 0;
+  req.log_term_ref() = 1;
+  req.cleanup_data_ref() = false;
+  req.to_space_name_ref() = spaceName;
 
   auto verticesPart = mock::MockData::mockVerticesofPart(partNum);
   std::vector<nebula::mock::VertexData> data = verticesPart[partId];
@@ -266,7 +266,7 @@ StatusOr<cpp2::AppendLogRequest> mockAppendLogWithMetaClientReq(meta::SchemaMana
       continue;
     }
     nebula::cpp2::LogEntry log;
-    log.set_cluster(1);
+    log.cluster_ref() = 1;
 
     std::string value;
     auto key = NebulaKeyUtils::tagKey(vidLen, partId, vertex.vId_, tagId);
@@ -280,12 +280,12 @@ StatusOr<cpp2::AppendLogRequest> mockAppendLogWithMetaClientReq(meta::SchemaMana
       LOG(ERROR) << "Encode failed, tagid %d" << tagId;
       return Status::Error("Encode failed, tagid %d", tagId);
     }
-    log.set_log_str(encodeMultiValues(kvstore::OP_PUT, key, value));
+    log.log_str_ref() = encodeMultiValues(kvstore::OP_PUT, key, value);
     logStrVec.emplace_back(std::move(log));
     count++;
   }
-  req.set_log_str_list(std::move(logStrVec));
-  req.set_last_log_id_to_send(count);
+  req.log_str_list_ref() = std::move(logStrVec);
+  req.last_log_id_to_send_ref() = count;
 
   auto result = sourceDataSize >= count;
   EXPECT_TRUE(result);

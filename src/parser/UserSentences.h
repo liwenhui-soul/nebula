@@ -19,9 +19,13 @@ class RoleTypeClause final {
  public:
   using RoleType = meta::cpp2::RoleType;
 
-  explicit RoleTypeClause(RoleType roleType) { roleType_ = roleType; }
+  explicit RoleTypeClause(RoleType roleType) {
+    roleType_ = roleType;
+  }
 
-  RoleType getRoleType() const { return roleType_; }
+  RoleType getRoleType() const {
+    return roleType_;
+  }
 
   std::string toString() const;
 
@@ -37,13 +41,21 @@ class AclItemClause final {
     spaceName_.reset(spaceName);
   }
 
-  bool isSet() const { return isSet_; }
+  bool isSet() const {
+    return isSet_;
+  }
 
-  void setRoleTypeClause(RoleTypeClause* type) { type_.reset(type); }
+  void setRoleTypeClause(RoleTypeClause* type) {
+    type_.reset(type);
+  }
 
-  RoleTypeClause::RoleType getRoleType() const { return type_->getRoleType(); }
+  RoleTypeClause::RoleType getRoleType() const {
+    return type_->getRoleType();
+  }
 
-  const std::string* getSpaceName() const { return spaceName_.get(); }
+  const std::string* getSpaceName() const {
+    return spaceName_.get();
+  }
 
   std::string toString() const;
 
@@ -66,9 +78,13 @@ class CreateUserSentence final : public Sentence {
     kind_ = Kind::kCreateUser;
   }
 
-  const std::string* getAccount() const { return account_.get(); }
+  const std::string* getAccount() const {
+    return account_.get();
+  }
 
-  const std::string* getPassword() const { return password_.get(); }
+  const std::string* getPassword() const {
+    return password_.get();
+  }
 
   const std::unordered_set<std::string>* getIpWhitelist() const { return ipWhitelist_.get(); }
 
@@ -94,9 +110,13 @@ class AlterUserSentence final : public Sentence {
     kind_ = Kind::kAlterUser;
   }
 
-  const std::string* getAccount() const { return account_.get(); }
+  const std::string* getAccount() const {
+    return account_.get();
+  }
 
-  const std::string* getPassword() const { return password_.get(); }
+  const std::string* getPassword() const {
+    return password_.get();
+  }
 
   const std::unordered_set<std::string>* getIpWhitelist() const { return ipWhitelist_.get(); }
 
@@ -116,9 +136,13 @@ class DropUserSentence final : public Sentence {
     kind_ = Kind::kDropUser;
   }
 
-  bool ifExists() const { return ifExists_; }
+  bool ifExists() const {
+    return ifExists_;
+  }
 
-  const std::string* getAccount() const { return account_.get(); }
+  const std::string* getAccount() const {
+    return account_.get();
+  }
 
   std::string toString() const override;
 
@@ -136,11 +160,17 @@ class ChangePasswordSentence final : public Sentence {
     kind_ = Kind::kChangePassword;
   }
 
-  const std::string* getAccount() const { return account_.get(); }
+  const std::string* getAccount() const {
+    return account_.get();
+  }
 
-  const std::string* getNewPwd() const { return newPwd_.get(); }
+  const std::string* getNewPwd() const {
+    return newPwd_.get();
+  }
 
-  const std::string* getOldPwd() const { return oldPwd_.get(); }
+  const std::string* getOldPwd() const {
+    return oldPwd_.get();
+  }
 
   std::string toString() const override;
 
@@ -157,11 +187,17 @@ class GrantSentence final : public Sentence {
     kind_ = Kind::kGrant;
   }
 
-  void setAclItemClause(AclItemClause* aclItemClause) { aclItemClause_.reset(aclItemClause); }
+  void setAclItemClause(AclItemClause* aclItemClause) {
+    aclItemClause_.reset(aclItemClause);
+  }
 
-  const AclItemClause* getAclItemClause() const { return aclItemClause_.get(); }
+  const AclItemClause* getAclItemClause() const {
+    return aclItemClause_.get();
+  }
 
-  const std::string* getAccount() const { return account_.get(); }
+  const std::string* getAccount() const {
+    return account_.get();
+  }
 
   std::string toString() const override;
 
@@ -177,13 +213,21 @@ class RevokeSentence final : public Sentence {
     kind_ = Kind::kRevoke;
   }
 
-  void setAclItemClause(AclItemClause* aclItemClause) { aclItemClause_.reset(aclItemClause); }
+  void setAclItemClause(AclItemClause* aclItemClause) {
+    aclItemClause_.reset(aclItemClause);
+  }
 
-  const AclItemClause* getAclItemClause() const { return aclItemClause_.get(); }
+  const AclItemClause* getAclItemClause() const {
+    return aclItemClause_.get();
+  }
 
-  AclItemClause* mutableAclItemClause() { return aclItemClause_.get(); }
+  AclItemClause* mutableAclItemClause() {
+    return aclItemClause_.get();
+  }
 
-  const std::string* getAccount() const { return account_.get(); }
+  const std::string* getAccount() const {
+    return account_.get();
+  }
 
   std::string toString() const override;
 

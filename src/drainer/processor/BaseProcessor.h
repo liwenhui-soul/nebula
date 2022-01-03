@@ -49,7 +49,9 @@ class BaseProcessor {
     delete this;
   }
 
-  void pushResultCode(nebula::cpp2::ErrorCode code) { resp_.set_error_code(std::move(code)); }
+  void pushResultCode(nebula::cpp2::ErrorCode code) {
+    resp_.error_code_ref() = std::move(code);
+  }
 
   virtual nebula::cpp2::ErrorCode checkAndBuildContexts(const REQ& req) = 0;
 

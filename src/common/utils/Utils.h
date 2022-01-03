@@ -77,7 +77,7 @@ class Utils final {
 
     if (ferror(f)) {
       // Something is wrong
-      fclose(f);
+      pclose(f);
       return -1;
     }
 

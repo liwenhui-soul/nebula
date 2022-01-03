@@ -11,19 +11,21 @@
 #
 #  Ldap_FOUND            System has Ldap, include and lib dirs found
 #  Ldap_INCLUDE_DIR      The Ldap includes directories.
-#  Ldap_LIBRARY          The Ldap library.
+#  Ldap_LIBRARIES        The Ldap libraries.
 
 find_path(Ldap_INCLUDE_DIR NAMES ldap.h)
-find_library(Ldap_LIBRARY NAMES ldap)
+find_library(Ldap_LIBRARIES NAMES ldap lber)
 
-if(Ldap_INCLUDE_DIR AND Ldap_LIBRARY)
+if(Ldap_INCLUDE_DIR AND Ldap_LIBRARIES)
     set(Ldap_FOUND TRUE)
     mark_as_advanced(
         Ldap_INCLUDE_DIR
-        Ldap_LIBRARY
+        Ldap_LIBRARIES
     )
 endif()
 
 if(NOT Ldap_FOUND)
     message(FATAL_ERROR "Ldap doesn't exist")
+else()
+    message(STATUS "Found LDAP libraries: " ${Ldap_LIBRARIES})
 endif()

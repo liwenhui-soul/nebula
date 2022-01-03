@@ -68,4 +68,5 @@ nebula_add_test(
         ${THRIFT_LIBRARIES}
         gtest
         gtest_main
+        ${Ldap_LIBRARIES}
 )
