@@ -666,8 +666,11 @@ Status ShowSpaceServiceClientsValidator::toPlan() {
 
 Status ShowSessionsValidator::toPlan() {
   auto sentence = static_cast<ShowSessionsSentence *>(sentence_);
-  auto *node =
-      ShowSessions::make(qctx_, nullptr, sentence->isSetSessionID(), sentence->getSessionID());
+  auto *node = ShowSessions::make(qctx_,
+                                  nullptr,
+                                  sentence->isSetSessionID(),
+                                  sentence->getSessionID(),
+                                  sentence->isLocalCommand());
   root_ = node;
   tail_ = root_;
   return Status::OK();
