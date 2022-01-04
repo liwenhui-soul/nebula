@@ -124,7 +124,7 @@ class ClientSession final {
     }
   }
 
-  const meta::cpp2::Session& getSession() const {
+  meta::cpp2::Session getSession() const {
     folly::RWSpinLock::ReadHolder rHolder(rwSpinLock_);
     return session_;
   }
