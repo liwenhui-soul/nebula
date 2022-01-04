@@ -214,9 +214,13 @@ folly::Future<ExecutionResponse> GraphService::future_executeWithParameter(
       auditQuery(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
       return ctx->finish();
     }
+    stats::StatsManager::addValue(kNumQueries);
+    stats::StatsManager::addValue(
+        stats::StatsManager::counterWithLabels(kNumQueries, {{"space", sessionPtr->space().name}}));
     ctx->setSession(std::move(sessionPtr));
     ctx->setParameterMap(parameterMap);
     queryEngine_->execute(std::move(ctx));
+    stats::StatsManager::decValue(kNumActiveQueries);
   };
   sessionManager_->findSession(sessionId, getThreadManager()).thenValue(std::move(cb));
   return future;
@@ -224,64 +228,7 @@ folly::Future<ExecutionResponse> GraphService::future_executeWithParameter(
 
 folly::Future<ExecutionResponse> GraphService::future_execute(int64_t sessionId,
                                                               const std::string& query) {
-  auto ctx = std::make_unique<RequestContext<ExecutionResponse>>();
-  ctx->setQuery(query);
-  ctx->setRunner(getThreadManager());
-  ctx->setSessionMgr(sessionManager_.get());
-  auto future = ctx->future();
-  stats::StatsManager::addValue(kNumQueries);
-  stats::StatsManager::addValue(kNumActiveQueries);
-  if (FLAGS_enable_audit) {
-    ctx->auditContext().connectionId_ = sessionId;
-    ctx->auditContext().query_ = query;
-    // In order not to affect the main thread, findSessionFromCache() is called here
-    // instead of findSession(). If session is not obtained, audit would not record user,
-    // client ip and space. In that case, users can distinguish different records by sessionId.
-    std::shared_ptr<ClientSession> clientSessionPtr =
-        sessionManager_->findSessionFromCache(sessionId);
-    if (clientSessionPtr != nullptr) {
-      ctx->auditContext().user_ = clientSessionPtr->user();
-      ctx->auditContext().clientHost_ = clientSessionPtr->clientIp();
-      ctx->auditContext().space_ = clientSessionPtr->spaceName();
-    }
-  }
-  // When the sessionId is 0, it means the clients to ping the connection is ok
-  if (sessionId == 0) {
-    ctx->resp().errorCode = ErrorCode::E_SESSION_INVALID;
-    ctx->resp().errorMsg = std::make_unique<std::string>("Invalid session id");
-    ctx->finish();
-    // Before connecting to graphd, clients will ping whether the network is ok.
-    // Therefore, these ping operations are no need to audite.
-    return future;
-  }
-  auto cb = [this, sessionId, ctx = std::move(ctx)](
-                StatusOr<std::shared_ptr<ClientSession>> ret) mutable {
-    if (!ret.ok()) {
-      LOG(ERROR) << "Get session for sessionId: " << sessionId << " failed: " << ret.status();
-      ctx->resp().errorCode = ErrorCode::E_SESSION_INVALID;
-      ctx->resp().errorMsg.reset(new std::string(folly::stringPrintf(
-          "Get sessionId[%ld] failed: %s", sessionId, ret.status().toString().c_str())));
-      auditQuery(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
-      return ctx->finish();
-    }
-    auto sessionPtr = std::move(ret).value();
-    if (sessionPtr == nullptr) {
-      LOG(ERROR) << "Get session for sessionId: " << sessionId << " is nullptr";
-      ctx->resp().errorCode = ErrorCode::E_SESSION_INVALID;
-      ctx->resp().errorMsg.reset(
-          new std::string(folly::stringPrintf("SessionId[%ld] does not exist", sessionId)));
-      auditQuery(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
-      return ctx->finish();
-    }
-    stats::StatsManager::addValue(kNumQueries);
-    stats::StatsManager::addValue(
-        stats::StatsManager::counterWithLabels(kNumQueries, {{"space", sessionPtr->space().name}}));
-    ctx->setSession(std::move(sessionPtr));
-    queryEngine_->execute(std::move(ctx));
-    stats::StatsManager::decValue(kNumActiveQueries);
-  };
-  sessionManager_->findSession(sessionId, getThreadManager()).thenValue(std::move(cb));
-  return future;
+  return future_executeWithParameter(sessionId, query, std::unordered_map<std::string, Value>{});
 }
 
 folly::Future<std::string> GraphService::future_executeJson(int64_t sessionId,
