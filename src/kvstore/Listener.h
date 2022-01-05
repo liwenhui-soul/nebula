@@ -52,7 +52,8 @@ using RaftClient = thrift::ThriftClientManager<raftex::cpp2::RaftexServiceAsyncC
  *
  *   // For listener, we just return true directly. Another background thread trigger the actual
  *   // apply work, and do it in worker thread, and update lastApplyLogId_
- *   cpp2::Errorcode commitLogs(std::unique_ptr<LogIterator> iter, bool)
+ *   std::tuple<nebula::cpp2::ErrorCode, LogID, TermID>
+ *   commitLogs(std::unique_ptr<LogIterator> iter, bool)
  *
  *   // For most of the listeners, just return true is enough. However, if listener need to be
  *   // aware of membership change, some log type of wal need to be pre-processed, could do it
@@ -66,6 +67,7 @@ using RaftClient = thrift::ThriftClientManager<raftex::cpp2::RaftexServiceAsyncC
  *                                              LogID committedLogId,
  *                                              TermID committedLogTerm,
  *                                              bool finished) override;
+ *
  *   // extra cleanup work, will be invoked when listener is about to be removed,
  *   // or raft is reset
  *   void cleanup()；
@@ -111,11 +113,12 @@ class Listener : public raftex::RaftPart {
     return lastApplyLogId_;
   }
 
-  void cleanup() override {
+  nebula::cpp2::ErrorCode cleanup() override {
     CHECK(!raftLock_.try_lock());
     leaderCommitId_ = 0;
     lastApplyLogId_ = 0;
     persist(0, 0, lastApplyLogId_);
+    return nebula::cpp2::ErrorCode::SUCCEEDED;
   }
 
   void resetListener();
@@ -159,7 +162,8 @@ class Listener : public raftex::RaftPart {
 
   // For listener, we just return true directly. Another background thread trigger the actual
   // apply work, and do it in worker thread, and update lastApplyLogId_
-  cpp2::ErrorCode commitLogs(std::unique_ptr<LogIterator>, bool) override;
+  std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> commitLogs(std::unique_ptr<LogIterator>,
+                                                                bool) override;
 
   // For most of the listeners, just return true is enough. However, if listener need to be aware
   // of membership change, some log type of wal need to be pre-processed, could do it here.
