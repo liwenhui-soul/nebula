@@ -1,0 +1,95 @@
+name: nightly_tck
+
+on:
+  schedule:
+    - cron: '0 18 * * *'
+
+concurrency:
+  group: nightly_tck
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: build
+    runs-on: [self-hosted, nebula]
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - centos7
+        compiler:
+          - gcc-9.3
+
+    container:
+      image: reg.vesoft-inc.com/vesoft/nebula-dev:${{ matrix.os }}
+      credentials:
+        username: ${{ secrets.HARBOR_USERNAME }}
+        password: ${{ secrets.HARBOR_PASSWORD }}
+      env:
+        CCACHE_DIR: /tmp/ccache/nebula/${{ matrix.os }}-${{ matrix.compiler }}
+        CCACHE_MAXSIZE: 8G
+      volumes:
+        - /tmp/ccache/nebula/${{ matrix.os }}-${{ matrix.compiler }}:/tmp/ccache/nebula/${{ matrix.os }}-${{ matrix.compiler }}
+      options: --cap-add=SYS_PTRACE
+    steps:
+      - uses: webiny/action-post-run@2.0.1
+        with:
+          run: sh -c "find . -mindepth 1 -delete"
+      - uses: actions/checkout@v2
+      - name: Prepare environment
+        id: prepare
+        run: |
+          [ -d build/ ] && rm -rf build/* || mkdir -p build
+          make init -C tests
+      - name: Decrypt License
+        run: sh ./.github/workflows/decrypt_secret.sh
+        env:
+          SECRET_PASSPHRASE: ${{ secrets.LICENSE_PASSWORD }}
+      - name: CMake
+        id: cmake
+        run: |
+          cmake \
+              -DCMAKE_CXX_COMPILER=$TOOLSET_GCC_DIR/bin/g++ \
+              -DCMAKE_C_COMPILER=$TOOLSET_GCC_DIR/bin/gcc \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DENABLE_TESTING=on \
+              -GNinja \
+              -B build
+          echo "::set-output name=j::10"
+          ;;
+      - name: Make
+        run: |
+          ccache -z
+          ninja -j $(nproc)
+          ccache -s
+        working-directory: build/
+      - name: CTest
+        env:
+          ASAN_OPTIONS: fast_unwind_on_malloc=1
+        run: ctest -j $(($(nproc)/2+1)) --timeout 400 --output-on-failure
+        working-directory: build/
+        timeout-minutes: 20
+      - name: Setup cluster
+        run: |
+          make CONTAINERIZED=true up
+        working-directory: tests/
+        timeout-minutes: 2
+      - name: Pytest
+        run: |
+          make RM_DIR=false DEBUG=false J=${{ steps.cmake.outputs.j }} test
+        working-directory: tests/
+        timeout-minutes: 15
+      - name: TCK
+        run: |
+          make RM_DIR=false DEBUG=false J=${{ steps.cmake.outputs.j }} tck
+        working-directory: tests/
+        timeout-minutes: 60
+      - name: Down cluster
+        run: |
+          make RM_DIR=false down
+        working-directory: tests/
+        timeout-minutes: 2
