@@ -65,6 +65,10 @@ class PlanNode {
     kDataCollect,
     kLeftJoin,
     kInnerJoin,
+    kBiLeftJoin,
+    kBiInnerJoin,
+    kBiCartesianProduct,
+    kArgument,
 
     // Logic
     kStart,
@@ -239,9 +243,7 @@ class PlanNode {
     id_ = id;
   }
 
-  void setColNames(std::vector<std::string> cols) {
-    outputVarPtr(0)->colNames = std::move(cols);
-  }
+  void setColNames(std::vector<std::string> cols);
 
   const auto& dependencies() const {
     return dependencies_;
