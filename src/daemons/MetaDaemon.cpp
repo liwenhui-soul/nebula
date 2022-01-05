@@ -8,6 +8,7 @@
 #include <openssl/sha.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
+#include "MetaDaemonInit.h"
 #include "common/base/Base.h"
 #include "common/base/SignalHandler.h"
 #include "common/encryption/License.h"
@@ -44,30 +45,22 @@ using nebula::Status;
 using nebula::StatusOr;
 using nebula::encryption::License;
 using nebula::network::NetworkUtils;
-using nebula::web::PathParams;
 
 DEFINE_string(local_ip, "", "Local ip specified for NetworkUtils::getLocalIP");
 DEFINE_int32(port, 45500, "Meta daemon listening port");
 DEFINE_bool(reuse_port, true, "Whether to turn on the SO_REUSEPORT option");
-DEFINE_string(data_path, "", "Root data path");
-DEFINE_string(listener_path,
-              "",
-              "Path for listener, only wal will be saved."
-              "if it is not empty, data_path will not take effect.");
-DEFINE_string(meta_server_addrs,
-              "",
-              "The address of the meta synchronization listener."
-              "There can only be one host");
 DEFINE_string(meta_sync_listener,
               "",
               "It is a list of IPs split by comma, used in cluster deployment"
               "the ips number is equal to the replica number."
               "If empty, it means it's a single node");
+
+DECLARE_string(data_path);
+DECLARE_string(meta_server_addrs);
+
 // DEFINE_string(local_ip, "", "Local ip specified for
 // NetworkUtils::getLocalIP");
-DEFINE_int32(num_io_threads, 16, "Number of IO threads");
 DEFINE_int32(meta_http_thread_num, 3, "Number of meta daemon's http thread");
-DEFINE_int32(num_worker_threads, 32, "Number of workers");
 DEFINE_string(pid_file, "pids/nebula-metad.pid", "File to hold the process id");
 DEFINE_bool(daemonize, true, "Whether run as a daemon process");
 // License file path
@@ -84,196 +77,6 @@ extern Status setupLogging();
 #if defined(__x86_64__)
 extern Status setupBreakpad();
 #endif
-
-namespace nebula {
-namespace meta {
-const std::string kClusterIdKey = "__meta_cluster_id_key__";  // NOLINT
-}  // namespace meta
-}  // namespace nebula
-
-nebula::ClusterID gClusterId = 0;
-
-std::unique_ptr<nebula::meta::SchemaManager> schemaMan;
-std::unique_ptr<nebula::meta::MetaClient> metaClient;
-std::unique_ptr<nebula::meta::ServiceManager> serviceMan;
-
-std::unique_ptr<nebula::kvstore::KVStore> initKV(std::vector<nebula::HostAddr> peers,
-                                                 nebula::HostAddr syncListenerHost,
-                                                 nebula::HostAddr localhost) {
-  auto partMan = std::make_unique<nebula::kvstore::MemPartManager>();
-  // The meta server has only one space (0), one part (0)
-  partMan->addPart(nebula::kDefaultSpaceId, nebula::kDefaultPartId, peers);
-
-  // folly IOThreadPoolExecutor
-  auto ioPool = std::make_shared<folly::IOThreadPoolExecutor>(FLAGS_num_io_threads);
-  std::shared_ptr<apache::thrift::concurrency::ThreadManager> threadManager(
-      apache::thrift::concurrency::PriorityThreadManager::newPriorityThreadManager(
-          FLAGS_num_worker_threads));
-  threadManager->setNamePrefix("executor");
-  threadManager->start();
-
-  nebula::kvstore::KVOptions kvOptions;
-
-  // Meta sync listener host if exists, meta normal replica and meta listener replica used
-  if (syncListenerHost != nebula::HostAddr("", 0)) {
-    // Meta listener replica needs some meta information,
-    // so metaClient is needed to get some information from meta leader.
-    if (syncListenerHost == localhost) {
-      auto retStatus = partMan->addListener(nebula::kDefaultSpaceId,
-                                            nebula::kDefaultPartId,
-                                            nebula::meta::cpp2::ListenerType::SYNC,
-                                            syncListenerHost,
-                                            peers);
-      if (!retStatus.ok()) {
-        LOG(ERROR) << retStatus;
-        return nullptr;
-      }
-
-      nebula::meta::MetaClientOptions options;
-      options.localHost_ = localhost;
-      options.serviceName_ = "";
-      options.skipConfig_ = FLAGS_local_config;
-      options.role_ = nebula::meta::cpp2::HostRole::META_LISTENER;
-      options.gitInfoSHA_ = nebula::gitInfoSha();
-
-      metaClient = std::make_unique<nebula::meta::MetaClient>(ioPool, peers, options);
-      if (!metaClient->waitForMetadReady()) {
-        LOG(ERROR) << "waitForMetadReady error!";
-        return nullptr;
-      }
-
-      LOG(INFO) << "Init schema manager";
-      schemaMan = nebula::meta::ServerBasedSchemaManager::create(metaClient.get());
-      kvOptions.schemaMan_ = schemaMan.get();
-      serviceMan = nebula::meta::ServiceManager::create(metaClient.get());
-      kvOptions.serviceMan_ = serviceMan.get();
-    } else {
-      // Normal meta replica, use meta_sync_listener in meta conf
-      auto retStatus = partMan->addRemoteListener(nebula::kDefaultSpaceId,
-                                                  nebula::kDefaultPartId,
-                                                  nebula::meta::cpp2::ListenerType::SYNC,
-                                                  syncListenerHost);
-      if (!retStatus.ok()) {
-        LOG(ERROR) << retStatus;
-        return nullptr;
-      }
-    }
-  }
-
-  kvOptions.isMeta_ = true;
-  auto absolute = boost::filesystem::absolute(FLAGS_data_path);
-  kvOptions.dataPaths_ = {absolute.string()};
-  kvOptions.listenerPath_ = FLAGS_listener_path;
-  kvOptions.partMan_ = std::move(partMan);
-
-  auto kvstore = std::make_unique<nebula::kvstore::NebulaStore>(
-      std::move(kvOptions), ioPool, localhost, threadManager);
-  if (!(kvstore->init())) {
-    LOG(ERROR) << "Nebula store init failed";
-    return nullptr;
-  }
-
-  if (syncListenerHost != localhost) {
-    LOG(INFO) << "Waiting for the leader elected...";
-    nebula::HostAddr leader;
-    while (true) {
-      auto ret = kvstore->partLeader(nebula::kDefaultSpaceId, nebula::kDefaultPartId);
-      if (!nebula::ok(ret)) {
-        LOG(ERROR) << "Nebula store init failed";
-        return nullptr;
-      }
-      leader = nebula::value(ret);
-      if (leader != nebula::HostAddr("", 0)) {
-        break;
-      }
-      LOG(INFO) << "Leader has not been elected, sleep 1s";
-      sleep(1);
-    }
-
-    gClusterId =
-        nebula::meta::ClusterIdMan::getClusterIdFromKV(kvstore.get(), nebula::meta::kClusterIdKey);
-    if (gClusterId == 0) {
-      if (leader == localhost) {
-        LOG(INFO) << "I am leader, create cluster Id";
-        gClusterId = nebula::meta::ClusterIdMan::create(FLAGS_meta_server_addrs);
-        if (!nebula::meta::ClusterIdMan::persistInKV(
-                kvstore.get(), nebula::meta::kClusterIdKey, gClusterId)) {
-          LOG(ERROR) << "Persist cluster failed!";
-          return nullptr;
-        }
-      } else {
-        LOG(INFO) << "I am follower, wait for the leader's clusterId";
-        while (gClusterId == 0) {
-          LOG(INFO) << "Waiting for the leader's clusterId";
-          sleep(1);
-          gClusterId = nebula::meta::ClusterIdMan::getClusterIdFromKV(kvstore.get(),
-                                                                      nebula::meta::kClusterIdKey);
-        }
-      }
-    }
-
-    auto version = nebula::meta::MetaVersionMan::getMetaVersionFromKV(kvstore.get());
-    LOG(INFO) << "Get meta version is " << static_cast<int32_t>(version);
-    if (version == nebula::meta::MetaVersion::UNKNOWN) {
-      LOG(ERROR) << "Meta version is invalid";
-      return nullptr;
-    } else if (version == nebula::meta::MetaVersion::V1) {
-      if (leader == localhost) {
-        LOG(INFO) << "I am leader, begin upgrade meta data";
-        // need to upgrade the v1.0 meta data format to v2.0 meta data format
-        auto ret = nebula::meta::MetaVersionMan::updateMetaV1ToV2(kvstore.get());
-        if (!ret.ok()) {
-          LOG(ERROR) << ret;
-          return nullptr;
-        }
-      } else {
-        LOG(INFO) << "I am follower, wait for leader to sync upgrade";
-        while (version != nebula::meta::MetaVersion::V2) {
-          VLOG(1) << "Waiting for leader to upgrade";
-          sleep(1);
-          version = nebula::meta::MetaVersionMan::getMetaVersionFromKV(kvstore.get());
-        }
-      }
-    }
-
-    if (leader == localhost) {
-      nebula::meta::MetaVersionMan::setMetaVersionToKV(kvstore.get());
-    }
-  } else {
-    LOG(INFO) << "I am listener, wait for the leader's clusterId";
-    while (gClusterId == 0) {
-      LOG(INFO) << "Waiting for the leader's clusterId";
-      sleep(1);
-      gClusterId = metaClient->getClusterId();
-    }
-  }
-  LOG(INFO) << "Nebula store init succeeded, clusterId " << gClusterId;
-  return kvstore;
-}
-
-Status initWebService(nebula::WebService* svc,
-                      nebula::kvstore::KVStore* kvstore,
-                      nebula::hdfs::HdfsCommandHelper* helper,
-                      nebula::thread::GenericThreadPool* pool) {
-  LOG(INFO) << "Starting Meta HTTP Service";
-  auto& router = svc->router();
-  router.get("/download-dispatch").handler([kvstore, helper, pool](PathParams&&) {
-    auto handler = new nebula::meta::MetaHttpDownloadHandler();
-    handler->init(kvstore, helper, pool);
-    return handler;
-  });
-  router.get("/ingest-dispatch").handler([kvstore, pool](PathParams&&) {
-    auto handler = new nebula::meta::MetaHttpIngestHandler();
-    handler->init(kvstore, pool);
-    return handler;
-  });
-  router.get("/replace").handler([kvstore](PathParams&&) {
-    auto handler = new nebula::meta::MetaHttpReplaceHostHandler();
-    handler->init(kvstore);
-    return handler;
-  });
-  return svc->start();
-}
 
 int main(int argc, char* argv[]) {
   google::SetVersionString(nebula::versionString());
@@ -459,7 +262,8 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  auto handler = std::make_shared<nebula::meta::MetaServiceHandler>(gKVStore.get(), gClusterId);
+  auto handler =
+      std::make_shared<nebula::meta::MetaServiceHandler>(gKVStore.get(), metaClusterId());
   LOG(INFO) << "The meta daemon start on " << localhost;
   try {
     gServer = std::make_unique<apache::thrift::ThriftServer>();

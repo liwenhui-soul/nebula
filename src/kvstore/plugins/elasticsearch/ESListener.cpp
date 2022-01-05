@@ -8,8 +8,8 @@
 #include "common/plugin/fulltext/elasticsearch/ESStorageAdapter.h"
 #include "common/utils/NebulaKeyUtils.h"
 
-DEFINE_int32(ft_request_retry_times, 3, "Retry times if fulltext request failed");
-DEFINE_int32(ft_bulk_batch_size, 100, "Max batch size when bulk insert");
+DECLARE_uint32(ft_request_retry_times);
+DECLARE_int32(ft_bulk_batch_size);
 
 namespace nebula {
 namespace kvstore {
