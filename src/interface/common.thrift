@@ -487,5 +487,12 @@ enum ErrorCode {
     E_REQ_CONFLICT                    = -4007,
     E_DATA_ILLEGAL                    = -4008,
 
+    // 5xxx for cache
+    E_CACHE_CONFIG_ERROR              = -5001,
+    E_NOT_ENOUGH_SPACE                = -5002,
+    E_CACHE_MISS                      = -5003,
+    E_POOL_NOT_FOUND                  = -5004,
+    E_CACHE_WRITE_FAILURE             = -5005,
+
     E_UNKNOWN                         = -8000,
 } (cpp.enum_strict)

@@ -23,6 +23,7 @@ nebula_add_exe_linker_flag(-static-libstdc++)
 nebula_add_exe_linker_flag(-static-libgcc)
 nebula_add_exe_linker_flag(-no-pie)
 nebula_add_exe_linker_flag(-rdynamic)
+nebula_add_exe_linker_flag(-lrt)
 
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     add_definitions(-D_FORTIFY_SOURCE=2)
