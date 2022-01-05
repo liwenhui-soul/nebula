@@ -31,7 +31,9 @@ DrainerServer::DrainerServer(HostAddr localHost,
                              std::string dataPath)
     : localHost_(localHost), metaAddrs_(std::move(metaAddrs)), dataPath_(std::move(dataPath)) {}
 
-DrainerServer::~DrainerServer() { stop(); }
+DrainerServer::~DrainerServer() {
+  stop();
+}
 
 bool DrainerServer::initWebService() {
   LOG(INFO) << "Starting Drainer HTTP Service";
@@ -123,7 +125,9 @@ bool DrainerServer::start() {
   return true;
 }
 
-void DrainerServer::waitUntilStop() { drainerThread_->join(); }
+void DrainerServer::waitUntilStop() {
+  drainerThread_->join();
+}
 
 void DrainerServer::stop() {
   if (drainerSvcStatus_.load() == ServiceStatus::STATUS_STOPPED) {

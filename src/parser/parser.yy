@@ -125,6 +125,8 @@ static constexpr size_t kCommentLengthLimit = 256;
     nebula::HostList                       *host_list;
     nebula::HostAddr                       *host_item;
     nebula::ZoneNameList                   *zone_name_list;
+    nebula::ZoneItem                       *zone_item;
+    nebula::ZoneItemList                   *zone_item_list;
     std::vector<int32_t>                   *integer_list;
     nebula::InBoundClause                  *in_bound_clause;
     nebula::OutBoundClause                 *out_bound_clause;
@@ -208,7 +210,7 @@ static constexpr size_t kCommentLengthLimit = 256;
 %token KW_KILL KW_QUERY KW_QUERIES KW_TOP
 %token KW_GEOGRAPHY KW_POINT KW_LINESTRING KW_POLYGON
 %token KW_LIST KW_MAP
-%token KW_MERGE KW_SPLIT KW_RENAME
+%token KW_MERGE KW_DIVIDE KW_RENAME
 %token KW_VARIABLES
 
 /* symbols */
@@ -302,6 +304,8 @@ static constexpr size_t kCommentLengthLimit = 256;
 %type <IPV4_list> IPV4_list
 %type <host_list> host_list
 %type <host_item> host_item
+%type <zone_item> zone_item
+%type <zone_item_list> zone_item_list
 %type <integer_list> integer_list
 %type <in_bound_clause> in_bound_clause
 %type <out_bound_clause> out_bound_clause
@@ -368,7 +372,7 @@ static constexpr size_t kCommentLengthLimit = 256;
 %type <sentence> rebuild_tag_index_sentence rebuild_edge_index_sentence rebuild_fulltext_index_sentence
 %type <sentence> add_hosts_sentence drop_hosts_sentence
 %type <sentence> drop_zone_sentence desc_zone_sentence
-%type <sentence> merge_zone_sentence /*split_zone_sentence*/ rename_zone_sentence
+%type <sentence> merge_zone_sentence divide_zone_sentence rename_zone_sentence
 %type <sentence> create_snapshot_sentence drop_snapshot_sentence
 %type <sentence> add_listener_sentence remove_listener_sentence list_listener_sentence
 %type <sentence> add_drainer_sentence remove_drainer_sentence list_drainer_sentence
@@ -559,7 +563,7 @@ unreserved_keyword
     | KW_HTTP               { $$ = new std::string("http"); }
     | KW_HTTPS              { $$ = new std::string("https"); }
     | KW_MERGE              { $$ = new std::string("merge"); }
-    | KW_SPLIT              { $$ = new std::string("split"); }
+    | KW_DIVIDE             { $$ = new std::string("divide"); }
     | KW_RENAME             { $$ = new std::string("rename"); }
     | KW_VARIABLES          { $$ = new std::string("variables"); }
     ;
@@ -2864,11 +2868,28 @@ drop_zone_sentence
     }
     ;
 
-// split_zone_sentence
-//     : KW_SPLIT KW_ZONE name_label KW_FROM zone_name_list {
-//         $$ = new SplitZoneSentence($3, $5);
-//     }
-//     ;
+zone_item
+    : STRING L_PAREN host_list R_PAREN {
+        $$ = new nebula::ZoneItem($1, $3);
+    }
+    ;
+
+zone_item_list
+    : zone_item {
+        $$ = new ZoneItemList();
+        $$->addZoneItem($1);
+    }
+    | zone_item_list zone_item {
+        $$ = $1;
+        $$->addZoneItem($2);
+    }
+    ;
+
+divide_zone_sentence
+    : KW_DIVIDE KW_ZONE STRING KW_INTO zone_item_list {
+        $$ = new DivideZoneSentence($3, $5);
+    }
+    ;
 
 rename_zone_sentence
     : KW_RENAME KW_ZONE STRING KW_TO STRING {
@@ -3913,7 +3934,7 @@ maintain_sentence
     | drop_hosts_sentence { $$ = $1; }
     | merge_zone_sentence { $$ = $1; }
     | drop_zone_sentence { $$ = $1; }
-    // | split_zone_sentence { $$ = $1; }
+    | divide_zone_sentence { $$ = $1; }
     | rename_zone_sentence { $$ = $1; }
     | desc_zone_sentence { $$ = $1; }
     | show_sentence { $$ = $1; }

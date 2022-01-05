@@ -271,7 +271,9 @@ class DummyDrainerTaskManager : public DrainerTaskManager {
   }
 
   // Get a subtask execution from drainer task
-  void runSubTask(GraphSpaceID spaceId) { return DrainerTaskManager::runSubTask(spaceId); }
+  void runSubTask(GraphSpaceID spaceId) {
+    return DrainerTaskManager::runSubTask(spaceId);
+  }
 
   // schedule
   bool run() {

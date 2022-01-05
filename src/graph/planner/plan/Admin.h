@@ -247,7 +247,7 @@ class ShowSpaces final : public SingleDependencyNode {
   }
 
  private:
-  explicit ShowSpaces(QueryContext* qctx, PlanNode* input)
+  ShowSpaces(QueryContext* qctx, PlanNode* input)
       : SingleDependencyNode(qctx, Kind::kShowSpaces, input) {}
 };
 
@@ -333,10 +333,7 @@ class GetConfig final : public SingleDependencyNode {
   }
 
  private:
-  explicit GetConfig(QueryContext* qctx,
-                     PlanNode* input,
-                     meta::cpp2::ConfigModule module,
-                     std::string name)
+  GetConfig(QueryContext* qctx, PlanNode* input, meta::cpp2::ConfigModule module, std::string name)
       : SingleDependencyNode(qctx, Kind::kGetConfig, input),
         module_(module),
         name_(std::move(name)) {}
@@ -375,7 +372,7 @@ class CreateSnapshot final : public SingleDependencyNode {
   }
 
  private:
-  explicit CreateSnapshot(QueryContext* qctx, PlanNode* input)
+  CreateSnapshot(QueryContext* qctx, PlanNode* input)
       : SingleDependencyNode(qctx, Kind::kCreateSnapshot, input) {}
 };
 
@@ -392,7 +389,7 @@ class DropSnapshot final : public SingleDependencyNode {
   }
 
  private:
-  explicit DropSnapshot(QueryContext* qctx, PlanNode* input, std::string snapshotName)
+  DropSnapshot(QueryContext* qctx, PlanNode* input, std::string snapshotName)
       : SingleDependencyNode(qctx, Kind::kDropSnapshot, input) {
     snapshotName_ = std::move(snapshotName);
   }
@@ -408,7 +405,7 @@ class ShowSnapshots final : public SingleDependencyNode {
   }
 
  private:
-  explicit ShowSnapshots(QueryContext* qctx, PlanNode* input)
+  ShowSnapshots(QueryContext* qctx, PlanNode* input)
       : SingleDependencyNode(qctx, Kind::kShowSnapshots, input) {}
 };
 
@@ -432,17 +429,21 @@ class AddListener final : public SingleDependencyNode {
     return hosts_;
   }
 
-  const std::string* spaceName() const { return spaceName_; }
+  const std::string* spaceName() const {
+    return spaceName_;
+  }
 
-  const HostAddr* metaListener() const { return metaListener_; }
+  const HostAddr* metaListener() const {
+    return metaListener_;
+  }
 
  private:
-  explicit AddListener(QueryContext* qctx,
-                       PlanNode* input,
-                       meta::cpp2::ListenerType type,
-                       std::vector<HostAddr> hosts,
-                       HostAddr* metaListener,
-                       const std::string* spaceName)
+  AddListener(QueryContext* qctx,
+              PlanNode* input,
+              meta::cpp2::ListenerType type,
+              std::vector<HostAddr> hosts,
+              HostAddr* metaListener,
+              const std::string* spaceName)
       : SingleDependencyNode(qctx, Kind::kAddListener, input),
         metaListener_(metaListener),
         spaceName_(spaceName) {
@@ -468,7 +469,7 @@ class RemoveListener final : public SingleDependencyNode {
   }
 
  private:
-  explicit RemoveListener(QueryContext* qctx, PlanNode* input, meta::cpp2::ListenerType type)
+  RemoveListener(QueryContext* qctx, PlanNode* input, meta::cpp2::ListenerType type)
       : SingleDependencyNode(qctx, Kind::kRemoveListener, input) {
     type_ = std::move(type);
   }
@@ -483,10 +484,12 @@ class ShowListener final : public SingleDependencyNode {
     return qctx->objPool()->add(new ShowListener(qctx, input, std::move(type)));
   }
 
-  const meta::cpp2::ListenerType& type() const { return type_; }
+  const meta::cpp2::ListenerType& type() const {
+    return type_;
+  }
 
  private:
-  explicit ShowListener(QueryContext* qctx, PlanNode* input, meta::cpp2::ListenerType type)
+  ShowListener(QueryContext* qctx, PlanNode* input, meta::cpp2::ListenerType type)
       : SingleDependencyNode(qctx, Kind::kShowListener, input) {
     type_ = std::move(type);
   }
@@ -501,7 +504,9 @@ class AddDrainer final : public SingleDependencyNode {
     return qctx->objPool()->add(new AddDrainer(qctx, input, std::move(hosts)));
   }
 
-  const std::vector<HostAddr> hosts() const { return hosts_; }
+  const std::vector<HostAddr> hosts() const {
+    return hosts_;
+  }
 
  private:
   explicit AddDrainer(QueryContext* qctx, PlanNode* input, std::vector<HostAddr> hosts)
@@ -558,11 +563,11 @@ class Download final : public SingleDependencyNode {
   }
 
  private:
-  explicit Download(QueryContext* qctx,
-                    PlanNode* dep,
-                    std::string hdfsHost,
-                    int32_t hdfsPort,
-                    std::string hdfsPath)
+  Download(QueryContext* qctx,
+           PlanNode* dep,
+           std::string hdfsHost,
+           int32_t hdfsPort,
+           std::string hdfsPath)
       : SingleDependencyNode(qctx, Kind::kDownload, dep),
         hdfsHost_(hdfsHost),
         hdfsPort_(hdfsPort),
@@ -581,8 +586,7 @@ class Ingest final : public SingleDependencyNode {
   }
 
  private:
-  explicit Ingest(QueryContext* qctx, PlanNode* dep)
-      : SingleDependencyNode(qctx, Kind::kIngest, dep) {}
+  Ingest(QueryContext* qctx, PlanNode* dep) : SingleDependencyNode(qctx, Kind::kIngest, dep) {}
 };
 
 // User related Node
@@ -608,7 +612,9 @@ class CreateUser final : public CreateNode {
     return password_;
   }
 
-  const std::unordered_set<std::string>* ipWhitelist() const { return ipWhitelist_; }
+  const std::unordered_set<std::string>* ipWhitelist() const {
+    return ipWhitelist_;
+  }
 
  private:
   CreateUser(QueryContext* qctx,
@@ -671,7 +677,9 @@ class UpdateUser final : public SingleDependencyNode {
     return password_;
   }
 
-  const std::unordered_set<std::string>* ipWhitelist() const { return ipWhitelist_; }
+  const std::unordered_set<std::string>* ipWhitelist() const {
+    return ipWhitelist_;
+  }
 
  private:
   UpdateUser(QueryContext* qctx,
@@ -840,7 +848,7 @@ class ListUsers final : public SingleDependencyNode {
   }
 
  private:
-  explicit ListUsers(QueryContext* qctx, PlanNode* dep)
+  ListUsers(QueryContext* qctx, PlanNode* dep)
       : SingleDependencyNode(qctx, Kind::kListUsers, dep) {}
 };
 
@@ -857,7 +865,7 @@ class DescribeUser final : public SingleDependencyNode {
   }
 
  private:
-  explicit DescribeUser(QueryContext* qctx, PlanNode* dep, const std::string* username)
+  DescribeUser(QueryContext* qctx, PlanNode* dep, const std::string* username)
       : SingleDependencyNode(qctx, Kind::kDescribeUser, dep), username_(username) {}
 
   const std::string* username_;
@@ -876,7 +884,7 @@ class ListRoles final : public SingleDependencyNode {
   }
 
  private:
-  explicit ListRoles(QueryContext* qctx, PlanNode* dep, GraphSpaceID space)
+  ListRoles(QueryContext* qctx, PlanNode* dep, GraphSpaceID space)
       : SingleDependencyNode(qctx, Kind::kListRoles, dep), space_(space) {}
 
   GraphSpaceID space_{-1};
@@ -902,10 +910,10 @@ class ShowParts final : public SingleDependencyNode {
   }
 
  private:
-  explicit ShowParts(QueryContext* qctx,
-                     PlanNode* input,
-                     GraphSpaceID spaceId,
-                     std::vector<PartitionID> partIds)
+  ShowParts(QueryContext* qctx,
+            PlanNode* input,
+            GraphSpaceID spaceId,
+            std::vector<PartitionID> partIds)
       : SingleDependencyNode(qctx, Kind::kShowParts, input) {
     spaceId_ = spaceId;
     partIds_ = std::move(partIds);
@@ -1104,37 +1112,37 @@ class DropZone final : public SingleDependencyNode {
   std::string zoneName_;
 };
 
-class SplitZone final : public SingleDependencyNode {
+class DivideZone final : public SingleDependencyNode {
  public:
-  static SplitZone* make(QueryContext* qctx,
-                         PlanNode* input,
-                         std::string zoneName,
-                         std::vector<std::string> zoneNames) {
+  static DivideZone* make(QueryContext* qctx,
+                          PlanNode* input,
+                          std::string zoneName,
+                          std::unordered_map<std::string, std::vector<HostAddr>> zoneItems) {
     return qctx->objPool()->add(
-        new SplitZone(qctx, input, std::move(zoneName), std::move(zoneNames)));
+        new DivideZone(qctx, input, std::move(zoneName), std::move(zoneItems)));
   }
 
   const std::string& zoneName() const {
     return zoneName_;
   }
 
-  const std::vector<std::string>& zones() const {
-    return zones_;
+  const std::unordered_map<std::string, std::vector<HostAddr>>& zoneItems() const {
+    return zoneItems_;
   }
 
  private:
-  SplitZone(QueryContext* qctx,
-            PlanNode* input,
-            std::string zoneName,
-            std::vector<std::string> zoneNames)
-      : SingleDependencyNode(qctx, Kind::kSplitZone, input) {
+  DivideZone(QueryContext* qctx,
+             PlanNode* input,
+             std::string zoneName,
+             std::unordered_map<std::string, std::vector<HostAddr>> zoneItems)
+      : SingleDependencyNode(qctx, Kind::kDivideZone, input) {
     zoneName_ = std::move(zoneName);
-    zones_ = std::move(zoneNames);
+    zoneItems_ = std::move(zoneItems);
   }
 
  private:
   std::string zoneName_;
-  std::vector<std::string> zones_;
+  std::unordered_map<std::string, std::vector<HostAddr>> zoneItems_;
 };
 
 class DescribeZone final : public SingleDependencyNode {
@@ -1198,7 +1206,9 @@ class ShowServiceClients final : public SingleDependencyNode {
     return qctx->objPool()->add(new ShowServiceClients(qctx, input, type));
   }
 
-  meta::cpp2::ExternalServiceType type() const { return type_; }
+  meta::cpp2::ExternalServiceType type() const {
+    return type_;
+  }
 
  private:
   ShowServiceClients(QueryContext* qctx, PlanNode* input, meta::cpp2::ExternalServiceType type)
@@ -1217,9 +1227,13 @@ class SignInService final : public SingleDependencyNode {
     return qctx->objPool()->add(new SignInService(qctx, input, std::move(clients), type));
   }
 
-  const std::vector<meta::cpp2::ServiceClient>& clients() const { return clients_; }
+  const std::vector<meta::cpp2::ServiceClient>& clients() const {
+    return clients_;
+  }
 
-  meta::cpp2::ExternalServiceType type() const { return type_; }
+  meta::cpp2::ExternalServiceType type() const {
+    return type_;
+  }
 
  private:
   SignInService(QueryContext* qctx,
@@ -1243,7 +1257,9 @@ class SignOutService final : public SingleDependencyNode {
     return qctx->objPool()->add(new SignOutService(qctx, input, type));
   }
 
-  meta::cpp2::ExternalServiceType type() const { return type_; }
+  meta::cpp2::ExternalServiceType type() const {
+    return type_;
+  }
 
  private:
   SignOutService(QueryContext* qctx, PlanNode* input, meta::cpp2::ExternalServiceType type)
@@ -1262,9 +1278,13 @@ class SignInSpaceService final : public SingleDependencyNode {
     return qctx->objPool()->add(new SignInSpaceService(qctx, input, std::move(clients), type));
   }
 
-  const std::vector<meta::cpp2::ServiceClient>& clients() const { return clients_; }
+  const std::vector<meta::cpp2::ServiceClient>& clients() const {
+    return clients_;
+  }
 
-  meta::cpp2::ExternalSpaceServiceType type() const { return type_; }
+  meta::cpp2::ExternalSpaceServiceType type() const {
+    return type_;
+  }
 
  private:
   SignInSpaceService(QueryContext* qctx,
@@ -1288,7 +1308,9 @@ class SignOutSpaceService final : public SingleDependencyNode {
     return qctx->objPool()->add(new SignOutSpaceService(qctx, input, type));
   }
 
-  meta::cpp2::ExternalSpaceServiceType type() const { return type_; }
+  meta::cpp2::ExternalSpaceServiceType type() const {
+    return type_;
+  }
 
  private:
   SignOutSpaceService(QueryContext* qctx,
@@ -1308,7 +1330,9 @@ class ShowSpaceServiceClients final : public SingleDependencyNode {
     return qctx->objPool()->add(new ShowSpaceServiceClients(qctx, input, type));
   }
 
-  meta::cpp2::ExternalSpaceServiceType type() const { return type_; }
+  meta::cpp2::ExternalSpaceServiceType type() const {
+    return type_;
+  }
 
  private:
   ShowSpaceServiceClients(QueryContext* qctx,
@@ -1342,11 +1366,11 @@ class ShowSessions final : public SingleInputNode {
   }
 
  private:
-  explicit ShowSessions(QueryContext* qctx,
-                        PlanNode* input,
-                        bool isSetSessionID,
-                        SessionID sessionId,
-                        bool isLocalCommand)
+  ShowSessions(QueryContext* qctx,
+               PlanNode* input,
+               bool isSetSessionID,
+               SessionID sessionId,
+               bool isLocalCommand)
       : SingleInputNode(qctx, Kind::kShowSessions, input) {
     sessionId_ = sessionId;
     isSetSessionID_ = isSetSessionID;
@@ -1370,7 +1394,7 @@ class UpdateSession final : public SingleInputNode {
   }
 
  private:
-  explicit UpdateSession(QueryContext* qctx, PlanNode* input, meta::cpp2::Session session)
+  UpdateSession(QueryContext* qctx, PlanNode* input, meta::cpp2::Session session)
       : SingleInputNode(qctx, Kind::kUpdateSession, input), session_(std::move(session)) {}
 
  private:
@@ -1390,7 +1414,7 @@ class ShowQueries final : public SingleInputNode {
   std::unique_ptr<PlanNodeDescription> explain() const override;
 
  private:
-  explicit ShowQueries(QueryContext* qctx, PlanNode* input, bool isAll)
+  ShowQueries(QueryContext* qctx, PlanNode* input, bool isAll)
       : SingleInputNode(qctx, Kind::kShowQueries, input), isAll_(isAll) {}
 
   bool isAll_{false};
@@ -1416,7 +1440,7 @@ class KillQuery final : public SingleInputNode {
   std::unique_ptr<PlanNodeDescription> explain() const override;
 
  private:
-  explicit KillQuery(QueryContext* qctx, PlanNode* input, Expression* sessionId, Expression* epId)
+  KillQuery(QueryContext* qctx, PlanNode* input, Expression* sessionId, Expression* epId)
       : SingleInputNode(qctx, Kind::kKillQuery, input), sessionId_(sessionId), epId_(epId) {}
 
   Expression* sessionId_;
@@ -1431,9 +1455,13 @@ class SetVariable final : public SingleDependencyNode {
 
   std::unique_ptr<PlanNodeDescription> explain() const override;
 
-  const std::string& getName() const { return name_; }
+  const std::string& getName() const {
+    return name_;
+  }
 
-  const Value& getValue() const { return value_; }
+  const Value& getValue() const {
+    return value_;
+  }
 
  private:
   SetVariable(QueryContext* qctx, PlanNode* input, std::string name, Value value)
@@ -1454,7 +1482,9 @@ class GetVariable final : public SingleDependencyNode {
 
   std::unique_ptr<PlanNodeDescription> explain() const override;
 
-  const std::string& getName() const { return name_; }
+  const std::string& getName() const {
+    return name_;
+  }
 
  private:
   explicit GetVariable(QueryContext* qctx, PlanNode* input, std::string name)

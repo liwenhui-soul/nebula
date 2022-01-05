@@ -98,7 +98,9 @@ class RequestContext final : public cpp::NonCopyable, public cpp::NonMovable {
     return parameterMap_;
   }
 
-  AuditContext& auditContext() { return auditContext_; }
+  AuditContext& auditContext() {
+    return auditContext_;
+  }
 
  private:
   time::Duration duration_;

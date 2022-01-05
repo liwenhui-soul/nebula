@@ -8,7 +8,9 @@
 namespace nebula {
 namespace graph {
 
-IpWhitelistCheck::IpWhitelistCheck(meta::MetaClient* client) { metaClient_ = client; }
+IpWhitelistCheck::IpWhitelistCheck(meta::MetaClient* client) {
+  metaClient_ = client;
+}
 
 bool IpWhitelistCheck::check(const std::string& user, const std::string& clientIp) {
   return metaClient_->checkIpWhitelistFromCache(user, clientIp);

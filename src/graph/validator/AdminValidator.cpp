@@ -357,7 +357,9 @@ Status AddDrainerValidator::toPlan() {
   return Status::OK();
 }
 
-Status RemoveDrainerValidator::validateImpl() { return Status::OK(); }
+Status RemoveDrainerValidator::validateImpl() {
+  return Status::OK();
+}
 
 Status RemoveDrainerValidator::toPlan() {
   auto *doNode = RemoveDrainer::make(qctx_, nullptr);
@@ -366,7 +368,9 @@ Status RemoveDrainerValidator::toPlan() {
   return Status::OK();
 }
 
-Status ListDrainersValidator::validateImpl() { return Status::OK(); }
+Status ListDrainersValidator::validateImpl() {
+  return Status::OK();
+}
 
 Status ListDrainersValidator::toPlan() {
   auto *doNode = ShowDrainers::make(qctx_, nullptr);
@@ -584,7 +588,9 @@ Status ShowStatusValidator::toPlan() {
   return Status::OK();
 }
 
-Status ShowServiceClientsValidator::validateImpl() { return Status::OK(); }
+Status ShowServiceClientsValidator::validateImpl() {
+  return Status::OK();
+}
 
 Status ShowServiceClientsValidator::toPlan() {
   auto sentence = static_cast<ShowServiceClientsSentence *>(sentence_);
@@ -595,7 +601,9 @@ Status ShowServiceClientsValidator::toPlan() {
   return Status::OK();
 }
 
-Status SignInServiceValidator::validateImpl() { return Status::OK(); }
+Status SignInServiceValidator::validateImpl() {
+  return Status::OK();
+}
 
 Status SignInServiceValidator::toPlan() {
   auto sentence = static_cast<SignInServiceSentence *>(sentence_);
@@ -610,7 +618,9 @@ Status SignInServiceValidator::toPlan() {
   return Status::OK();
 }
 
-Status SignOutServiceValidator::validateImpl() { return Status::OK(); }
+Status SignOutServiceValidator::validateImpl() {
+  return Status::OK();
+}
 
 Status SignOutServiceValidator::toPlan() {
   auto sentence = static_cast<SignOutServiceSentence *>(sentence_);
@@ -642,7 +652,9 @@ Status SignInSpaceServiceValidator::toPlan() {
   return Status::OK();
 }
 
-Status SignOutSpaceServiceValidator::validateImpl() { return Status::OK(); }
+Status SignOutSpaceServiceValidator::validateImpl() {
+  return Status::OK();
+}
 
 Status SignOutSpaceServiceValidator::toPlan() {
   auto sentence = static_cast<SignOutSpaceServiceSentence *>(sentence_);
@@ -653,7 +665,9 @@ Status SignOutSpaceServiceValidator::toPlan() {
   return Status::OK();
 }
 
-Status ShowSpaceServiceClientsValidator::validateImpl() { return Status::OK(); }
+Status ShowSpaceServiceClientsValidator::validateImpl() {
+  return Status::OK();
+}
 
 Status ShowSpaceServiceClientsValidator::toPlan() {
   auto sentence = static_cast<ShowSpaceServiceClientsSentence *>(sentence_);

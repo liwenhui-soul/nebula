@@ -86,9 +86,13 @@ class CreateUserSentence final : public Sentence {
     return password_.get();
   }
 
-  const std::unordered_set<std::string>* getIpWhitelist() const { return ipWhitelist_.get(); }
+  const std::unordered_set<std::string>* getIpWhitelist() const {
+    return ipWhitelist_.get();
+  }
 
-  bool ifNotExists() const { return ifNotExists_; }
+  bool ifNotExists() const {
+    return ifNotExists_;
+  }
 
   std::string toString() const override;
 
@@ -101,9 +105,9 @@ class CreateUserSentence final : public Sentence {
 
 class AlterUserSentence final : public Sentence {
  public:
-  explicit AlterUserSentence(std::string* account,
-                             std::string* password,
-                             std::unordered_set<std::string>* ipWhitelist) {
+  AlterUserSentence(std::string* account,
+                    std::string* password,
+                    std::unordered_set<std::string>* ipWhitelist) {
     account_.reset(account);
     password_.reset(password);
     ipWhitelist_.reset(ipWhitelist);
@@ -118,7 +122,9 @@ class AlterUserSentence final : public Sentence {
     return password_.get();
   }
 
-  const std::unordered_set<std::string>* getIpWhitelist() const { return ipWhitelist_.get(); }
+  const std::unordered_set<std::string>* getIpWhitelist() const {
+    return ipWhitelist_.get();
+  }
 
   std::string toString() const override;
 
@@ -130,7 +136,7 @@ class AlterUserSentence final : public Sentence {
 
 class DropUserSentence final : public Sentence {
  public:
-  explicit DropUserSentence(std::string* account, bool ifExists) {
+  DropUserSentence(std::string* account, bool ifExists) {
     account_.reset(account);
     ifExists_ = ifExists;
     kind_ = Kind::kDropUser;

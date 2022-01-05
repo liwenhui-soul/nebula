@@ -25,10 +25,14 @@ class DrainerSubTask {
   explicit DrainerSubTask(std::function<nebula::cpp2::ErrorCode()> f, PartitionID part)
       : run_(f), partId_(part) {}
 
-  nebula::cpp2::ErrorCode invoke() { return run_(); }
+  nebula::cpp2::ErrorCode invoke() {
+    return run_();
+  }
 
   // master cluster partId
-  PartitionID part() { return partId_; }
+  PartitionID part() {
+    return partId_;
+  }
 
  private:
   std::function<nebula::cpp2::ErrorCode()> run_;
@@ -69,7 +73,9 @@ class DrainerTask {
         masterClusterId_(masterClusterId),
         slaveClusterId_(slaveClusterId) {}
 
-  virtual ~DrainerTask() { VLOG(3) << "Release Drainer Task"; }
+  virtual ~DrainerTask() {
+    VLOG(3) << "Release Drainer Task";
+  }
 
   // Process all parts under the space, one part generates a DrainerSubTask.
   virtual ErrorOr<nebula::cpp2::ErrorCode, std::vector<DrainerSubTask>> genSubTasks();
@@ -139,9 +145,13 @@ class DrainerTask {
   // read recv.log(last_log_id_recv)
   StatusOr<LogID> readRecvLog(const std::string& path, GraphSpaceID spaceId, PartitionID part);
 
-  int getSpaceId() { return spaceId_; }
+  int getSpaceId() {
+    return spaceId_;
+  }
 
-  void finish() { finish(rc_); }
+  void finish() {
+    finish(rc_);
+  }
 
   void finish(nebula::cpp2::ErrorCode rc) {
     if (rc == nebula::cpp2::ErrorCode::SUCCEEDED) {
@@ -154,7 +164,9 @@ class DrainerTask {
     rc_.compare_exchange_strong(suc, rc);
   }
 
-  nebula::cpp2::ErrorCode status() const { return rc_; }
+  nebula::cpp2::ErrorCode status() const {
+    return rc_;
+  }
 
   void subTaskFinish(nebula::cpp2::ErrorCode rc, PartitionID partId);
 

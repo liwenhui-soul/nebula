@@ -13,7 +13,9 @@ meta::PartsMap MemPartManager::parts(const HostAddr&) {
 }
 
 // Get all the listener information used by a host
-meta::ListenersMap MemPartManager::listeners(const HostAddr& host) { return listenersMap_[host]; }
+meta::ListenersMap MemPartManager::listeners(const HostAddr& host) {
+  return listenersMap_[host];
+}
 
 StatusOr<std::vector<meta::RemoteListenerInfo>> MemPartManager::listenerPeerExist(
     GraphSpaceID spaceId, PartitionID partId) {

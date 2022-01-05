@@ -506,7 +506,7 @@ class ConfigRowItem {
 
 class ConfigBaseSentence : public Sentence {
  public:
-  explicit ConfigBaseSentence(Kind kind, ConfigRowItem* item) {
+  ConfigBaseSentence(Kind kind, ConfigRowItem* item) {
     kind_ = kind;
     configItem_.reset(item);
   }
@@ -584,11 +584,17 @@ class AddListenerSentence final : public Sentence {
     return type_;
   }
 
-  const std::string* spaceName() const { return spaceName_.get(); }
+  const std::string* spaceName() const {
+    return spaceName_.get();
+  }
 
-  HostList* storageListeners() const { return storageListeners_.get(); }
+  HostList* storageListeners() const {
+    return storageListeners_.get();
+  }
 
-  HostAddr* metaListeners() const { return metaListener_.get(); }
+  HostAddr* metaListeners() const {
+    return metaListener_.get();
+  }
 
   std::string toString() const override;
 
@@ -624,7 +630,9 @@ class ShowListenerSentence final : public Sentence {
 
   std::string toString() const override;
 
-  meta::cpp2::ListenerType type() const { return type_; }
+  meta::cpp2::ListenerType type() const {
+    return type_;
+  }
 
  private:
   meta::cpp2::ListenerType type_;
@@ -637,7 +645,9 @@ class AddDrainerSentence final : public Sentence {
     drainers_.reset(hosts);
   }
 
-  HostList* drainers() const { return drainers_.get(); }
+  HostList* drainers() const {
+    return drainers_.get();
+  }
 
   std::string toString() const override;
 
@@ -647,14 +657,18 @@ class AddDrainerSentence final : public Sentence {
 
 class RemoveDrainerSentence final : public Sentence {
  public:
-  RemoveDrainerSentence() { kind_ = Kind::kRemoveDrainer; }
+  RemoveDrainerSentence() {
+    kind_ = Kind::kRemoveDrainer;
+  }
 
   std::string toString() const override;
 };
 
 class ShowDrainersSentence final : public Sentence {
  public:
-  ShowDrainersSentence() { kind_ = Kind::kShowDrainers; }
+  ShowDrainersSentence() {
+    kind_ = Kind::kShowDrainers;
+  }
 
   std::string toString() const override;
 };
@@ -695,7 +709,9 @@ class ShowStatsSentence final : public Sentence {
 
 class ServiceClientList final {
  public:
-  void addClient(nebula::meta::cpp2::ServiceClient* client) { clients_.emplace_back(client); }
+  void addClient(nebula::meta::cpp2::ServiceClient* client) {
+    clients_.emplace_back(client);
+  }
 
   std::string toString() const;
 
@@ -720,7 +736,9 @@ class ShowServiceClientsSentence final : public Sentence {
 
   std::string toString() const override;
 
-  meta::cpp2::ExternalServiceType getType() { return type_; }
+  meta::cpp2::ExternalServiceType getType() {
+    return type_;
+  }
 
  private:
   meta::cpp2::ExternalServiceType type_;
@@ -737,9 +755,13 @@ class SignInServiceSentence final : public Sentence {
 
   std::string toString() const override;
 
-  ServiceClientList* clients() const { return clients_.get(); }
+  ServiceClientList* clients() const {
+    return clients_.get();
+  }
 
-  meta::cpp2::ExternalServiceType getType() { return type_; }
+  meta::cpp2::ExternalServiceType getType() {
+    return type_;
+  }
 
  private:
   std::unique_ptr<ServiceClientList> clients_;
@@ -754,7 +776,9 @@ class SignOutServiceSentence final : public Sentence {
 
   std::string toString() const override;
 
-  meta::cpp2::ExternalServiceType getType() { return type_; }
+  meta::cpp2::ExternalServiceType getType() {
+    return type_;
+  }
 
  private:
   meta::cpp2::ExternalServiceType type_;
@@ -771,9 +795,13 @@ class SignInSpaceServiceSentence final : public Sentence {
 
   std::string toString() const override;
 
-  ServiceClientList* clients() const { return clients_.get(); }
+  ServiceClientList* clients() const {
+    return clients_.get();
+  }
 
-  meta::cpp2::ExternalSpaceServiceType getType() { return type_; }
+  meta::cpp2::ExternalSpaceServiceType getType() {
+    return type_;
+  }
 
  private:
   std::unique_ptr<ServiceClientList> clients_;
@@ -789,7 +817,9 @@ class SignOutSpaceServiceSentence final : public Sentence {
 
   std::string toString() const override;
 
-  meta::cpp2::ExternalSpaceServiceType getType() { return type_; }
+  meta::cpp2::ExternalSpaceServiceType getType() {
+    return type_;
+  }
 
  private:
   meta::cpp2::ExternalSpaceServiceType type_;
@@ -804,7 +834,9 @@ class ShowSpaceServiceClientsSentence final : public Sentence {
 
   std::string toString() const override;
 
-  meta::cpp2::ExternalSpaceServiceType getType() { return type_; }
+  meta::cpp2::ExternalSpaceServiceType getType() {
+    return type_;
+  }
 
  private:
   meta::cpp2::ExternalSpaceServiceType type_;
@@ -926,9 +958,13 @@ class SetVariableSentence final : public Sentence {
 
   std::string toString() const override;
 
-  const std::string* getName() const { return name_.get(); }
+  const std::string* getName() const {
+    return name_.get();
+  }
 
-  Expression* getValue() const { return value_; }
+  Expression* getValue() const {
+    return value_;
+  }
 
  private:
   std::unique_ptr<std::string> name_;
@@ -944,7 +980,9 @@ class GetVariableSentence final : public Sentence {
 
   std::string toString() const override;
 
-  const std::string* getName() const { return name_.get(); }
+  const std::string* getName() const {
+    return name_.get();
+  }
 
  protected:
   std::unique_ptr<std::string> name_;

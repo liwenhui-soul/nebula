@@ -76,9 +76,9 @@ static const std::string kEdgesTable          = tableMaps.at("edges").first;    
 static const std::string kIndexesTable        = tableMaps.at("indexes").first;        // NOLINT
 static const std::string kIndexTable          = tableMaps.at("index").first;          // NOLINT
 static const std::string kIndexStatusTable    = tableMaps.at("index_status").first;   // NOLINT
-static const std::string kUsersTable          = systemTableMaps.at("users").first;          // NOLINT
+static const std::string kUsersTable          = systemTableMaps.at("users").first;    // NOLINT
 static const std::string kRolesTable          = tableMaps.at("roles").first;          // NOLINT
-static const std::string kIpWhitelistTable    = tableMaps.at("ip_whitelist").first;          // NOLINT
+static const std::string kIpWhitelistTable    = tableMaps.at("ip_whitelist").first;         // NOLINT
 static const std::string kConfigsTable        = systemTableMaps.at("configs").first;        // NOLINT
 static const std::string kSnapshotsTable      = systemTableMaps.at("snapshots").first;      // NOLINT
 static const std::string kLeadersTable        = tableMaps.at("leaders").first;              // NOLINT
@@ -1433,7 +1433,9 @@ std::string MetaKeyUtils::serviceKey(const meta::cpp2::ExternalServiceType& type
   return key;
 }
 
-const std::string& MetaKeyUtils::servicePrefix() { return kServicesTable; }
+const std::string& MetaKeyUtils::servicePrefix() {
+  return kServicesTable;
+}
 
 meta::cpp2::ExternalServiceType MetaKeyUtils::parseServiceType(folly::StringPiece rawData) {
   auto offset = kServicesTable.size();
@@ -1472,7 +1474,9 @@ std::string MetaKeyUtils::spaceServicePrefix(GraphSpaceID spaceId) {
   return key;
 }
 
-const std::string& MetaKeyUtils::sessionPrefix() { return kSessionsTable; }
+const std::string& MetaKeyUtils::sessionPrefix() {
+  return kSessionsTable;
+}
 
 std::string MetaKeyUtils::sessionKey(SessionID sessionId) {
   std::string key;

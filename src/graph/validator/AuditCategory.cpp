@@ -69,7 +69,7 @@ std::string auditCategory(Sentence::Kind kind) {
     case Sentence::Kind::kAdminJob:
     case Sentence::Kind::kMergeZone:
     case Sentence::Kind::kRenameZone:
-    case Sentence::Kind::kSplitZone:
+    case Sentence::Kind::kDivideZone:
     case Sentence::Kind::kDropZone:
     case Sentence::Kind::kAddHosts:
     case Sentence::Kind::kAddHostsIntoZone:

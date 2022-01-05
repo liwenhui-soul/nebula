@@ -43,7 +43,9 @@ class AppendLogProcessor : public BaseProcessor<cpp2::AppendLogRequest, cpp2::Ap
 
   void onProcessFinished() override;
 
-  std::string recvLogFile() { return recvLogFile_; }
+  std::string recvLogFile() {
+    return recvLogFile_;
+  }
 
  private:
   AppendLogProcessor(DrainerEnv* env, const ProcessorCounters* counters)

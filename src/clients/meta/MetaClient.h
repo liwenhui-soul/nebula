@@ -679,12 +679,12 @@ class MetaClient {
 
   folly::Future<StatusOr<bool>> mergeZone(std::vector<std::string> zones, std::string zoneName);
 
+  folly::Future<StatusOr<bool>> divideZone(
+      std::string zoneName, std::unordered_map<std::string, std::vector<HostAddr>> zoneItems);
+
   folly::Future<StatusOr<bool>> renameZone(std::string originalZoneName, std::string zoneName);
 
   folly::Future<StatusOr<bool>> dropZone(std::string zoneName);
-
-  folly::Future<StatusOr<bool>> splitZone(
-      std::string zoneName, std::unordered_map<std::string, std::vector<HostAddr>> zones);
 
   folly::Future<StatusOr<bool>> addHostsIntoZone(std::vector<HostAddr> hosts,
                                                  std::string zoneName,
@@ -723,13 +723,17 @@ class MetaClient {
 
   bool currentSpaceReadOnly(GraphSpaceID spaceId);
 
-  HostAddr getMetaLeader() { return leader_; }
+  HostAddr getMetaLeader() {
+    return leader_;
+  }
 
   int64_t HeartbeatTime() {
     return heartbeatTime_;
   }
 
-  nebula::ClusterID getClusterId() { return options_.clusterId_.load(); }
+  nebula::ClusterID getClusterId() {
+    return options_.clusterId_.load();
+  }
 
   // use for drainer to slave meta
   folly::Future<StatusOr<bool>> syncData(ClusterID cluster,

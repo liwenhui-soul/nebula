@@ -29,7 +29,9 @@ class BaseProcessor {
 
   virtual void process(const REQ& req) = 0;
 
-  folly::Future<RESP> getFuture() { return promise_.getFuture(); }
+  folly::Future<RESP> getFuture() {
+    return promise_.getFuture();
+  }
 
  protected:
   virtual void onFinished() {
