@@ -61,7 +61,6 @@ int main(int argc, char *argv[]) {
   if (FLAGS_enable_ssl || FLAGS_enable_graph_ssl || FLAGS_enable_meta_ssl) {
     folly::ssl::init();
   }
-  nebula::initGraphStats();
 
   if (FLAGS_flagfile.empty()) {
     printHelp(argv[0]);
@@ -90,6 +89,8 @@ int main(int argc, char *argv[]) {
     LOG(ERROR) << status;
     return EXIT_FAILURE;
   }
+
+  nebula::initGraphStats();
 
   if (FLAGS_daemonize) {
     status = ProcessUtils::daemonize(pidPath);
