@@ -684,6 +684,7 @@ service GraphStorageService {
 
     UpdateResponse chainUpdateEdge(1: UpdateEdgeRequest req);
     ExecResponse chainAddEdges(1: AddEdgesRequest req);
+    ExecResponse chainDeleteEdges(1: DeleteEdgesRequest req);
 
     KVGetResponse   get(1: KVGetRequest req);
     ExecResponse    put(1: KVPutRequest req);
@@ -884,7 +885,6 @@ struct ChainAddEdgesRequest {
     3: list<binary>                             prop_names,
     // if true, when edge already exists, do nothing
     4: bool                                     if_not_exists,
-    // 5: map<common.PartitionID, i64>             term_of_parts,
     5: i64                                      term
     6: optional i64                             edge_version
     // 6: optional map<common.PartitionID, list<i64>>(
@@ -900,10 +900,20 @@ struct ChainUpdateEdgeRequest {
     5: required list<common.PartitionID>        parts,
 }
 
+struct ChainDeleteEdgesRequest {
+    1: common.GraphSpaceID                      space_id,
+    // partId => edgeKeys
+    2: map<common.PartitionID, list<EdgeKey>>
+        (cpp.template = "std::unordered_map")   parts,
+    3: binary                                   txn_id
+    4: i64                                      term,
+}
+
 service InternalStorageService {
     ExecResponse chainAddEdges(1: ChainAddEdgesRequest req);
     UpdateResponse chainUpdateEdge(1: ChainUpdateEdgeRequest req);
 
     // Interfaces for log storage
     ExecResponse      syncData(1: SyncDataRequest req);
+    ExecResponse chainDeleteEdges(1: ChainDeleteEdgesRequest req);
 }

@@ -30,6 +30,9 @@ class InternalStorageServiceHandler final : public cpp2::InternalStorageServiceS
 
   folly::Future<cpp2::ExecResponse> future_syncData(const cpp2::SyncDataRequest& req) override;
 
+  folly::Future<cpp2::ExecResponse> future_chainDeleteEdges(
+      const cpp2::ChainDeleteEdgesRequest& p_req);
+
  private:
   StorageEnv* env_{nullptr};
   std::shared_ptr<folly::Executor> readerPool_;
