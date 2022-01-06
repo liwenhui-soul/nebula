@@ -270,6 +270,8 @@ std::unique_ptr<Validator> Validator::makeValidator(Sentence* sentence, QueryCon
       return std::make_unique<GetVariableValidator>(sentence, context);
     case Sentence::Kind::kSetVariable:
       return std::make_unique<SetVariableValidator>(sentence, context);
+    case Sentence::Kind::kAlterSpace:
+      return std::make_unique<AlterSpaceValidator>(sentence, context);
     case Sentence::Kind::kUnknown:
     case Sentence::Kind::kReturn: {
       // nothing

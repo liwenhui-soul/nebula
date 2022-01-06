@@ -140,6 +140,7 @@ class Sentence {
     kShowMetaLeader,
     kSetVariable,
     kGetVariable,
+    kAlterSpace,
   };
 
   Kind kind() const {
