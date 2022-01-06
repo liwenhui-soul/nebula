@@ -10,8 +10,6 @@
 #include "meta/KVBasedClusterIdMan.h"
 #include "meta/MetaVersionMan.h"
 
-DEFINE_bool(hosts_whitelist_enabled, true, "Automatically receive the heartbeat report");
-
 namespace nebula {
 namespace meta {
 
@@ -38,7 +36,7 @@ void HBProcessor::process(const cpp2::HBReq& req) {
   if (role == cpp2::HostRole::STORAGE || role == cpp2::HostRole::META_LISTENER ||
       role == cpp2::HostRole::STORAGE_LISTENER) {
     if (role == cpp2::HostRole::STORAGE) {
-      if (!FLAGS_hosts_whitelist_enabled && !ActiveHostsMan::machineRegisted(kvstore_, host)) {
+      if (!ActiveHostsMan::machineRegisted(kvstore_, host)) {
         LOG(ERROR) << "Machine " << host << " is not registed";
         handleErrorCode(nebula::cpp2::ErrorCode::E_MACHINE_NOT_FOUND);
         onFinished();
