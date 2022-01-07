@@ -727,6 +727,8 @@ class MetaClient {
 
   bool currentSpaceReadOnly(GraphSpaceID spaceId);
 
+  folly::Future<StatusOr<int64_t>> getWorkerId(std::string ipAddr);
+
   HostAddr getMetaLeader() {
     return leader_;
   }
@@ -743,6 +745,10 @@ class MetaClient {
   folly::Future<StatusOr<bool>> syncData(ClusterID cluster,
                                          GraphSpaceID space,
                                          std::vector<std::string> data);
+
+  std::string getLocalIp() {
+    return options_.localHost_.toString();
+  }
 
  protected:
   // Return true if load succeeded.

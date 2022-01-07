@@ -476,6 +476,8 @@ enum ErrorCode {
     E_WRITE_WRITE_CONFLICT            = -3073,
 
     E_CLIENT_SERVER_INCOMPATIBLE      = -3061,
+    // get worker id
+    E_WORKER_ID_FAILED                = -3062,
 
     // 4xxx for drainer
     E_LOG_GAP                         = -4001,
