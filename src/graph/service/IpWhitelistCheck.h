@@ -15,10 +15,10 @@ class IpWhitelistCheck final {
  public:
   explicit IpWhitelistCheck(meta::MetaClient* client);
 
-  bool check(const std::string& user, const std::string& clientIp);
+  Status check(const std::string& user, const std::string& clientIp);
 
  private:
-  meta::MetaClient* metaClient_;
+  meta::MetaClient* metaClient_{nullptr};
 };
 }  // namespace graph
 }  // namespace nebula

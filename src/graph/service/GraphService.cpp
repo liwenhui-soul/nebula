@@ -10,6 +10,7 @@
 #include "audit/AuditLogging.h"
 #include "clients/storage/StorageClient.h"
 #include "common/base/Base.h"
+#include "common/base/Status.h"
 #include "common/encryption/MD5Utils.h"
 #include "common/stats/StatsManager.h"
 #include "common/time/Duration.h"
@@ -83,10 +84,10 @@ folly::Future<AuthResponse> GraphService::future_authenticate(const std::string&
     ctx->auditContext().clientHost_ = clientIp;
   }
   // check username and password failed
-  if (!auth(username, password, clientIp)) {
+  auto authResult = auth(username, password, clientIp);
+  if (!authResult.ok()) {
     ctx->resp().errorCode = ErrorCode::E_BAD_USERNAME_PASSWORD;
-    ctx->resp().errorMsg.reset(
-        new std::string("Bad username/password or clientIp not in ip whitelist"));
+    ctx->resp().errorMsg.reset(new std::string(authResult.toString()));
     auditLogin(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
     ctx->finish();
     stats::StatsManager::addValue(kNumAuthFailedSessions);
@@ -254,17 +255,17 @@ folly::Future<std::string> GraphService::future_executeJsonWithParameter(
   });
 }
 
-bool GraphService::auth(const std::string& username,
-                        const std::string& password,
-                        const std::string& clientIp) {
+Status GraphService::auth(const std::string& username,
+                          const std::string& password,
+                          const std::string& clientIp) {
   if (!FLAGS_enable_authorize) {
-    return true;
+    return Status::OK();
   }
-  auto ipWhiteListChecker = std::make_unique<IpWhitelistCheck>(queryEngine_->metaClient());
 
-  if (!ipWhiteListChecker->check(username, clientIp)) {
-    return false;
-  }
+  // Check IP white list
+  auto ipWhiteListChecker = std::make_unique<IpWhitelistCheck>(queryEngine_->metaClient());
+  NG_RETURN_IF_ERROR(ipWhiteListChecker->check(username, clientIp));
+
   if (FLAGS_auth_type == "password") {
     auto authenticator = std::make_unique<PasswordAuthenticator>(queryEngine_->metaClient());
     return authenticator->auth(username, encryption::MD5Utils::md5Encode(password));
@@ -274,9 +275,7 @@ bool GraphService::auth(const std::string& username,
     // There is no way to identify which one is in the graph layer，
     // let's check the native user's password first, then cloud user.
     auto pwdAuth = std::make_unique<PasswordAuthenticator>(queryEngine_->metaClient());
-    if (pwdAuth->auth(username, encryption::MD5Utils::md5Encode(password))) {
-      return true;
-    }
+    return pwdAuth->auth(username, encryption::MD5Utils::md5Encode(password));
     auto cloudAuth = std::make_unique<CloudAuthenticator>(queryEngine_->metaClient());
     return cloudAuth->auth(username, password);
   } else if (FLAGS_auth_type == "ldap") {
@@ -285,7 +284,7 @@ bool GraphService::auth(const std::string& username,
   }
 
   LOG(WARNING) << "Unknown auth type: " << FLAGS_auth_type;
-  return false;
+  return Status::Error("Unknown auth type: %s", FLAGS_auth_type.c_str());
 }
 
 folly::Future<cpp2::VerifyClientVersionResp> GraphService::future_verifyClientVersion(

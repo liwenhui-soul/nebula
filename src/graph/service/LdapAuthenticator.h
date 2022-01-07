@@ -45,7 +45,7 @@ class LdapAuthenticator final : public Authenticator {
   /**
    * Execute LDAP authentication.
    */
-  bool auth(const std::string& user, const std::string& password) override;
+  Status auth(const std::string& user, const std::string& password) override;
 
  private:
   /**

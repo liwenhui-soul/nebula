@@ -294,17 +294,17 @@ StatusOr<bool> LdapAuthenticator::searchBindAuth() {
   return true;
 }
 
-bool LdapAuthenticator::auth(const std::string& user, const std::string& password) {
+Status LdapAuthenticator::auth(const std::string& user, const std::string& password) {
   // The shadow account on the nebula side has been created.
   // First, go to meta to check if the shadow account exists
   if (!metaClient_->checkShadowAccountFromCache(user)) {
-    return false;
+    return Status::Error();
   }
 
   // Second, use user + password authentication methods
   if (password.empty()) {
     LOG(ERROR) << "Password cannot be empty in LDAP authentication.";
-    return false;
+    return Status::Error();
   }
 
   userName_ = user;
@@ -313,13 +313,13 @@ bool LdapAuthenticator::auth(const std::string& user, const std::string& passwor
   auto ret = prepare();
   if (!ret.ok()) {
     LOG(ERROR) << ret.toString();
-    return false;
+    return Status::Error();
   }
 
   ret = initLDAPConnection();
   if (!ret.ok()) {
     LOG(ERROR) << ret.toString();
-    return false;
+    return Status::Error();
   }
 
   // Search bind mode
@@ -332,9 +332,9 @@ bool LdapAuthenticator::auth(const std::string& user, const std::string& passwor
 
   if (!rets.ok()) {
     LOG(ERROR) << rets.status().toString();
-    return false;
+    return Status::Error();
   }
-  return rets.value();
+  return rets.value() ? Status::OK() : Status::Error();
 }
 
 }  // namespace graph

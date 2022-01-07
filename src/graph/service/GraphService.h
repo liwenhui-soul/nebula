@@ -54,7 +54,9 @@ class GraphService final : public cpp2::GraphServiceSvIf {
   std::unique_ptr<meta::MetaClient> metaClient_;
 
  private:
-  bool auth(const std::string& username, const std::string& password, const std::string& clientIp);
+  Status auth(const std::string& username,
+              const std::string& password,
+              const std::string& clientIp);
 
   std::unique_ptr<GraphSessionManager> sessionManager_;
   std::unique_ptr<QueryEngine> queryEngine_;
