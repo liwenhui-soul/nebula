@@ -466,6 +466,7 @@ enum ListHostType {
     DRAINER          = 0x04,
     META_LISTENER    = 0x05,
     STORAGE_LISTENER = 0x06,
+    AGENT            = 0x07,
 } (cpp.enum_strict)
 
 struct ListHostsReq {
