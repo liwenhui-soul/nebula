@@ -33,7 +33,7 @@ TEST(VariableTest, VariableTest) {
   {
     // Register storage machine
     std::vector<HostAddr> addresses;
-    for (int32_t i = 0; i < 3; i++) {
+    for (int32_t i = 0; i <= 3; i++) {
       addresses.emplace_back(std::to_string(i), i);
     }
     TestUtils::registerHB(kv.get(), addresses, cpp2::HostRole::STORAGE);
