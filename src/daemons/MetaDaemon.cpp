@@ -66,12 +66,11 @@ DEFINE_bool(daemonize, true, "Whether run as a daemon process");
 DEFINE_string(license_path, "share/resources/nebula.license", "File path to license file");
 DEFINE_bool(local_config, false, "meta client will not retrieve latest configuration from meta");
 
-static std::unique_ptr<apache::thrift::ThriftServer> gServer;
 static std::unique_ptr<nebula::kvstore::KVStore> gKVStore;
 
-static void signalHandler(int sig);
+static void signalHandler(apache::thrift::ThriftServer* metaServer, int sig);
 static void waitForStop();
-static Status setupSignalHandler();
+static Status setupSignalHandler(apache::thrift::ThriftServer* metaServer);
 #if defined(__x86_64__)
 extern Status setupBreakpad();
 #endif
@@ -238,8 +237,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  auto metaServer = std::make_unique<apache::thrift::ThriftServer>();
   // Setup the signal handlers
-  status = setupSignalHandler();
+  status = setupSignalHandler(metaServer.get());
   if (!status.ok()) {
     LOG(ERROR) << status;
     return EXIT_FAILURE;
@@ -264,14 +264,13 @@ int main(int argc, char* argv[]) {
       std::make_shared<nebula::meta::MetaServiceHandler>(gKVStore.get(), metaClusterId());
   LOG(INFO) << "The meta daemon start on " << localhost;
   try {
-    gServer = std::make_unique<apache::thrift::ThriftServer>();
-    gServer->setPort(FLAGS_port);
-    gServer->setIdleTimeout(std::chrono::seconds(0));  // No idle timeout on client connection
-    gServer->setInterface(std::move(handler));
+    metaServer->setPort(FLAGS_port);
+    metaServer->setIdleTimeout(std::chrono::seconds(0));  // No idle timeout on client connection
+    metaServer->setInterface(std::move(handler));
     if (FLAGS_enable_ssl || FLAGS_enable_meta_ssl) {
-      gServer->setSSLConfig(nebula::sslContextConfig());
+      metaServer->setSSLConfig(nebula::sslContextConfig());
     }
-    gServer->serve();  // Will wait until the server shuts down
+    metaServer->serve();  // Will wait until the server shuts down
     waitForStop();
   } catch (const std::exception& e) {
     LOG(ERROR) << "Exception thrown: " << e.what();
@@ -282,19 +281,20 @@ int main(int argc, char* argv[]) {
   return EXIT_SUCCESS;
 }
 
-Status setupSignalHandler() {
+Status setupSignalHandler(apache::thrift::ThriftServer* metaServer) {
   return nebula::SignalHandler::install(
-      {SIGINT, SIGTERM},
-      [](nebula::SignalHandler::GeneralSignalInfo* info) { signalHandler(info->sig()); });
+      {SIGINT, SIGTERM}, [metaServer](nebula::SignalHandler::GeneralSignalInfo* info) {
+        signalHandler(metaServer, info->sig());
+      });
 }
 
-void signalHandler(int sig) {
+void signalHandler(apache::thrift::ThriftServer* metaServer, int sig) {
   switch (sig) {
     case SIGINT:
     case SIGTERM:
       FLOG_INFO("Signal %d(%s) received, stopping this server", sig, ::strsignal(sig));
-      if (gServer) {
-        gServer->stop();
+      if (metaServer) {
+        metaServer->stop();
       }
       break;
     default:
