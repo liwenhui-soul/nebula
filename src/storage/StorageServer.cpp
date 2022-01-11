@@ -368,6 +368,9 @@ void StorageServer::notifyStop() {
     serverStatus_ = STATUS_STOPPED;
     cvStop_.notify_one();
   }
+  if (metaClient_) {
+    metaClient_->notifyStop();
+  }
 }
 
 void StorageServer::stop() {
@@ -401,7 +404,7 @@ void StorageServer::stop() {
     taskMgr_->shutdown();
   }
   if (metaClient_) {
-    metaClient_->stop();
+    metaClient_->notifyStop();
   }
   if (kvstore_) {
     kvstore_.reset();
