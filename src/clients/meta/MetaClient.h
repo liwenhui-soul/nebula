@@ -76,6 +76,12 @@ using Indexes = std::unordered_map<IndexID, std::shared_ptr<cpp2::IndexItem>>;
 using Listeners =
     std::unordered_map<HostAddr, std::vector<std::pair<PartitionID, cpp2::ListenerType>>>;
 
+// MetaListeners is a map of ListenerHost => <GraphSpaceID + toSpaceName>, used to all space meta
+// listener
+// TODO(pandasheep) sync listener will support 1vsN in the future
+using MetaListeners =
+    std::unordered_map<HostAddr, std::vector<std::pair<GraphSpaceID, std::string>>>;
+
 // Get services
 using ServiceClientsList =
     std::unordered_map<cpp2::ExternalServiceType, std::vector<cpp2::ServiceClient>>;
@@ -181,6 +187,7 @@ using MetaConfigMap =
 using FTIndexMap = std::unordered_map<std::string, cpp2::FTIndex>;
 
 using SessionMap = std::unordered_map<SessionID, cpp2::Session>;
+
 class MetaChangedListener {
  public:
   virtual ~MetaChangedListener() = default;
@@ -783,7 +790,9 @@ class MetaClient {
 
   bool loadIndexes(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCache> cache);
 
-  bool loadListeners(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCache> cache);
+  bool loadListeners(GraphSpaceID spaceId,
+                     std::shared_ptr<SpaceInfoCache> cache,
+                     MetaListeners& metaListeners);
 
   // For the master cluster, the drainer used by the sync listener of each part under the space
   bool loadListenerDrainers(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCache> cache);
@@ -878,9 +887,6 @@ class MetaClient {
 
   LocalCache localCache_;
 
-  // meta Listener localCache, meta listener host-> <fromspaceId, tospace name>
-  std::unordered_map<HostAddr, std::vector<std::pair<GraphSpaceID, std::string>>> metaListeners_;
-
   std::vector<HostAddr> addrs_;
   // The lock used to protect active_ and leader_.
   folly::RWSpinLock hostLock_;
@@ -901,6 +907,7 @@ class MetaClient {
     SpaceNewestTagVerMap spaceNewestTagVerMap_;
     SpaceNewestEdgeVerMap spaceNewestEdgeVerMap_;
     SpaceAllEdgeMap spaceAllEdgeMap_;
+    MetaListeners metaListeners_;
 
     UserRolesMap userRolesMap_;
     std::vector<HostAddr> storageHosts_;
@@ -925,6 +932,8 @@ class MetaClient {
   SpaceNewestTagVerMap spaceNewestTagVerMap_;
   SpaceNewestEdgeVerMap spaceNewestEdgeVerMap_;
   SpaceAllEdgeMap spaceAllEdgeMap_;
+  // meta Listener localCache
+  MetaListeners metaListeners_;
 
   UserRolesMap userRolesMap_;
   UserPasswordMap userPasswordMap_;

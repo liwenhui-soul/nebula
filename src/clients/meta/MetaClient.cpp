@@ -242,6 +242,7 @@ bool MetaClient::loadUsersAndRoles() {
   }
   return true;
 }
+
 bool MetaClient::loadData() {
   if (localDataLastUpdateTime_ == metadLastUpdateTime_) {
     return true;
@@ -287,6 +288,7 @@ bool MetaClient::loadData() {
   decltype(spaceEdgeIndexByType_) spaceEdgeIndexByType;
   decltype(spaceTagIndexById_) spaceTagIndexById;
   decltype(spaceAllEdgeMap_) spaceAllEdgeMap;
+  decltype(metaListeners_) metaListeners;
 
   for (auto space : ret.value()) {
     auto spaceId = space.first;
@@ -325,7 +327,7 @@ bool MetaClient::loadData() {
       return false;
     }
 
-    if (!loadListeners(spaceId, spaceCache)) {
+    if (!loadListeners(spaceId, spaceCache, metaListeners)) {
       LOG(ERROR) << "Load Listeners Failed";
       return false;
     }
@@ -386,6 +388,7 @@ bool MetaClient::loadData() {
     spaceTagIndexById_ = std::move(spaceTagIndexById);
     spaceAllEdgeMap_ = std::move(spaceAllEdgeMap);
     storageHosts_ = std::move(hosts);
+    metaListeners_ = std::move(metaListeners);
   }
 
   localDataLastUpdateTime_.store(metadLastUpdateTime_.load());
@@ -591,14 +594,15 @@ bool MetaClient::loadIndexes(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCach
   return true;
 }
 
-bool MetaClient::loadListeners(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCache> cache) {
+bool MetaClient::loadListeners(GraphSpaceID spaceId,
+                               std::shared_ptr<SpaceInfoCache> cache,
+                               MetaListeners& metaListeners) {
   auto listenerRet = listListeners(spaceId, cpp2::ListenerType::ALL).get();
   if (!listenerRet.ok()) {
     LOG(ERROR) << "Get listeners failed for spaceId " << spaceId << ", " << listenerRet.status();
     return false;
   }
   Listeners listeners;
-  std::unordered_map<HostAddr, std::vector<std::pair<GraphSpaceID, std::string>>> metaListeners;
   for (auto& listener : listenerRet.value()) {
     if (listener.get_part_id() == 0 && listener.space_name_ref().has_value()) {
       metaListeners[listener.get_host()].emplace_back(spaceId, *listener.space_name_ref());
@@ -608,7 +612,6 @@ bool MetaClient::loadListeners(GraphSpaceID spaceId, std::shared_ptr<SpaceInfoCa
     }
   }
   cache->listeners_ = std::move(listeners);
-  metaListeners_ = metaListeners;
   return true;
 }
 
@@ -705,6 +708,7 @@ const MetaClient::ThreadLocalInfo& MetaClient::getThreadLocalInfo() {
     threadLocalInfo.spaceNewestEdgeVerMap_ = spaceNewestEdgeVerMap_;
     threadLocalInfo.spaceTagIndexById_ = spaceTagIndexById_;
     threadLocalInfo.spaceAllEdgeMap_ = spaceAllEdgeMap_;
+    threadLocalInfo.metaListeners_ = metaListeners_;
 
     threadLocalInfo.userRolesMap_ = userRolesMap_;
     threadLocalInfo.storageHosts_ = storageHosts_;
@@ -3227,14 +3231,13 @@ MetaClient::getMetaListenerInfoFromCache(HostAddr host) {
   if (!ready_) {
     return Status::Error("Not ready!");
   }
-  folly::RWSpinLock::ReadHolder holder(localCacheLock_);
-  auto iter = metaListeners_.find(host);
-  if (iter == metaListeners_.end()) {
+  const ThreadLocalInfo& threadLocalInfo = getThreadLocalInfo();
+  auto it = threadLocalInfo.metaListeners_.find(host);
+  if (it == threadLocalInfo.metaListeners_.end()) {
     VLOG(3) << "Meta listener not found!";
     return Status::ListenerNotFound();
-  } else {
-    return iter->second;
   }
+  return it->second;
 }
 
 StatusOr<cpp2::DrainerClientInfo> MetaClient::getMetaListenerDrainerOnSpaceFromCache(

@@ -37,11 +37,11 @@ using DrainerClient = thrift::ThriftClientManager<drainer::cpp2::DrainerServiceA
  * |--------spaceId1
  * |----------wal
  * |------------walxx
- * |----------last_apply_log
+ * |----------last_apply_log(lastApplyLogId)
  * |--------spaceId2
  * |----------wal
  * |------------walxx
- * |----------last_apply_log
+ * |----------last_apply_log(lastApplyLogId)
  */
 class SyncListener : public Listener {
  public:
@@ -110,6 +110,7 @@ class SyncListener : public Listener {
 
   nebula::StatusOr<LogID> spacelLastApplyLogId(std::string& path);
 
+  // Used for meta
   bool writespacelLastApplyLogId(std::string& path, LogID lastApplyLogId);
 
   std::pair<int64_t, int64_t> commitSnapshot(const std::vector<std::string>& rows,
