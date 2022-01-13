@@ -129,8 +129,9 @@
 # There are eight categories for tracking. There are: [ login ｜ exit | ddl | dql | dml | dcl | util | unknown ].
 --audit_log_categories=login,exit
 
+########## metrics ##########
+--enable_space_level_metrics=false
+
 ########## experimental feature ##########
 # if use experimental features
 --enable_experimental_feature=false
-
---enable_space_level_metrics=false
