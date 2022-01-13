@@ -938,6 +938,12 @@ Status MetaClient::handleResponse(const RESP& resp) {
       return Status::Error("Invalid param!");
     case nebula::cpp2::ErrorCode::E_WRONGCLUSTER:
       return Status::Error("Wrong cluster!");
+    case nebula::cpp2::ErrorCode::E_LISTENER_CONFLICT:
+      return Status::Error("Listener conflict!");
+    case nebula::cpp2::ErrorCode::E_ZONE_NOT_ENOUGH:
+      return Status::Error("Zone not enough!");
+    case nebula::cpp2::ErrorCode::E_ZONE_IS_EMPTY:
+      return Status::Error("Zone is empty!");
     case nebula::cpp2::ErrorCode::E_STORE_FAILURE:
       return Status::Error("Store failure!");
     case nebula::cpp2::ErrorCode::E_STORE_SEGMENT_ILLEGAL:
@@ -1020,8 +1026,6 @@ Status MetaClient::handleResponse(const RESP& resp) {
       return Status::Error("Drainer client not existed!");
     case nebula::cpp2::ErrorCode::E_NO_VALID_DRAINER:
       return Status::Error("Invalid drainer!");
-    case nebula::cpp2::ErrorCode::E_LISTENER_CONFLICT:
-      return Status::Error("Listener host conflict!");
     case nebula::cpp2::ErrorCode::E_INVALID_VARIABLE:
       return Status::Error("Invalid variable!");
     case nebula::cpp2::ErrorCode::E_VARIABLE_TYPE_VALUE_MISMATCH:
