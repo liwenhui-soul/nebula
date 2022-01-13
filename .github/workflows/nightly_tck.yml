@@ -60,7 +60,6 @@ jobs:
               -GNinja \
               -B build
           echo "::set-output name=j::10"
-          ;;
       - name: Make
         run: |
           ccache -z
