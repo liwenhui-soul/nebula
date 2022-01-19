@@ -124,6 +124,9 @@
 --storage_cache_buckets_power=10
 # Number of locks in base 2 logarithm. E.g., in case of 5, the total number of locks will be 2^5.
 --storage_cache_locks_power=5
+
+# Whether to add vertex pool in cache. Only valid when storage cache is enabled.
+--enable_vertex_pool=false
 # Vertex pool size in MB
 --vertex_pool_capacity=50
 # TTL in seconds for vertex items in the cache

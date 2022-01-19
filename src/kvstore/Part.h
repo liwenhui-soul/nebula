@@ -10,6 +10,7 @@
 #include "common/utils/NebulaKeyUtils.h"
 #include "kvstore/Common.h"
 #include "kvstore/KVEngine.h"
+#include "kvstore/cache/StorageCache.h"
 #include "kvstore/raftex/SnapshotManager.h"
 #include "kvstore/wal/FileBasedWal.h"
 #include "raftex/RaftPart.h"
@@ -28,6 +29,7 @@ class Part : public raftex::RaftPart {
        HostAddr localAddr,
        const std::string& walPath,
        KVEngine* engine,
+       kvstore::StorageCache* storageCache,
        std::shared_ptr<folly::IOThreadPoolExecutor> pool,
        std::shared_ptr<thread::GenericThreadPool> workers,
        std::shared_ptr<folly::Executor> handlers,
@@ -137,6 +139,7 @@ class Part : public raftex::RaftPart {
 
  private:
   KVEngine* engine_ = nullptr;
+  kvstore::StorageCache* storageCache_ = nullptr;
   int32_t vIdLen_;
 };
 

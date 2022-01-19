@@ -5,7 +5,7 @@
 
 #include <gtest/gtest.h>
 
-#include "storage/cache/StorageCache.h"
+#include "kvstore/cache/StorageCache.h"
 
 DECLARE_uint32(storage_cache_capacity);
 
@@ -18,7 +18,7 @@ DECLARE_uint32(vertex_pool_capacity);
 DECLARE_uint32(vertex_item_ttl);
 
 namespace nebula {
-namespace storage {
+namespace kvstore {
 /*
  * summary:
  * 1. validate cache creation, adding pools, put and get values
@@ -125,7 +125,7 @@ TEST_F(StorageCacheTest, PutIntoNonExistingPool) {
   EXPECT_FALSE(ret);
 }
 
-}  // namespace storage
+}  // namespace kvstore
 }  // namespace nebula
 
 int main(int argc, char** argv) {

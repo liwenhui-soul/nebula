@@ -3,7 +3,9 @@
  * This source code is licensed under Apache 2.0 License.
  */
 
-#include "storage/cache/StorageCache.h"
+#include "kvstore/cache/StorageCache.h"
+
+#include "common/utils/NebulaKeyUtils.h"
 
 DEFINE_uint32(storage_cache_capacity,
               100,
@@ -22,8 +24,11 @@ DEFINE_uint32(storage_cache_locks_power,
 DEFINE_uint32(vertex_pool_capacity, 50, "Vertex pool size in MB");
 DEFINE_uint32(vertex_item_ttl, 300, "TTL for vertex item in the cache");
 
+DEFINE_bool(enable_storage_cache, false, "Whether to enable storage cache");
+DEFINE_bool(enable_vertex_pool, false, "Whether to add vertex pool in cache");
+
 namespace nebula {
-namespace storage {
+namespace kvstore {
 
 StorageCache::StorageCache() {
   capacity_ = FLAGS_storage_cache_capacity;
@@ -77,8 +82,12 @@ bool StorageCache::putVertexProp(const std::string& key, std::string& value) {
   return true;
 }
 
-void StorageCache::invalidateVertex(std::string& key) {
+void StorageCache::invalidateVertex(const std::string& key) {
   cacheInternal_->invalidateItem(key);
+}
+
+void StorageCache::invalidateVertices(const std::vector<std::string>& keys) {
+  cacheInternal_->invalidateItems(keys);
 }
 
 uint32_t StorageCache::getVertexPoolSize() {
@@ -89,5 +98,13 @@ uint32_t StorageCache::getVertexPoolSize() {
   return nebula::value(ret) / 1024 / 1024;
 }
 
-}  // namespace storage
+void StorageCache::addCacheItemsToDelete(GraphSpaceID spaceId,
+                                         const folly::StringPiece& rawKey,
+                                         std::vector<std::string>& vertexKeys) {
+  if (FLAGS_enable_vertex_pool && NebulaKeyUtils::isTagOrVertex(rawKey)) {
+    vertexKeys.emplace_back(NebulaKeyUtils::cacheKey(spaceId, rawKey));
+  }
+}
+
+}  // namespace kvstore
 }  // namespace nebula

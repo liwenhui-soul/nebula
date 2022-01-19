@@ -22,6 +22,7 @@ Part::Part(GraphSpaceID spaceId,
            HostAddr localAddr,
            const std::string& walPath,
            KVEngine* engine,
+           kvstore::StorageCache* storageCache,
            std::shared_ptr<folly::IOThreadPoolExecutor> ioPool,
            std::shared_ptr<thread::GenericThreadPool> workers,
            std::shared_ptr<folly::Executor> handlers,
@@ -44,6 +45,7 @@ Part::Part(GraphSpaceID spaceId,
       partId_(partId),
       walPath_(walPath),
       engine_(engine),
+      storageCache_(storageCache),
       vIdLen_(vIdLen) {}
 
 std::pair<LogID, TermID> Part::lastCommittedLogId() {
@@ -215,6 +217,7 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
   auto batch = engine_->startBatchWrite();
   LogID lastId = kNoCommitLogId;
   TermID lastTerm = kNoCommitLogTerm;
+  std::vector<std::string> verticesToInvalidate;
   while (iter->valid()) {
     lastId = iter->logId();
     lastTerm = iter->logTerm();
@@ -235,6 +238,9 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
           LOG(ERROR) << idStr_ << "Failed to call WriteBatch::put()";
           return {code, kNoCommitLogId, kNoCommitLogTerm};
         }
+        if (storageCache_) {
+          storageCache_->addCacheItemsToDelete(spaceId_, pieces[0], verticesToInvalidate);
+        }
         break;
       }
       case OP_MULTI_PUT: {
@@ -249,6 +255,9 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
             LOG(ERROR) << idStr_ << "Failed to call WriteBatch::put()";
             return {code, kNoCommitLogId, kNoCommitLogTerm};
           }
+          if (storageCache_) {
+            storageCache_->addCacheItemsToDelete(spaceId_, kvs[i], verticesToInvalidate);
+          }
         }
         break;
       }
@@ -259,15 +268,22 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
           LOG(ERROR) << idStr_ << "Failed to call WriteBatch::remove()";
           return {code, kNoCommitLogId, kNoCommitLogTerm};
         }
+        if (storageCache_) {
+          storageCache_->addCacheItemsToDelete(spaceId_, key, verticesToInvalidate);
+        }
         break;
       }
       case OP_MULTI_REMOVE: {
+        // DeleteTags and DeleteVertices will reach here if indexes are empty
         auto keys = decodeMultiValues(log);
         for (auto k : keys) {
           auto code = batch->remove(k);
           if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
             LOG(ERROR) << idStr_ << "Failed to call WriteBatch::remove()";
             return {code, kNoCommitLogId, kNoCommitLogTerm};
+          }
+          if (storageCache_) {
+            storageCache_->addCacheItemsToDelete(spaceId_, k, verticesToInvalidate);
           }
         }
         break;
@@ -290,8 +306,15 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
           auto code = nebula::cpp2::ErrorCode::SUCCEEDED;
           if (op.first == BatchLogType::OP_BATCH_PUT) {
             code = batch->put(op.second.first, op.second.second);
+            if (storageCache_) {
+              storageCache_->addCacheItemsToDelete(spaceId_, op.second.first, verticesToInvalidate);
+            }
           } else if (op.first == BatchLogType::OP_BATCH_REMOVE) {
+            // DeleteTags and DeleteVertices will reach here if indexes are not empty
             code = batch->remove(op.second.first);
+            if (storageCache_) {
+              storageCache_->addCacheItemsToDelete(spaceId_, op.second.first, verticesToInvalidate);
+            }
           } else if (op.first == BatchLogType::OP_BATCH_REMOVE_RANGE) {
             code = batch->removeRange(op.second.first, op.second.second);
           }
@@ -349,6 +372,12 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
   auto code = engine_->commitBatchWrite(
       std::move(batch), FLAGS_rocksdb_disable_wal, FLAGS_rocksdb_wal_sync, wait);
   if (code == nebula::cpp2::ErrorCode::SUCCEEDED) {
+    // invalidate vertices in cache after the DB update, to avoid cache incoherence
+    if (storageCache_) {
+      if (verticesToInvalidate.size()) {
+        storageCache_->invalidateVertices(std::move(verticesToInvalidate));
+      }
+    }
     return {code, lastId, lastTerm};
   } else {
     return {code, kNoCommitLogId, kNoCommitLogTerm};

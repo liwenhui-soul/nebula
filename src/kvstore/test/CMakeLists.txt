@@ -1,5 +1,6 @@
 set(KVSTORE_TEST_LIBS
     $<TARGET_OBJECTS:kvstore_obj>
+    $<TARGET_OBJECTS:storage_cache_obj>
     $<TARGET_OBJECTS:raftex_obj>
     $<TARGET_OBJECTS:wal_obj>
     $<TARGET_OBJECTS:disk_man_obj>
@@ -53,6 +54,7 @@ nebula_add_test(
     OBJECTS
         ${KVSTORE_TEST_LIBS}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -68,6 +70,7 @@ nebula_add_test(
     OBJECTS
         ${KVSTORE_TEST_LIBS}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -83,6 +86,7 @@ nebula_add_test(
     OBJECTS
         ${KVSTORE_TEST_LIBS}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -98,6 +102,7 @@ nebula_add_test(
     OBJECTS
         ${KVSTORE_TEST_LIBS}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -113,6 +118,7 @@ nebula_add_test(
     OBJECTS
         ${KVSTORE_TEST_LIBS}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -128,6 +134,7 @@ nebula_add_test(
     OBJECTS
         ${KVSTORE_TEST_LIBS}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -143,6 +150,7 @@ nebula_add_test(
     OBJECTS
         ${KVSTORE_TEST_LIBS}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -158,6 +166,7 @@ nebula_add_test(
     OBJECTS
         ${KVSTORE_TEST_LIBS}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -173,6 +182,7 @@ nebula_add_executable(
     OBJECTS
         ${KVSTORE_TEST_LIBS}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -189,6 +199,7 @@ nebula_add_executable(
     OBJECTS
         ${KVSTORE_TEST_LIBS}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}  
         ${THRIFT_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -206,6 +217,7 @@ nebula_add_test(
     OBJECTS
         ${KVSTORE_TEST_LIBS}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${PROXYGEN_LIBRARIES}

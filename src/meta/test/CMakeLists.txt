@@ -10,6 +10,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -25,6 +26,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -40,6 +42,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -55,6 +58,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -70,6 +74,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -85,6 +90,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -101,6 +107,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -140,6 +147,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -156,6 +164,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -171,6 +180,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -186,6 +196,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -202,6 +213,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -218,6 +230,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -233,6 +246,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -248,6 +262,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -263,6 +278,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -278,6 +294,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -293,6 +310,7 @@ nebula_add_test(
     OBJECTS
         ${meta_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}

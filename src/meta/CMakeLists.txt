@@ -137,6 +137,7 @@ set(meta_test_deps
     $<TARGET_OBJECTS:internal_storage_client_obj>
     $<TARGET_OBJECTS:storage_common_obj>
     $<TARGET_OBJECTS:kvstore_obj>
+    $<TARGET_OBJECTS:storage_cache_obj>
     $<TARGET_OBJECTS:raftex_obj>
     $<TARGET_OBJECTS:wal_obj>
     $<TARGET_OBJECTS:disk_man_obj>

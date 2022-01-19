@@ -14,6 +14,7 @@ set(storage_test_deps
     $<TARGET_OBJECTS:storage_client_base_obj>
     $<TARGET_OBJECTS:internal_storage_client_obj>
     $<TARGET_OBJECTS:kvstore_obj>
+    $<TARGET_OBJECTS:storage_cache_obj>
     $<TARGET_OBJECTS:raftex_obj>
     $<TARGET_OBJECTS:wal_obj>
     $<TARGET_OBJECTS:disk_man_obj>
@@ -77,6 +78,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -92,6 +94,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -107,6 +110,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -122,6 +126,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -137,6 +142,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -152,6 +158,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -167,6 +174,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -182,6 +190,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -197,6 +206,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -212,6 +222,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -227,6 +238,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -242,6 +254,7 @@ nebula_add_executable(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -260,6 +273,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -275,6 +289,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -290,6 +305,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -305,6 +321,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -321,6 +338,7 @@ nebula_add_executable(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -338,6 +356,7 @@ nebula_add_executable(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -353,6 +372,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -370,6 +390,7 @@ nebula_add_executable(
         ${storage_test_deps}
         $<TARGET_OBJECTS:codec_test_obj>
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -388,6 +409,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -408,6 +430,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:process_obj>
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -424,6 +447,7 @@ nebula_add_executable(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -441,6 +465,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -458,6 +483,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:ws_obj>
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -475,6 +501,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:ws_obj>
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -492,6 +519,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:ws_obj>
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -509,6 +537,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:ws_obj>
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -524,6 +553,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -539,6 +569,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -554,6 +585,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -585,6 +617,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -600,6 +633,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -615,6 +649,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -630,6 +665,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -650,6 +686,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:ws_obj>
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -670,6 +707,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:ws_obj>
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -693,6 +731,7 @@ nebula_add_test(
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
+        ${CACHELIB_LIBRARIES}
         wangle
         gtest
 )
@@ -705,6 +744,7 @@ nebula_add_executable(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -720,6 +760,7 @@ nebula_add_executable(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -736,6 +777,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -751,6 +793,7 @@ nebula_add_test(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -765,6 +808,7 @@ nebula_add_executable(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -780,6 +824,7 @@ nebula_add_executable(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -795,6 +840,7 @@ nebula_add_executable(
     OBJECTS
         ${storage_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -803,21 +849,3 @@ nebula_add_executable(
         wangle
         gtest
 )
-
-nebula_add_executable(
-    NAME
-        storage_cache_test
-    SOURCES
-        StorageCacheTest.cpp
-    OBJECTS
-        $<TARGET_OBJECTS:storage_cache_obj>
-        ${storage_test_deps}
-    LIBRARIES
-        ${ROCKSDB_LIBRARIES}
-        ${THRIFT_LIBRARIES}
-        ${PROXYGEN_LIBRARIES}
-        ${CACHELIB_LIBRARIES}
-        wangle
-        gtest
-)
-

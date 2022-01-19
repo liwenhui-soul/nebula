@@ -108,6 +108,18 @@ std::string NebulaKeyUtils::vertexKey(size_t vIdLen,
       .append(vIdLen - vId.size(), pad);
   return key;
 }
+
+// static
+bool NebulaKeyUtils::isTagOrVertex(const folly::StringPiece& rawKey) {
+  if (rawKey.size() < kTagLen) {
+    return false;
+  }
+  constexpr int32_t len = static_cast<int32_t>(sizeof(NebulaKeyType));
+  auto type = readInt<uint32_t>(rawKey.data(), len) & kTypeMask;
+  return (static_cast<NebulaKeyType>(type) == NebulaKeyType::kTag_) ||
+         (static_cast<NebulaKeyType>(type) == NebulaKeyType::kVertex);
+}
+
 // static
 std::string NebulaKeyUtils::updatePartIdEdgeKey(PartitionID partId, const std::string& rawKey) {
   int32_t item = (partId << kPartitionOffset) | static_cast<uint32_t>(NebulaKeyType::kEdge);
@@ -296,6 +308,14 @@ std::string NebulaKeyUtils::adminTaskKey(int32_t seqId, JobID jobId, TaskID task
 
 std::string NebulaKeyUtils::dataVersionKey() {
   return "\xFF\xFF\xFF\xFF";
+}
+
+std::string NebulaKeyUtils::cacheKey(GraphSpaceID spaceId, const folly::StringPiece& key) {
+  std::string ret;
+  ret.reserve(sizeof(GraphSpaceID) + key.size());
+  ret.append(reinterpret_cast<const char*>(&spaceId), sizeof(GraphSpaceID));
+  ret.append(key.data(), key.size());
+  return ret;
 }
 
 }  // namespace nebula

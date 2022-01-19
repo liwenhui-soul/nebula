@@ -10,7 +10,7 @@
 #include "common/base/CacheLibLRU.h"
 
 namespace nebula {
-namespace storage {
+namespace kvstore {
 
 static const char kVertexPoolName[] = "VertextPool";
 static const char kStorageCacheName[] = "__StorageCache__";
@@ -72,7 +72,14 @@ class StorageCache {
    *
    * @param key
    */
-  void invalidateVertex(std::string& key);
+  void invalidateVertex(const std::string& key);
+
+  /**
+   * @brief Data may be written in batch. To avoid frequently aquiring and releasing locks, we will
+   * remove keys in batches in this case.
+   * @param keys: keys to remove from cache
+   */
+  void invalidateVertices(const std::vector<std::string>& keys);
 
   /**
    * @brief get the size of the vertex pool
@@ -90,13 +97,24 @@ class StorageCache {
     return vertexPool_ != nullptr;
   }
 
+  /**
+   * @brief add a key to vector to invalidate in cache later
+   *
+   * @param spaceId:
+   * @param rawKey: key like tag, vertix, edge, etc...
+   * @param vertixKeys: a vector storing the cacheKey to invalidate
+   */
+  void addCacheItemsToDelete(GraphSpaceID spaceId,
+                             const folly::StringPiece& rawKey,
+                             std::vector<std::string>& vertexKeys);
+
  private:
   uint32_t capacity_ = 0;  // in MB
   std::unique_ptr<CacheLibLRU> cacheInternal_{nullptr};
   std::shared_ptr<VertexPoolInfo> vertexPool_{nullptr};
 };
 
-}  // namespace storage
+}  // namespace kvstore
 }  // namespace nebula
 
 #endif  // STORAGE_CACHE_STORAGECACHE_H

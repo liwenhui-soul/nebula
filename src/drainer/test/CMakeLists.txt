@@ -33,6 +33,7 @@ set(drainer_test_deps
     $<TARGET_OBJECTS:datetime_parser_obj>
     $<TARGET_OBJECTS:version_obj>
     $<TARGET_OBJECTS:kvstore_obj>
+    $<TARGET_OBJECTS:storage_cache_obj>
     $<TARGET_OBJECTS:raftex_obj>
     $<TARGET_OBJECTS:wal_obj>
     $<TARGET_OBJECTS:disk_man_obj>
@@ -74,6 +75,7 @@ nebula_add_test(
     OBJECTS
         ${drainer_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -89,6 +91,7 @@ nebula_add_test(
     OBJECTS
         ${drainer_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}    
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
@@ -105,6 +108,7 @@ nebula_add_test(
     OBJECTS
         ${drainer_test_deps}
     LIBRARIES
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}

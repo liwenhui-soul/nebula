@@ -98,11 +98,6 @@ nebula_add_library(
 )
 
 nebula_add_library(
-    storage_cache_obj OBJECT
-    cache/StorageCache.cpp
-)
-
-nebula_add_library(
     storage_local_server_obj OBJECT
     GraphStorageLocalServer.cpp
 )

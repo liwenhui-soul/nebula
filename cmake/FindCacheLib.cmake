@@ -28,7 +28,7 @@ if(CacheLib_INCLUDE_DIR
     AND CacheLib_COMMON
     AND CacheLib_NAVY)
         set(CacheLib_FOUND TRUE)
-        set(CacheLib_LIBRARIES ${CacheLib_DATATYPE} ${CacheLib_COMMON} ${CacheLib_SHM} ${CacheLib_ALLOCATOR} ${CacheLib_NAVY})
+        set(CacheLib_LIBRARIES ${CacheLib_ALLOCATOR} ${CacheLib_NAVY} ${CacheLib_SHM} ${CacheLib_DATATYPE} ${CacheLib_COMMON})
         mark_as_advanced(
             CacheLib_INCLUDE_DIR
             CacheLib_LIBRARIES

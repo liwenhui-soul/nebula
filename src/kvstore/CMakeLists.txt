@@ -18,6 +18,7 @@ nebula_add_library(
     DiskManager.cpp
 )
 
+nebula_add_subdirectory(cache)
 nebula_add_subdirectory(raftex)
 nebula_add_subdirectory(wal)
 nebula_add_subdirectory(stats)
