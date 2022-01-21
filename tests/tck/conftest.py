@@ -16,7 +16,6 @@ from nebula3.common.ttypes import NList, NMap, Value, ErrorCode
 from nebula3.data.DataObject import ValueWrapper
 from nebula3.Exception import AuthFailedException
 from pytest_bdd import given, parsers, then, when
-from nebula2.Exception import AuthFailedException
 
 from tests.common.dataset_printer import DataSetPrinter
 from tests.common.comparator import DataSetComparator, CmpType

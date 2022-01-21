@@ -9,7 +9,7 @@ namespace java com.vesoft.nebula.drainer
 namespace go nebula.drainer
 namespace csharp nebula.drainer
 namespace js nebula.drainer
-namespace py nebula2.drainer
+namespace py nebula3.drainer
 
 include "common.thrift"
 
