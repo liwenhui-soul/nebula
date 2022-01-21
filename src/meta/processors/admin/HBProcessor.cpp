@@ -37,7 +37,7 @@ void HBProcessor::process(const cpp2::HBReq& req) {
       role == cpp2::HostRole::STORAGE_LISTENER) {
     if (role == cpp2::HostRole::STORAGE) {
       if (!ActiveHostsMan::machineRegisted(kvstore_, host)) {
-        LOG(ERROR) << "Machine " << host << " is not registed";
+        LOG(INFO) << "Machine " << host << " is not registed";
         handleErrorCode(nebula::cpp2::ErrorCode::E_MACHINE_NOT_FOUND);
         onFinished();
         return;
@@ -50,7 +50,7 @@ void HBProcessor::process(const cpp2::HBReq& req) {
       LOG(INFO) << "Set clusterId for new host " << host << "!";
       resp_.cluster_id_ref() = clusterId_;
     } else if (peerClusterId != clusterId_) {
-      LOG(ERROR) << "Reject wrong cluster host " << host << "!";
+      LOG(INFO) << "Reject wrong cluster host " << host << "!";
       handleErrorCode(nebula::cpp2::ErrorCode::E_WRONGCLUSTER);
       onFinished();
       return;
