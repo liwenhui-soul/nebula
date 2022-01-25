@@ -36,10 +36,10 @@ void AddListenerProcessor::process(const cpp2::AddListenerReq& req) {
   auto ret = listenerExist(space, type, storageHosts, metaHost);
   if (ret != nebula::cpp2::ErrorCode::E_LISTENER_NOT_FOUND) {
     if (ret == nebula::cpp2::ErrorCode::SUCCEEDED) {
-      LOG(ERROR) << "Add listener failed, listener already exists.";
+      LOG(INFO) << "Add listener failed, listener already exists.";
       ret = nebula::cpp2::ErrorCode::E_EXISTED;
     } else {
-      LOG(ERROR) << "Add listener failed, error: " << apache::thrift::util::enumNameSafe(ret);
+      LOG(INFO) << "Add listener failed, error: " << apache::thrift::util::enumNameSafe(ret);
     }
     handleErrorCode(ret);
     onFinished();
@@ -53,7 +53,7 @@ void AddListenerProcessor::process(const cpp2::AddListenerReq& req) {
   auto iterRet = doPrefix(prefix);
   if (!nebula::ok(iterRet)) {
     auto retCode = nebula::error(iterRet);
-    LOG(ERROR) << "List parts failed, error: " << apache::thrift::util::enumNameSafe(retCode);
+    LOG(INFO) << "List parts failed, error: " << apache::thrift::util::enumNameSafe(retCode);
     handleErrorCode(retCode);
     onFinished();
     return;
@@ -136,9 +136,9 @@ void RemoveListenerProcessor::process(const cpp2::RemoveListenerReq& req) {
   auto ret = listenerExist(space, type);
   if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
     if (ret == nebula::cpp2::ErrorCode::E_LISTENER_NOT_FOUND) {
-      LOG(ERROR) << "Remove listener failed, listener not exists.";
+      LOG(INFO) << "Remove listener failed, listener not exists.";
     } else {
-      LOG(ERROR) << "Remove listener failed, error: " << apache::thrift::util::enumNameSafe(ret);
+      LOG(INFO) << "Remove listener failed, error: " << apache::thrift::util::enumNameSafe(ret);
     }
     handleErrorCode(ret);
     onFinished();
@@ -151,7 +151,7 @@ void RemoveListenerProcessor::process(const cpp2::RemoveListenerReq& req) {
   auto iterRet = doPrefix(prefix);
   if (!nebula::ok(iterRet)) {
     auto retCode = nebula::error(iterRet);
-    LOG(ERROR) << "Remove listener failed, error: " << apache::thrift::util::enumNameSafe(retCode);
+    LOG(INFO) << "Remove listener failed, error: " << apache::thrift::util::enumNameSafe(retCode);
     handleErrorCode(retCode);
     onFinished();
     return;
@@ -201,7 +201,7 @@ void ListListenersProcessor::process(const cpp2::ListListenersReq& req) {
   auto iterRet = doPrefix(prefix);
   if (!nebula::ok(iterRet)) {
     auto retCode = nebula::error(iterRet);
-    LOG(ERROR) << "List listener failed, error: " << apache::thrift::util::enumNameSafe(retCode);
+    LOG(INFO) << "List listener failed, error: " << apache::thrift::util::enumNameSafe(retCode);
     handleErrorCode(retCode);
     onFinished();
     return;
