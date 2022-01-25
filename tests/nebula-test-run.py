@@ -7,6 +7,7 @@
 
 import json
 import os
+import pickle
 import shutil
 from tests.common.nebula_service import NebulaService
 from tests.common.utils import get_conn_pool, load_csv_data, get_ssl_config
@@ -16,6 +17,7 @@ from tests.common.constants import (
     NB_TMP_PATH,
     SPACE_TMP_PATH,
     BUILD_DIR,
+    NB_SERVICE_OBJ
 )
 
 
@@ -107,12 +109,14 @@ def opt_is(val, expect):
 
 
 def start_nebula(nb, configs):
+    is_remote = False
     if configs.address is not None and configs.address != "":
         print('test remote nebula graph, address is {}'.format(configs.address))
         if len(configs.address.split(':')) != 2:
             raise Exception('Invalid address, address is {}'.format(configs.address))
         address, port = configs.address.split(':')
         ports = [int(port)]
+        is_remote = True
     else:
         nb.install()
         address = "localhost"
@@ -148,8 +152,13 @@ def start_nebula(nb, configs):
             "enable_ssl": configs.enable_ssl,
             "enable_graph_ssl": configs.enable_graph_ssl,
             "ca_signed": configs.ca_signed,
+            "is_remote": is_remote,
         }
         f.write(json.dumps(data))
+    
+    with open(NB_SERVICE_OBJ, "wb") as f:
+        pickle.dump(nb, f)
+    
     print('Start nebula successfully')
 
 

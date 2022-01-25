@@ -21,6 +21,9 @@ TEST(AuditFormat, init) {
   // miss audit_log_format option.
   EXPECT_EQ(false, format.init(config));
 
+  config["audit_log_format"] = "other";
+  EXPECT_EQ(false, format.init(config));
+
   config["audit_log_format"] = "xml";
   EXPECT_EQ(true, format.init(config));
 }
@@ -53,8 +56,8 @@ TEST(AuditFormat, format) {
       "  TIMESTAMP=\"2021-12-20 16:48:00\"\n"
       "  TERMINAL=\"\"\n"
       "  CONNECTION_ID=\"0\"\n"
-      "  CONNECT_STATUS=\"0\"\n"
-      "  CONNECT_MESSAGE=\"\"\n"
+      "  CONNECTION_STATUS=\"0\"\n"
+      "  CONNECTION_MESSAGE=\"\"\n"
       "  USER=\"xiao\"ming\"\n"
       "  CLIENT_HOST=\"192.168.0.1\"\n"
       "  HOST=\"local\\host\"\n"
@@ -95,11 +98,6 @@ TEST(AuditFormat, format) {
       "dql,2021-12-20 16:48:00,,0,0,,xiao\"ming,192.168.0.1,local\\host,nebula,"
       "go from 'v1' over 'follow',0,unexpected `error,";
   EXPECT_EQ(res, out);
-
-  config["audit_log_format"] = "other";
-  EXPECT_EQ(true, format.init(config));
-  out = "";
-  EXPECT_EQ(false, format.format(msg, out));
 }
 
 }  // namespace audit

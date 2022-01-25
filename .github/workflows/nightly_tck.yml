@@ -84,7 +84,7 @@ jobs:
         timeout-minutes: 15
       - name: TCK
         run: |
-          make RM_DIR=false DEBUG=false J=${{ steps.cmake.outputs.j }} tck
+          make RM_DIR=false DEBUG=false TEST_AUDIT=true J=${{ steps.cmake.outputs.j }} tck
         working-directory: tests/
         timeout-minutes: 60
       - name: Down cluster

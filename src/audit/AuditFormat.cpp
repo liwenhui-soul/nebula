@@ -18,8 +18,8 @@ constexpr char kXmlFormat[] =
     "  TIMESTAMP=\"{}\"\n"
     "  TERMINAL=\"{}\"\n"
     "  CONNECTION_ID=\"{}\"\n"
-    "  CONNECT_STATUS=\"{}\"\n"
-    "  CONNECT_MESSAGE=\"{}\"\n"
+    "  CONNECTION_STATUS=\"{}\"\n"
+    "  CONNECTION_MESSAGE=\"{}\"\n"
     "  USER=\"{}\"\n"
     "  CLIENT_HOST=\"{}\"\n"
     "  HOST=\"{}\"\n"
@@ -52,6 +52,10 @@ bool AuditFormat::init(const std::unordered_map<std::string, std::string> &confi
   auto option = config.find("audit_log_format");
   if (option == config.end()) {
     LOG(ERROR) << "miss audit_log_format option.";
+    return false;
+  }
+  if (option->second != "xml" && option->second != "json" && option->second != "csv") {
+    LOG(ERROR) << "unsupported format type:" << option->second;
     return false;
   }
   formatType_ = option->second;

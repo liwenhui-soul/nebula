@@ -59,6 +59,10 @@ class NebulaProcess(object):
             )
 
         process_params.update(self.params)
+        if self.name.upper() == 'GRAPHD' and process_params.__contains__('audit_log_file'):
+            process_params['audit_log_file'] = '{}.{}'.format(
+                process_params['audit_log_file'],
+                self.suffix_index)
         cmd = [
             'bin/nebula-{}'.format(self.name),
             '--flagfile',
@@ -241,6 +245,9 @@ class NebulaService(object):
 
     def set_work_dir(self, work_dir):
         self.work_dir = work_dir
+    
+    def update_graphd_param(self, config):
+        self.graphd_param.update(config)
 
     def _copy_nebula_conf(self):
         bin_path = self.build_dir + '/bin/'
@@ -369,13 +376,8 @@ class NebulaService(object):
                 return True
             time.sleep(1)
         return False
-
-    def start(self):
-        os.chdir(self.work_dir)
-        start_time = time.time()
-        for p in self.all_processes:
-            p.start()
-
+    
+    def _add_hosts(self):
         config = Config()
         config.max_connection_pool_size = 20
         config.timeout = 60000
@@ -415,13 +417,27 @@ class NebulaService(object):
         assert resp.is_succeeded(), resp.error_msg()
         client.release()
 
+    def start(self, add_hosts=True, no_throw=False):
+        os.chdir(self.work_dir)
+        start_time = time.time()
+        for p in self.all_processes:
+            p.start()
+
+        if add_hosts:
+            self._add_hosts()
+        else:
+            time.sleep(2)
+        
         # wait nebula start
         server_ports = [p.tcp_port for p in self.all_processes]
         if not self._check_servers_status(server_ports):
             self._collect_pids()
             self.kill_all(signal.SIGKILL)
             elapse = time.time() - start_time
-            raise Exception(f'nebula servers not ready in {elapse}s')
+            if no_throw:
+                return
+            else:
+                raise Exception(f'nebula servers not ready in {elapse}s')
 
         self._collect_pids()
 
@@ -432,7 +448,7 @@ class NebulaService(object):
             with open(pf) as f:
                 self.pids[f.name] = int(f.readline())
 
-    def stop(self, cleanup=True):
+    def stop(self, cleanup=True, remove_ports=True):
         print("try to stop nebula services...")
         self._collect_pids()
         if len(self.pids) == 0:
@@ -449,16 +465,17 @@ class NebulaService(object):
             self.kill_all(signal.SIGKILL)
 
         # thread safe
-        with open(self.lock_file, 'r+') as fl:
-            fcntl.flock(fl.fileno(), fcntl.LOCK_EX)
-            context = fl.read().strip()
-            lock_ports = {int(p) for p in context.split(self.delimiter) if p != ""}
-            for p in self.all_ports:
-                lock_ports.remove(p)
-            fl.seek(0)
-            fl.truncate()
-            fl.write(self.delimiter.join([str(p) for p in lock_ports]))
-            fl.write(self.delimiter)
+        if remove_ports:
+            with open(self.lock_file, 'r+') as fl:
+                fcntl.flock(fl.fileno(), fcntl.LOCK_EX)
+                context = fl.read().strip()
+                lock_ports = {int(p) for p in context.split(self.delimiter) if p != ""}
+                for p in self.all_ports:
+                    lock_ports.remove(p)
+                fl.seek(0)
+                fl.truncate()
+                fl.write(self.delimiter.join([str(p) for p in lock_ports]))
+                fl.write(self.delimiter)
 
         if cleanup:
             shutil.rmtree(self.work_dir, ignore_errors=True)
@@ -488,3 +505,6 @@ class NebulaService(object):
             if str(p) == str(self.pids[pid]):
                 return True
         return False
+    
+    def is_all_procs_alive(self):
+        return all(self.is_proc_alive(pid) for pid in self.pids)

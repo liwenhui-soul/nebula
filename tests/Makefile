@@ -21,6 +21,7 @@ CA_SIGNED ?= false
 CONTAINERIZED ?= false
 FAILED_LOGIN_ATTEMPTS ?= 0
 PASSWORD_LOCK_TIME_IN_SECS ?= 0
+TEST_AUDIT ?= false
 
 # commands
 gherkin_fmt = ~/.local/bin/reformat-gherkin
@@ -94,6 +95,9 @@ slow-query: currdir
 
 tck: jobs slow-query
 	$(test_j) tck/steps/test_tck.py
+ifeq ($(TEST_AUDIT),true)
+	$(test_without_skip) tck/steps/audit_tck.py
+endif
 
 ldbc: currdir
 	$(test_j) tck/steps/test_ldbc.py
