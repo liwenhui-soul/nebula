@@ -3,6 +3,7 @@
 --daemonize=true
 # The file to host the process id
 --pid_file=pids/nebula-standalone.pid
+--license_path=share/resources/nebula.license
 # Whether to enable optimizer
 --enable_optimizer=true
 # The default charset when a space is created

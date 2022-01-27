@@ -65,6 +65,7 @@ set(drainer_test_deps
     $<TARGET_OBJECTS:geo_index_obj>
 )
 
+if (NOT ENABLE_STANDALONE_VERSION)
 
 nebula_add_test(
     NAME
@@ -98,7 +99,6 @@ nebula_add_test(
         gtest
 )
 
-
 nebula_add_test(
     NAME
         drainer_task_test
@@ -114,3 +114,4 @@ nebula_add_test(
         wangle
         gtest
 )
+endif()

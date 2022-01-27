@@ -14,6 +14,7 @@
 #include "MetaDaemonInit.h"
 #include "common/base/Base.h"
 #include "common/base/SignalHandler.h"
+#include "common/encryption/License.h"
 #include "common/fs/FileUtils.h"
 #include "common/hdfs/HdfsCommandHelper.h"
 #include "common/network/NetworkUtils.h"
@@ -46,6 +47,7 @@ using nebula::HostAddr;
 using nebula::ProcessUtils;
 using nebula::Status;
 using nebula::StatusOr;
+using nebula::encryption::License;
 using nebula::network::NetworkUtils;
 
 void setupThreadManager();
@@ -68,6 +70,12 @@ DECLARE_string(flagfile);
 DECLARE_bool(containerized);
 DECLARE_bool(reuse_port);
 DECLARE_string(meta_server_addrs);
+DECLARE_string(license_path);
+DEFINE_string(meta_sync_listener,
+              "",
+              "It is a list of IPs split by comma, used in cluster deployment"
+              "the ips number is equal to the replica number."
+              "If empty, it means it's a single node");
 
 // storage gflags
 DEFINE_string(data_path,
@@ -78,10 +86,7 @@ DEFINE_string(wal_path,
               "",
               "Nebula wal path. By default, wal will be stored as a sibling of "
               "rocksdb data.");
-DEFINE_string(listener_path,
-              "",
-              "Path for listener, only wal will be saved."
-              "if it is not empty, data_path will not take effect.");
+DECLARE_string(listener_path);
 DECLARE_int32(storage_port);
 
 // meta gflags
@@ -163,6 +168,13 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  // load the time zone data
+  status = nebula::time::Timezone::init();
+  if (!status.ok()) {
+    LOG(ERROR) << status;
+    return EXIT_FAILURE;
+  }
+
   // Initialize the global timezone, it's only used for datetime type compute
   // won't affect the process timezone.
   status = nebula::time::Timezone::initializeGlobalTimezone();
@@ -196,7 +208,40 @@ int main(int argc, char *argv[]) {
       LOG(ERROR) << "Can't get peers address, status:" << peersRet.status();
       return;
     }
-    gMetaKVStore = initKV(peersRet.value(), metaLocalhost);
+
+    // License validation
+    LOG(INFO) << "-----------------Validate license-----------------\n";
+    LOG(INFO) << "License path: " << FLAGS_license_path;
+    auto licensePath = FLAGS_license_path;
+
+    status = License::validateLicense(licensePath);
+    if (!status.ok()) {
+      LOG(ERROR) << status;
+      return;
+    }
+
+    // Save license content
+    auto license = License::getInstance();
+    std::string contentStr = "";
+    License::parseLicenseContent(FLAGS_license_path, contentStr);
+    license->content = folly::parseJson(contentStr);
+
+    nebula::HostAddr syncListener("", 0);
+    if (!FLAGS_meta_sync_listener.empty()) {
+      auto syncListenerRet = nebula::network::NetworkUtils::toHosts(FLAGS_meta_sync_listener);
+      if (!syncListenerRet.ok()) {
+        LOG(ERROR) << "Can't get meta listener address, status:" << syncListenerRet.status();
+        return;
+      }
+      auto syncHost = syncListenerRet.value();
+      if (syncHost.size() != 1) {
+        LOG(ERROR) << "The meta sync listener address is illegal: " << FLAGS_meta_sync_listener;
+        return;
+      }
+      syncListener = syncHost[0];
+    }
+
+    gMetaKVStore = initKV(peersRet.value(), syncListener, metaLocalhost);
     if (gMetaKVStore == nullptr) {
       LOG(ERROR) << "Init kv failed!";
       return;
