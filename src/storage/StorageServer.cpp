@@ -402,6 +402,7 @@ void StorageServer::stop() {
 
   if (txnMan_) {
     txnMan_->stop();
+    txnMan_->join();
   }
   if (taskMgr_) {
     taskMgr_->shutdown();
