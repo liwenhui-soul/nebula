@@ -310,6 +310,10 @@ std::string NebulaKeyUtils::dataVersionKey() {
   return "\xFF\xFF\xFF\xFF";
 }
 
+std::string NebulaKeyUtils::dataVersionValue() {
+  return "3.0";
+}
+
 std::string NebulaKeyUtils::cacheKey(GraphSpaceID spaceId, const folly::StringPiece& key) {
   std::string ret;
   ret.reserve(sizeof(GraphSpaceID) + key.size());

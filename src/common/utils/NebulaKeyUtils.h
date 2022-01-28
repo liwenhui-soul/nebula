@@ -313,6 +313,8 @@ class NebulaKeyUtils final {
 
   static std::string dataVersionKey();
 
+  static std::string dataVersionValue();
+
   static_assert(sizeof(NebulaKeyType) == sizeof(PartitionID));
 
  private:
