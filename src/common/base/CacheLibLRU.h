@@ -78,11 +78,12 @@ class CacheLibLRU {
    * @param key
    * @return Error (cache miss) or value
    */
-  ErrorOr<nebula::cpp2::ErrorCode, std::string> get(const std::string& key) {
+  nebula::cpp2::ErrorCode get(const std::string& key, std::string* value) {
+    folly::SharedMutex::ReadHolder rHolder(lock_);
     auto itemHandle = nebulaCache_->find(key);
     if (itemHandle) {
-      return std::string(reinterpret_cast<const char*>(itemHandle->getMemory()),
-                         itemHandle->getSize());
+      value->assign(reinterpret_cast<const char*>(itemHandle->getMemory()), itemHandle->getSize());
+      return nebula::cpp2::ErrorCode::SUCCEEDED;
     }
     VLOG(3) << "Cache miss: " << key << " Not Found";
     return nebula::cpp2::ErrorCode::E_CACHE_MISS;
@@ -112,7 +113,7 @@ class CacheLibLRU {
     }
 
     {
-      std::unique_lock<std::shared_mutex> guard(lock_);
+      folly::SharedMutex::WriteHolder wHolder(lock_);
       std::memcpy(itemHandle->getMemory(), value.data(), value.size());
       nebulaCache_->insertOrReplace(itemHandle);
     }
@@ -128,7 +129,7 @@ class CacheLibLRU {
    * @return nebula::cpp2::ErrorCode
    */
   nebula::cpp2::ErrorCode invalidateItem(const std::string& key) {
-    std::unique_lock<std::shared_mutex> guard(lock_);
+    folly::SharedMutex::WriteHolder wHolder(lock_);
     VLOG(3) << "Invalidate vertex key: " << folly::hexlify(key);
     nebulaCache_->remove(key);
     return nebula::cpp2::ErrorCode::SUCCEEDED;
@@ -141,7 +142,7 @@ class CacheLibLRU {
    * @return nebula::cpp2::ErrorCode
    */
   nebula::cpp2::ErrorCode invalidateItems(const std::vector<std::string>& keys) {
-    std::unique_lock<std::shared_mutex> guard(lock_);
+    folly::SharedMutex::WriteHolder wHolder(lock_);
     for (auto key : keys) {
       VLOG(3) << "Invalidate vertex key: " << folly::hexlify(key);
       nebulaCache_->remove(key);
@@ -182,11 +183,11 @@ class CacheLibLRU {
   std::unordered_map<std::string, facebook::cachelib::PoolId> poolIdMap_;
   std::string name_;
   uint32_t capacity_ = 0;       // in MB
-  uint32_t bucketsPower_ = 25;  // bucketsPower number of buckets in base 2 logarithm
-  uint32_t locksPower_ = 2;     // locksPower number of locks in base 2 logarithm
+  uint32_t bucketsPower_ = 20;  // bucketsPower number of buckets in base 2 logarithm
+  uint32_t locksPower_ = 10;    // locksPower number of locks in base 2 logarithm
 
   // CacheLib does not protect data at item level. We need to synchronize the access.
-  mutable std::shared_mutex lock_;
+  folly::SharedMutex lock_;
 };
 
 }  // namespace nebula

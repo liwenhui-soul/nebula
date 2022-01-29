@@ -58,11 +58,10 @@ bool StorageCache::createVertexPool(std::string poolName) {
 }
 
 bool StorageCache::getVertexProp(const std::string& key, std::string* value) {
-  auto ret = cacheInternal_->get(key);
-  if (!nebula::ok(ret)) {
+  auto ret = cacheInternal_->get(key, value);
+  if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
     return false;
   }
-  value->assign(std::move(nebula::value(ret)));
   return true;
 }
 
