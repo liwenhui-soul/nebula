@@ -276,7 +276,8 @@ void ListUsersProcessor::process(const cpp2::ListUsersReq& req) {
 void ListIpWhitelistsProcessor::process(const cpp2::ListIpWhitelistsReq& req) {
   UNUSED(req);
   folly::SharedMutex::ReadHolder rHolder(LockUtils::userLock());
-  auto ipWhitelistsRet = doPrefix("__ip_whitelist__");
+  std::string prefix = "__ip_whitelist__";
+  auto ipWhitelistsRet = doPrefix(prefix);
   if (!nebula::ok(ipWhitelistsRet)) {
     auto retCode = nebula::error(ipWhitelistsRet);
     LOG(ERROR) << "List IP Whitelists failed, error: "
@@ -295,7 +296,7 @@ void ListIpWhitelistsProcessor::process(const cpp2::ListIpWhitelistsReq& req) {
     iter->next();
   }
 
-  std::string prefix = "__users__";
+  prefix = "__users__";
   auto ret = doPrefix(prefix);
   if (!nebula::ok(ret)) {
     auto retCode = nebula::error(ret);
