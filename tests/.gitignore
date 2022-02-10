@@ -1,3 +1,4 @@
 .pytest
 .pytest_cache
 tck-report.json
+nebula_test.license

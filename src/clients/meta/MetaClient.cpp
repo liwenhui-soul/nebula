@@ -3338,8 +3338,8 @@ void MetaClient::loadLeader(const std::vector<cpp2::HostItem>& hostItems,
               << item.get_leader_parts().size() << " space";
   }
   {
-    // todo(doodle): in worst case, storage and meta isolated, so graph may get a outdate
-    // leader info. The problem could be solved if leader term are cached as well.
+    // todo(doodle): in the worst case, storage and meta isolated, so graph may get a outdated
+    // leader info. The problem could be solved if leader terms are cached as well.
     LOG(INFO) << "Load leader ok";
     folly::RWSpinLock::WriteHolder wh(leadersLock_);
     leadersInfo_ = std::move(leaderInfo);

@@ -214,17 +214,20 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "License path: " << FLAGS_license_path;
     auto licensePath = FLAGS_license_path;
 
-    status = License::validateLicense(licensePath);
+    auto licenseIns = License::getInstance();
+    status = licenseIns->validateLicense(licensePath);
     if (!status.ok()) {
       LOG(ERROR) << status;
       return;
     }
 
-    // Save license content
-    auto license = License::getInstance();
-    std::string contentStr = "";
-    License::parseLicenseContent(FLAGS_license_path, contentStr);
-    license->content = folly::parseJson(contentStr);
+    // Function used to check the license in seprate thread
+    auto threadCheckLicense = [licenseIns]() { licenseIns->threadLicenseCheck(); };
+
+    // Construct function scheduler to periodically check the license at an interval of 12 hours
+    folly::FunctionScheduler fs;
+    fs.addFunction(threadCheckLicense, std::chrono::hours(12), "LicenseChecker");
+    fs.start();
 
     nebula::HostAddr syncListener("", 0);
     if (!FLAGS_meta_sync_listener.empty()) {

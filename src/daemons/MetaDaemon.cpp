@@ -3,10 +3,15 @@
  * This source code is licensed under Apache 2.0 License.
  */
 
+#include <folly/Function.h>
+#include <folly/experimental/FunctionScheduler.h>
+#include <folly/json.h>
 #include <folly/ssl/Init.h>
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
+
+#include <chrono>
 
 #include "MetaDaemonInit.h"
 #include "common/base/Base.h"
@@ -161,17 +166,12 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "License path: " << FLAGS_license_path;
   auto licensePath = FLAGS_license_path;
 
-  status = License::validateLicense(licensePath);
+  auto licenseIns = License::getInstance();
+  status = licenseIns->validateLicense(licensePath);
   if (!status.ok()) {
-    LOG(ERROR) << status;
+    LOG(ERROR) << "Failed to validate license: " << status;
     return EXIT_FAILURE;
   }
-
-  // Save license content
-  auto license = License::getInstance();
-  std::string contentStr = "";
-  License::parseLicenseContent(FLAGS_license_path, contentStr);
-  license->content = folly::parseJson(contentStr);
 
   nebula::HostAddr syncListener("", 0);
   if (!FLAGS_meta_sync_listener.empty()) {
@@ -244,6 +244,14 @@ int main(int argc, char* argv[]) {
     LOG(ERROR) << status;
     return EXIT_FAILURE;
   }
+
+  // Function used to check the license in seprate thread
+  auto threadCheckLicense = [licenseIns]() { licenseIns->threadLicenseCheck(); };
+
+  // Construct function scheduler to periodically check the license at an interval of 12 hours
+  folly::FunctionScheduler fs;
+  fs.addFunction(threadCheckLicense, std::chrono::hours(12), "LicenseChecker");
+  fs.start();
 
   // load the time zone data
   status = nebula::time::Timezone::init();

@@ -103,7 +103,7 @@ DEFINE_string(ldap_bindpasswd,
               "User password binding to the directory "
               "to perform the search");
 DEFINE_string(ldap_searchattribute, "", "Attribute to match the user name in the search");
-DEFINE_string(ldap_searchfilter, "", "Use search filter, more flexible than searchattribut");
+DEFINE_string(ldap_searchfilter, "", "Use search filter, more flexible than searchattribute");
 
 DEFINE_int32(num_rows_to_check_memory, 1024, "number rows to check memory");
 // License file path

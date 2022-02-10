@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <folly/dynamic.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
 
@@ -13,28 +14,8 @@
 #include "common/encryption/Base64.h"
 #include "common/fs/FileUtils.h"
 
-using nebula::Status;
-using nebula::StatusOr;
-
 namespace nebula {
 namespace encryption {
-// AES key/block size
-extern const unsigned int kKeySize;
-extern const unsigned int kBlockSize;
-extern const char kAesKeyBase64[];
-extern const char kAesIvBase64[];
-// RSA public key
-extern const char kPubKeyBase64[];
-// Length of base64 encoded signature
-extern const size_t kSigSize;
-// License headers/footers
-extern const char kContentHeader[];
-extern const char kContentFooter[];
-extern const char kKeyHeader[];
-extern const char kKeyFooter[];
-// Epoch secs
-extern const std::time_t kSecsInWeek;
-extern const std::time_t kSecsInDay;
 
 class License final {
  private:
@@ -44,23 +25,29 @@ class License final {
   const License operator=(const License& license);
 
  public:
+  // Gets the singleton
   static License* getInstance();
 
-  // Read License and validate
-  static Status validateLicense(const std::string& licensePath);
+  // Reads and validates License, save the parsed license content into content_
+  // This method is called when the meta process starts
+  Status validateLicense(const std::string& licensePath);
 
-  // Sign a RSA signature
+  // Validates the license, sends SIGTERM if the validation failed
+  // This is ONLY used to check the license periodically
+  void threadLicenseCheck();
+
+  // Signs a RSA signature
   static Status generateRsaSign(const std::string& digest,
                                 const std::string& prikey,
                                 std::vector<char>& outBuf);
 
-  // Verify RSA signature
+  // Verifies RSA signature
   static Status VerifyRsaSign(char* rsaSig,
                               uint32_t rsaSigLen,
                               const std::string& pubkey,
                               const std::string& digest);
 
-  // Compute the message digest using sha256
+  // Computes the message digest using sha256
   static Status computeSha256Digest(const std::string& message, std::string& outBuf);
 
   static Status aes256Encrypt(const unsigned char* key,
@@ -73,13 +60,16 @@ class License final {
                               const std::string& ctext,
                               std::string& rtext);
 
-  // Check the expiration of the license
-  static Status checkExpiration(const std::string datetime);
+  // Checks the expiration of the license
+  static Status checkExpiration(const folly::dynamic& content);
 
-  // Parse license file to get license body
-  static Status parseLicenseContent(const std::string& licensePath, std::string& licenseContent);
+  // Checks the expiration of the license
+  static Status checkContent(const std::string& licensePath);
 
-  // Parse license file to get license key
+  // Parses license file to get license body as a folly::dynamic object
+  static StatusOr<std::string> parseLicenseContent(const std::string& licensePath);
+
+  // Parses license file to get license key as a string
   static Status parseLicenseKey(const std::string& licensePath, std::string& licenseKey);
 
   static void logErrors() {
@@ -88,9 +78,17 @@ class License final {
     LOG(ERROR) << errBuf;
   }
 
- public:
+  // Sets a dynamic object representing the license info
+  void setContent(const folly::dynamic& content);
+
+  // Returns a dynamic object representing the license info
+  const folly::dynamic getContent() const;
+
+ private:
   // Dynamic object representing the license info
-  folly::dynamic content;
+  folly::dynamic content_;
+  // The license file path
+  std::string licensePath_ = "";
 };
 
 }  // namespace encryption

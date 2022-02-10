@@ -4,20 +4,27 @@
  */
 #include "common/encryption/License.h"
 
+#include <folly/json.h>
+
 #include <bitset>
 #include <chrono>
+#include <csignal>
 #include <iomanip>
 
+#include "common/base/Status.h"
+#include "common/base/StatusOr.h"
 #include "common/encryption/Base64.h"
 #include "common/time/TimeUtils.h"
 
 namespace nebula {
 namespace encryption {
 
+// AES key/block size
 const unsigned int kKeySize = 32;
 const unsigned int kBlockSize = 16;
 const char kAesKeyBase64[] = "241IYjd0+MKVhiXc0PWFetV7RhmsjTCJpZslOCPC5n8=";
 const char kAesIvBase64[] = "rjJJOkaaueQmwFTVtzBAxw==";
+
 // RSA public key
 const char kPubKeyBase64[] =
     "LS0tLS1CRUdJTiBSU0EgUFVCTElDIEtFWS0tLS0tCk1JSUJDZ0tDQVFFQTNGR0NvSW44VHZvYVNEYmx4RmJvL0l1VitxTF"
@@ -28,19 +35,23 @@ const char kPubKeyBase64[] =
     "VQREcKUjQwL3VWWC9zdnZXempXRDBabVI4QkQ1SC9rb3hLUGth"
     "Vm13c3ZOTCsrNk5qdENoUlV1NVBwVmFPclgwSUxMcgpKQzI5VzJuT0gvNWo3eVR4eUlsMU1uaWcyS3d6eUx0Ylh3SURBUU"
     "FCCi0tLS0tRU5EIFJTQSBQVUJMSUMgS0VZLS0tLS0K";
+
 // Length of base64 encoded
 const size_t kSigSize = 344;
+
 // License headers/footers
 const char kContentHeader[] = "----------License Content Start----------";
 const char kContentFooter[] = "----------License Content End----------";
 const char kKeyHeader[] = "----------License Key Start----------";
 const char kKeyFooter[] = "----------License Key End----------";
-// epoch secs
+
+// Epoch secs
 const std::time_t kSecsInWeek = 604800;
 const std::time_t kSecsInDay = 86400;
 
 // contact info
 const char contactInfo[] = "Please contact Vesoft.Inc at inquiry@vesoft.com to renew the license.";
+
 License* License::getInstance() {
   static License instance;
   return &instance;
@@ -48,73 +59,42 @@ License* License::getInstance() {
 
 Status License::validateLicense(const std::string& licensePath) {
   LOG(INFO) << "License validation started";
-  // Test existence of license file
-  if (!nebula::fs::FileUtils::exist(licensePath)) {
-    return Status::Error("Failed to find the license file: %s", licensePath.c_str());
-  }
-  LOG(INFO) << "License detected";
+  NG_RETURN_IF_ERROR(checkContent(licensePath));
+  auto parseResult = parseLicenseContent(licensePath);
+  NG_RETURN_IF_ERROR(parseResult);
 
-  // Parse license file to get license content and license key
-  std::string licenseContent = "";
-  std::string licenseKey = "";
-  NG_RETURN_IF_ERROR(parseLicenseContent(licensePath, licenseContent));
-  NG_RETURN_IF_ERROR(parseLicenseKey(licensePath, licenseKey));
-
-  // Extract AES cipher and RSA signature from licenseKey
-  const size_t licenseKeySize = licenseKey.size();
-  std::string aesCipherBase64 = licenseKey.substr(0, licenseKeySize - kSigSize);
-  auto aesCipherText = Base64::decode(aesCipherBase64);
-  std::string rsaSigBase64 = licenseKey.substr(licenseKeySize - kSigSize);
-  auto rsaSig = Base64::decode(rsaSigBase64);
-
-  // Calculate message digest of AES256 encrypted license content
-  const std::string aesKey = Base64::decode(std::string(kAesKeyBase64));
-  const std::string aesIv = Base64::decode(std::string(kAesIvBase64));
-  std::string encryptedBody = "";
-  NG_RETURN_IF_ERROR(aes256Encrypt((const unsigned char*)aesKey.c_str(),
-                                   (const unsigned char*)aesIv.c_str(),
-                                   licenseContent,
-                                   encryptedBody));
-  std::string digestBuf = "";
-  NG_RETURN_IF_ERROR(computeSha256Digest(encryptedBody, digestBuf));
-
-  // Validate rsa signature
-  const std::string pubKey = Base64::decode(kPubKeyBase64);
-  NG_RETURN_IF_ERROR(VerifyRsaSign(const_cast<char*>(rsaSig.c_str()), 256, pubKey, digestBuf));
-
-  // Decrypt license content
-  std::string rtext = "";
-  NG_RETURN_IF_ERROR(aes256Decrypt((const unsigned char*)aesKey.c_str(),
-                                   (const unsigned char*)aesIv.c_str(),
-                                   aesCipherText,
-                                   rtext));
-
-  auto contentJson = folly::parseJson(rtext);
-  LOG(INFO) << "License content JSON: " << folly::toPrettyJson(contentJson);
-  auto expiration = contentJson["expirationDate"];
-
-  // Clean key string
-  OPENSSL_cleanse(reinterpret_cast<void*>(const_cast<char*>(aesKey.c_str())), kKeySize);
-  OPENSSL_cleanse(reinterpret_cast<void*>(const_cast<char*>(aesIv.c_str())), kBlockSize);
+  // Save license content
+  content_ = folly::parseJson(parseResult.value());
+  licensePath_ = licensePath;
 
   // Check expiration
-  NG_RETURN_IF_ERROR(checkExpiration(expiration.asString()));
-
+  NG_RETURN_IF_ERROR(checkExpiration(std::move(folly::parseJson(parseResult.value()))));
   LOG(INFO) << "License validation succeed";
   return Status::OK();
+}
+
+void License::threadLicenseCheck() {
+  LOG(INFO) << "-----Periodic License Check-----\n";
+  auto checkStatus = validateLicense(licensePath_);
+  if (!checkStatus.ok()) {
+    LOG(ERROR) << "Periodic License Check failed: " << checkStatus;
+    std::raise(SIGTERM);
+  } else {
+    LOG(INFO) << "-----Periodic License Check Passed-----\n";
+  }
 }
 
 Status License::generateRsaSign(const std::string& digest,
                                 const std::string& prikey,
                                 std::vector<char>& outBuf) {
   BIO* in = BIO_new_mem_buf(reinterpret_cast<const void*>(prikey.c_str()), -1);
-  if (in == NULL) {
+  if (in == nullptr) {
     return Status::Error("BIO_new_mem_buf failed");
   }
 
-  RSA* rsa = PEM_read_bio_RSAPrivateKey(in, NULL, NULL, NULL);
+  RSA* rsa = PEM_read_bio_RSAPrivateKey(in, nullptr, nullptr, nullptr);
   BIO_free(in);
-  if (rsa == NULL) {
+  if (rsa == nullptr) {
     return Status::Error("PEM_read_bio_RSAPrivateKey failed");
   }
 
@@ -123,9 +103,9 @@ Status License::generateRsaSign(const std::string& digest,
   sign.resize(size);
 
   int ret = RSA_sign(NID_sha256,
-                     (const unsigned char*)digest.c_str(),
+                     reinterpret_cast<const unsigned char*>(digest.c_str()),
                      digest.length(),
-                     (unsigned char*)sign.data(),
+                     reinterpret_cast<unsigned char*>(sign.data()),
                      &size,
                      rsa);
   RSA_free(rsa);
@@ -143,21 +123,21 @@ Status License::VerifyRsaSign(char* rsaSig,
   LOG(INFO) << "RSA Signature validation started";
 
   BIO* in = BIO_new_mem_buf(reinterpret_cast<const void*>(pubkey.c_str()), -1);
-  if (in == NULL) {
+  if (in == nullptr) {
     return Status::Error("BIO_new_mem_buf failed");
   }
 
   // Load RSA public key
-  RSA* rsa = PEM_read_bio_RSAPublicKey(in, NULL, NULL, NULL);
+  RSA* rsa = PEM_read_bio_RSAPublicKey(in, nullptr, nullptr, nullptr);
   BIO_free(in);
-  if (rsa == NULL) {
+  if (rsa == nullptr) {
     return Status::Error("Failed to load public key from the given string");
   }
 
   int ret = RSA_verify(NID_sha256,
-                       (const unsigned char*)digest.c_str(),
+                       reinterpret_cast<const unsigned char*>(digest.c_str()),
                        digest.length(),
-                       (unsigned char*)rsaSig,
+                       reinterpret_cast<unsigned char*>(rsaSig),
                        rsaSigLen,
                        rsa);
   RSA_free(rsa);
@@ -180,7 +160,7 @@ Status License::computeSha256Digest(const std::string& message, std::string& out
   // Compute message digest
   EVP_MD_CTX* context = EVP_MD_CTX_new();
 
-  res = EVP_DigestInit_ex(context, EVP_sha256(), NULL);
+  res = EVP_DigestInit_ex(context, EVP_sha256(), nullptr);
   if (res != 1) {
     logErrors();
     return Status::Error("EVP_DigestInit_ex failed");
@@ -209,7 +189,7 @@ Status License::aes256Encrypt(const unsigned char* key,
                               const std::string& ptext,
                               std::string& ctext) {
   EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-  int rc = EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
+  int rc = EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key, iv);
   if (rc != 1) return Status::Error("EVP_EncryptInit_ex failed");
 
   // Recovered text expands upto kBlockSize
@@ -217,14 +197,14 @@ Status License::aes256Encrypt(const unsigned char* key,
   int out_len1 = static_cast<int>(ctext.size());
 
   rc = EVP_EncryptUpdate(ctx,
-                         (unsigned char*)&ctext[0],
+                         reinterpret_cast<unsigned char*>(&ctext[0]),
                          &out_len1,
-                         (const unsigned char*)&ptext[0],
+                         reinterpret_cast<const unsigned char*>(&ptext[0]),
                          static_cast<int>(ptext.size()));
   if (rc != 1) return Status::Error("EVP_EncryptUpdate failed");
 
   int out_len2 = static_cast<int>(ctext.size()) - out_len1;
-  rc = EVP_EncryptFinal_ex(ctx, (unsigned char*)&ctext[0] + out_len1, &out_len2);
+  rc = EVP_EncryptFinal_ex(ctx, reinterpret_cast<unsigned char*>(&ctext[0]) + out_len1, &out_len2);
   if (rc != 1) return Status::Error("EVP_EncryptFinal_ex failed");
 
   EVP_CIPHER_CTX_free(ctx);
@@ -238,7 +218,7 @@ Status License::aes256Decrypt(const unsigned char* key,
                               const std::string& ctext,
                               std::string& rtext) {
   EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-  int rc = EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
+  int rc = EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key, iv);
   if (rc != 1) return Status::Error("EVP_DecryptInit_ex failed");
 
   // Recovered text contracts upto kBlockSize
@@ -246,14 +226,14 @@ Status License::aes256Decrypt(const unsigned char* key,
   int out_len1 = static_cast<int>(rtext.size());
 
   rc = EVP_DecryptUpdate(ctx,
-                         (unsigned char*)&rtext[0],
+                         reinterpret_cast<unsigned char*>(&rtext[0]),
                          &out_len1,
-                         (const unsigned char*)&ctext[0],
+                         reinterpret_cast<const unsigned char*>(&ctext[0]),
                          static_cast<int>(ctext.size()));
   if (rc != 1) return Status::Error("EVP_DecryptUpdate failed");
 
   int out_len2 = static_cast<int>(rtext.size()) - out_len1;
-  rc = EVP_DecryptFinal_ex(ctx, (unsigned char*)&rtext[0] + out_len1, &out_len2);
+  rc = EVP_DecryptFinal_ex(ctx, reinterpret_cast<unsigned char*>(&rtext[0]) + out_len1, &out_len2);
   if (rc != 1) {
     logErrors();
     return Status::Error("EVP_DecryptFinal_ex failed");
@@ -265,7 +245,63 @@ Status License::aes256Decrypt(const unsigned char* key,
   return Status::OK();
 }
 
-Status License::checkExpiration(const std::string expiration) {
+Status License::checkContent(const std::string& licensePath) {
+  // Test existence of license file
+  if (!nebula::fs::FileUtils::exist(licensePath)) {
+    return Status::Error("Failed to find the license file: %s", licensePath.c_str());
+  }
+  LOG(INFO) << "License detected";
+
+  // Parse license file to get license content and license key
+  std::string licenseKey = "";
+  auto contentCheckStatus = parseLicenseContent(licensePath);
+  NG_RETURN_IF_ERROR(contentCheckStatus);
+  auto licenseContent = contentCheckStatus.value();
+  NG_RETURN_IF_ERROR(parseLicenseKey(licensePath, licenseKey));
+
+  // Extract AES cipher and RSA signature from licenseKey
+  const size_t licenseKeySize = licenseKey.size();
+  std::string aesCipherBase64 = licenseKey.substr(0, licenseKeySize - kSigSize);
+  auto aesCipherText = Base64::decode(aesCipherBase64);
+  std::string rsaSigBase64 = licenseKey.substr(licenseKeySize - kSigSize);
+  auto rsaSig = Base64::decode(rsaSigBase64);
+
+  // Calculate message digest of AES256 encrypted license content
+  const std::string aesKey = Base64::decode(std::string(kAesKeyBase64));
+  const std::string aesIv = Base64::decode(std::string(kAesIvBase64));
+  std::string encryptedBody = "";
+  NG_RETURN_IF_ERROR(aes256Encrypt(reinterpret_cast<const unsigned char*>(aesKey.c_str()),
+                                   reinterpret_cast<const unsigned char*>(aesIv.c_str()),
+                                   licenseContent,
+                                   encryptedBody));
+  std::string digestBuf = "";
+  NG_RETURN_IF_ERROR(computeSha256Digest(encryptedBody, digestBuf));
+
+  // Validate rsa signature
+  const std::string pubKey = Base64::decode(kPubKeyBase64);
+  NG_RETURN_IF_ERROR(VerifyRsaSign(const_cast<char*>(rsaSig.c_str()), 256, pubKey, digestBuf));
+
+  // Decrypt license content
+  std::string rtext = "";
+  NG_RETURN_IF_ERROR(aes256Decrypt(reinterpret_cast<const unsigned char*>(aesKey.c_str()),
+                                   reinterpret_cast<const unsigned char*>(aesIv.c_str()),
+                                   aesCipherText,
+                                   rtext));
+
+  auto contentJson = folly::parseJson(rtext);
+  LOG(INFO) << "License content JSON: " << folly::toPrettyJson(contentJson);
+  auto expiration = contentJson["expirationDate"];
+
+  // Clean key string
+  OPENSSL_cleanse(reinterpret_cast<void*>(const_cast<char*>(aesKey.c_str())), kKeySize);
+  OPENSSL_cleanse(reinterpret_cast<void*>(const_cast<char*>(aesIv.c_str())), kBlockSize);
+
+  return Status::OK();
+}
+
+Status License::checkExpiration(const folly::dynamic& content) {
+  // Get expiration date from content
+  auto expiration = content["expirationDate"].asString();
   // Get current time and covert to timestamp
   auto currentTime = std::chrono::system_clock::now();
   std::time_t currentTimestamp = std::chrono::system_clock::to_time_t(currentTime);
@@ -292,7 +328,7 @@ Status License::checkExpiration(const std::string expiration) {
   return Status::OK();
 }
 
-Status License::parseLicenseContent(const std::string& licensePath, std::string& licenseContent) {
+StatusOr<std::string> License::parseLicenseContent(const std::string& licensePath) {
   nebula::fs::FileUtils::FileLineIterator iter(licensePath);
   if (!iter.valid()) {
     return Status::Error("%s: %s", licensePath.c_str(), ::strerror(errno));
@@ -303,6 +339,7 @@ Status License::parseLicenseContent(const std::string& licensePath, std::string&
     return Status::Error("Invalid license header");
   }
 
+  std::string licenseContent = "";
   bool parsing = false;
   // Parse license content
   while (iter.valid()) {
@@ -322,7 +359,7 @@ Status License::parseLicenseContent(const std::string& licensePath, std::string&
   // side. Delete newline literal at the end
   licenseContent.erase(licenseContent.end() - 1, licenseContent.end());
 
-  return Status::OK();
+  return licenseContent;
 }
 
 Status License::parseLicenseKey(const std::string& licensePath, std::string& licenseKey) {
@@ -351,6 +388,14 @@ Status License::parseLicenseKey(const std::string& licensePath, std::string& lic
   licenseKey.erase(licenseKey.end() - 1, licenseKey.end());
 
   return Status::OK();
+}
+
+const folly::dynamic License::getContent() const {
+  return content_;
+}
+
+void License::setContent(const folly::dynamic& content) {
+  content_ = content;
 }
 
 }  // namespace encryption
