@@ -144,7 +144,7 @@ macro(package to_one name home_page scripts_dir)
     set(CPACK_DEB_COMPONENT_INSTALL YES)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${CMAKE_HOST_SYSTEM_PROCESSOR})
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE ${home_page})
-    set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA ${scripts_dir}/postinst)
+    set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA ${scripts_dir}/preinst ${scripts_dir}/postinst)
 
     set(CPACK_RPM_SPEC_MORE_DEFINE "%define debug_package %{nil}
             %define __os_install_post %{nil}")
@@ -152,6 +152,7 @@ macro(package to_one name home_page scripts_dir)
     set(CPACK_RPM_PACKAGE_ARCHITECTURE ${CMAKE_HOST_SYSTEM_PROCESSOR})
     set(CPACK_RPM_PACKAGE_URL ${home_page})
     set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE ${scripts_dir}/rpm_postinst)
+    set(CPACK_RPM_PRE_INSTALL_SCRIPT_FILE ${scripts_dir}/preinst)
     set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION /usr/local)
     set(CPACK_RPM_PACKAGE_RELOCATABLE ON)
 
