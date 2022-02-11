@@ -803,6 +803,7 @@ TEST(DrainerTaskTest, PartNumNotSameOnePartTest) {
   HostAddr localHost(cluster.localIP(), network::NetworkUtils::getAvailablePort());
   meta::MetaClientOptions options;
   options.localHost_ = localHost;
+  options.role_ = meta::cpp2::HostRole::DRAINER;
   cluster.initMetaClient(std::move(options));
   auto* mClient = cluster.metaClient_.get();
 
@@ -1071,6 +1072,7 @@ TEST(DrainerTaskTest, PartNumNotSameMultiPartTest) {
   HostAddr localHost(cluster.localIP(), network::NetworkUtils::getAvailablePort());
   meta::MetaClientOptions options;
   options.localHost_ = localHost;
+  options.role_ = meta::cpp2::HostRole::DRAINER;
   cluster.initMetaClient(std::move(options));
   auto* mClient = cluster.metaClient_.get();
   {
