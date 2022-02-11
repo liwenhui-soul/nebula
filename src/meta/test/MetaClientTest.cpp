@@ -1132,6 +1132,8 @@ class TestListener : public MetaChangedListener {
 };
 
 TEST(MetaClientTest, DiffTest) {
+  TestUtils::getDummyLicense();
+
   FLAGS_heartbeat_interval_secs = 1;
   fs::TempDir rootPath("/tmp/MetaClientDiffTest.XXXXXX");
 

@@ -15,6 +15,7 @@
 #include "common/base/Base.h"
 #include "common/base/CommonMacro.h"
 #include "common/base/ObjectPool.h"
+#include "common/encryption/License.h"
 #include "common/expression/ConstantExpression.h"
 #include "common/time/WallClock.h"
 #include "common/utils/DefaultValueContext.h"
@@ -639,6 +640,16 @@ class TestUtils {
       }
     }
     return true;
+  }
+
+  // Prepare dummy license content that will be checked in the HBProcessor
+  // Heartbeat related unit tests require a license with content
+  static void getDummyLicense() {
+    auto licenseIns = encryption::License::getInstance();
+    folly::dynamic dummyContent = folly::dynamic::object();
+    dummyContent["graphdSpec"] = folly::dynamic::object("nodes", 100);
+    dummyContent["storagedSpec"] = folly::dynamic::object("nodes", 100);
+    licenseIns->setContent(dummyContent);
   }
 };
 

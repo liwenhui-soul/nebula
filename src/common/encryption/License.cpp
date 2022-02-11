@@ -68,7 +68,7 @@ Status License::validateLicense(const std::string& licensePath) {
   licensePath_ = licensePath;
 
   // Check expiration
-  NG_RETURN_IF_ERROR(checkExpiration(std::move(folly::parseJson(parseResult.value()))));
+  NG_RETURN_IF_ERROR(checkExpiration(folly::parseJson(parseResult.value())));
   LOG(INFO) << "License validation succeed";
   return Status::OK();
 }

@@ -44,6 +44,8 @@ TEST(AgentHBProcessorTest, AgentHBTest) {
       dir.data_ref() = ds;
       req.dir_ref() = dir;
 
+      TestUtils::getDummyLicense();
+
       auto* processor = HBProcessor::instance(kv.get(), nullptr, kClusterId);
       auto f = processor->getFuture();
       processor->process(req);

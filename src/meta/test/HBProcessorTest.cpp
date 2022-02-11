@@ -30,6 +30,8 @@ TEST(HBProcessorTest, HBTest) {
 
   const ClusterID kClusterId = 10;
   {
+    TestUtils::getDummyLicense();
+
     for (auto i = 0; i < 5; i++) {
       cpp2::HBReq req;
       req.host_ref() = HostAddr(std::to_string(i), i);

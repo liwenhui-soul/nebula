@@ -40,6 +40,8 @@ TEST(VerifyClientVersionTest, VersionTest) {
     }
   }
   {
+    TestUtils::getDummyLicense();
+
     const ClusterID kClusterId = 10;
     for (auto i = 0; i < 5; i++) {
       auto req = cpp2::HBReq();

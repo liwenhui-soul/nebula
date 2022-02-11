@@ -6,12 +6,10 @@
 #include "meta/MetaServiceHandler.h"
 
 #include "common/utils/MetaKeyUtils.h"
-#include "meta/processors/admin/AgentHBProcessor.h"
 #include "meta/processors/admin/CreateBackupProcessor.h"
 #include "meta/processors/admin/CreateSnapshotProcessor.h"
 #include "meta/processors/admin/DropSnapshotProcessor.h"
 #include "meta/processors/admin/GetMetaDirInfoProcessor.h"
-#include "meta/processors/admin/HBProcessor.h"
 #include "meta/processors/admin/ListClusterInfoProcessor.h"
 #include "meta/processors/admin/ListSnapshotsProcessor.h"
 #include "meta/processors/admin/RestoreProcessor.h"

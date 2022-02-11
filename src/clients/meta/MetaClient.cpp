@@ -1014,6 +1014,8 @@ Status MetaClient::handleResponse(const RESP& resp) {
       return Status::Error("Invalid variable!");
     case nebula::cpp2::ErrorCode::E_VARIABLE_TYPE_VALUE_MISMATCH:
       return Status::Error("Variable type and value mismatch!");
+    case nebula::cpp2::ErrorCode::E_NODE_NUMBER_EXCEED_LIMIT:
+      return Status::Error("Nodes number exceeds the limit!");
     default:
       return Status::Error("Unknown error!");
   }

@@ -5,6 +5,9 @@
 
 #include "meta/processors/admin/HBProcessor.h"
 
+#include <folly/Format.h>
+
+#include "common/encryption/License.h"
 #include "common/time/WallClock.h"
 #include "meta/ActiveHostsMan.h"
 #include "meta/KVBasedClusterIdMan.h"
@@ -33,6 +36,15 @@ void HBProcessor::process(const cpp2::HBReq& req) {
   auto role = req.get_role();
   LOG(INFO) << "Receive heartbeat from " << host
             << ", role = " << apache::thrift::util::enumNameSafe(role);
+
+  // Check current node number
+  ret = checkNodeNumber(role, host);
+  if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    handleErrorCode(ret);
+    onFinished();
+    return;
+  }
+
   if (role == cpp2::HostRole::STORAGE || role == cpp2::HostRole::META_LISTENER ||
       role == cpp2::HostRole::STORAGE_LISTENER) {
     if (role == cpp2::HostRole::STORAGE) {
@@ -123,6 +135,51 @@ void HBProcessor::process(const cpp2::HBReq& req) {
 
   handleErrorCode(ret);
   onFinished();
+}
+
+// Checks the active node number of the given role
+// Rejects heartbeat if number reaches the max value
+// The license only limits the number of graph and storage nodes, other role types won't be checked.
+nebula::cpp2::ErrorCode HBProcessor::checkNodeNumber(const cpp2::HostRole role,
+                                                     const HostAddr& host) {
+  // Get license instance
+  auto licenseIns = encryption::License::getInstance();
+
+  // Get max nodes alloed from license
+  unsigned maxNodesNum = -1;
+  if (role == cpp2::HostRole::GRAPH) {
+    maxNodesNum = licenseIns->getContent()["graphdSpec"]["nodes"].asInt();
+  } else if (role == cpp2::HostRole::STORAGE) {
+    maxNodesNum = licenseIns->getContent()["storagedSpec"]["nodes"].asInt();
+  } else {  // No need to check other role types
+    return nebula::cpp2::ErrorCode::SUCCEEDED;
+  }
+
+  // Get active hosts
+  auto activeHostsRet = ActiveHostsMan::getActiveHosts(kvstore_, 0, role);
+  if (!nebula::ok(activeHostsRet)) {
+    return nebula::error(activeHostsRet);
+  }
+  auto activeHosts = nebula::value(activeHostsRet);
+
+  // No need to check hosts number if the host is already an active host
+  if (std::find(activeHosts.begin(), activeHosts.end(), host) != activeHosts.end()) {
+    return nebula::cpp2::ErrorCode::SUCCEEDED;
+  }
+
+  // Compare current active hosts and max hosts allowed
+  if ((role == cpp2::HostRole::GRAPH || role == cpp2::HostRole::STORAGE) &&
+      activeHosts.size() >= maxNodesNum) {
+    LOG(ERROR) << folly::sformat(
+        "Current the number of active {} nodes has reach the node maximum value allowed, "
+        "heartbeat "
+        "from {} is rejected",
+        apache::thrift::util::enumNameSafe(role),
+        host.toString());
+    return nebula::cpp2::ErrorCode::E_NODE_NUMBER_EXCEED_LIMIT;
+  }
+
+  return nebula::cpp2::ErrorCode::SUCCEEDED;
 }
 
 }  // namespace meta

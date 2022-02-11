@@ -306,6 +306,8 @@ TEST(ProcessorTest, HashTest) {
 }
 
 TEST(ProcessorTest, SpaceTest) {
+  TestUtils::getDummyLicense();
+
   fs::TempDir rootPath("/tmp/SpaceTest.XXXXXX");
   auto kv = MockCluster::initMetaKV(rootPath.path());
   {
@@ -2612,6 +2614,8 @@ TEST(ProcessorTest, TagIdAndEdgeTypeInSpaceRangeTest) {
 }
 
 TEST(ProcessorTest, HostsTest) {
+  TestUtils::getDummyLicense();
+
   fs::TempDir rootPath("/tmp/HostsTest.XXXXXX");
   auto kv = MockCluster::initMetaKV(rootPath.path());
   {
@@ -2810,6 +2814,8 @@ TEST(ProcessorTest, HostsTest) {
 }
 
 TEST(ProcessorTest, AddHostsIntoNewZoneTest) {
+  TestUtils::getDummyLicense();
+
   fs::TempDir rootPath("/tmp/AddHostsIntoZoneTest.XXXXXX");
   auto kv = MockCluster::initMetaKV(rootPath.path());
   {
@@ -2909,6 +2915,8 @@ TEST(ProcessorTest, AddHostsIntoNewZoneTest) {
 }
 
 TEST(ProcessorTest, AddHostsIntoZoneTest) {
+  TestUtils::getDummyLicense();
+
   fs::TempDir rootPath("/tmp/AddHostsIntoZoneTest.XXXXXX");
   auto kv = MockCluster::initMetaKV(rootPath.path());
   {

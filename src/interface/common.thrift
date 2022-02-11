@@ -522,5 +522,9 @@ enum ErrorCode {
     E_POOL_NOT_FOUND                  = -5004,
     E_CACHE_WRITE_FAILURE             = -5005,
 
+    // 7xxx for nebula enterprise
+    // license related
+    E_NODE_NUMBER_EXCEED_LIMIT        = -7001,
+
     E_UNKNOWN                         = -8000,
 } (cpp.enum_strict)
