@@ -94,13 +94,14 @@ std::string NebulaKeyUtils::edgeKey(size_t vIdLen,
       .append(1, ev);
   return key;
 }
+
 // static
 std::string NebulaKeyUtils::vertexKey(size_t vIdLen,
                                       PartitionID partId,
                                       const VertexID& vId,
                                       char pad) {
   CHECK_GE(vIdLen, vId.size());
-  int32_t item = (partId << kPartitionOffset) | static_cast<uint32_t>(NebulaKeyType::kVertex);
+  PartitionID item = (partId << kPartitionOffset) | static_cast<uint32_t>(NebulaKeyType::kVertex);
   std::string key;
   key.reserve(sizeof(PartitionID) + vIdLen);
   key.append(reinterpret_cast<const char*>(&item), sizeof(int32_t))
@@ -128,6 +129,15 @@ std::string NebulaKeyUtils::updatePartIdEdgeKey(PartitionID partId, const std::s
   key.reserve(rawKey.size());
   key.append(reinterpret_cast<const char*>(&item), sizeof(int32_t))
       .append(rawKey.data() + sizeof(int32_t), rawKey.size() - sizeof(int32_t));
+  return key;
+}
+
+// static
+std::string NebulaKeyUtils::vertexPrefix(PartitionID partId) {
+  PartitionID item = (partId << kPartitionOffset) | static_cast<uint32_t>(NebulaKeyType::kVertex);
+  std::string key;
+  key.reserve(sizeof(PartitionID));
+  key.append(reinterpret_cast<const char*>(&item), sizeof(PartitionID));
   return key;
 }
 

@@ -78,6 +78,8 @@ class NebulaKeyUtils final {
                                const VertexID& vId,
                                char pad = '\0');
 
+  static std::string vertexPrefix(PartitionID partId);
+
   /**
    *  Update partId of vertex key
    * */
