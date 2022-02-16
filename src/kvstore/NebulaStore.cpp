@@ -640,8 +640,6 @@ nebula::cpp2::ErrorCode NebulaStore::get(GraphSpaceID spaceId,
     if (exist) {
       return nebula::cpp2::ErrorCode::SUCCEEDED;
     } else {
-      // TODO: add locks in processors to make sure the get operation is atomic:
-      // https://github.com/vesoft-inc/nebula/issues/3718
       auto ret = getFromKVEngine(spaceId, partId, key, value, canReadFromFollower);
       if (ret == nebula::cpp2::ErrorCode::SUCCEEDED) {  // only write cache when the tag is found
         folly::Baton<true, std::atomic> baton;
@@ -1382,6 +1380,10 @@ ErrorOr<nebula::cpp2::ErrorCode, std::pair<meta::cpp2::HostRole, int64_t>> Nebul
   }
   auto role = *reinterpret_cast<const meta::cpp2::HostRole*>(data.data() + offset);
   return std::make_pair(role, lastHBTimeInMilliSec);
+}
+
+bool NebulaStore::hasVertexCache() {
+  return storageCache_ && storageCache_->vertexPoolExists();
 }
 
 }  // namespace kvstore

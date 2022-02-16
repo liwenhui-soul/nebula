@@ -128,7 +128,13 @@ void AddVerticesProcessor::doProcess(const cpp2::AddVerticesRequest& req) {
     if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
       handleAsync(spaceId_, partId, code);
     } else {
-      doPut(spaceId_, partId, std::move(data));
+      if (env_->kvstore_->hasVertexCache()) {
+        // write need to acquire the lock from read to avoid cache incoherence
+        folly::SharedMutex::WriteHolder wHolder(env_->cacheLock_);
+        doPut(spaceId_, partId, std::move(data));
+      } else {
+        doPut(spaceId_, partId, std::move(data));
+      }
       stats::StatsManager::addValue(kNumVerticesInserted, data.size());
     }
   }
@@ -297,15 +303,30 @@ void AddVerticesProcessor::doProcessWithIndex(const cpp2::AddVerticesRequest& re
     auto batch = encodeBatchValue(batchHolder->getBatch());
     DCHECK(!batch.empty());
     nebula::MemoryLockGuard<VMLI> lg(env_->verticesML_.get(), std::move(dummyLock), false, false);
-    env_->kvstore_->asyncAppendBatch(spaceId_,
-                                     partId,
-                                     std::move(batch),
-                                     [l = std::move(lg), icw = std::move(wrapper), partId, this](
-                                         nebula::cpp2::ErrorCode retCode) {
-                                       UNUSED(l);
-                                       UNUSED(icw);
-                                       handleAsync(spaceId_, partId, retCode);
-                                     });
+
+    if (env_->kvstore_->hasVertexCache()) {
+      // write need to acquire the lock from read to avoid cache incoherence
+      folly::SharedMutex::WriteHolder wHolder(env_->cacheLock_);
+      env_->kvstore_->asyncAppendBatch(spaceId_,
+                                       partId,
+                                       std::move(batch),
+                                       [l = std::move(lg), icw = std::move(wrapper), partId, this](
+                                           nebula::cpp2::ErrorCode retCode) {
+                                         UNUSED(l);
+                                         UNUSED(icw);
+                                         handleAsync(spaceId_, partId, retCode);
+                                       });
+    } else {
+      env_->kvstore_->asyncAppendBatch(spaceId_,
+                                       partId,
+                                       std::move(batch),
+                                       [l = std::move(lg), icw = std::move(wrapper), partId, this](
+                                           nebula::cpp2::ErrorCode retCode) {
+                                         UNUSED(l);
+                                         UNUSED(icw);
+                                         handleAsync(spaceId_, partId, retCode);
+                                       });
+    }
   }
 }  // namespace storage
 
@@ -313,7 +334,15 @@ ErrorOr<nebula::cpp2::ErrorCode, std::string> AddVerticesProcessor::findOldValue
     PartitionID partId, const VertexID& vId, TagID tagId) {
   auto key = NebulaKeyUtils::tagKey(spaceVidLen_, partId, vId, tagId);
   std::string val;
-  auto ret = env_->kvstore_->get(spaceId_, partId, key, &val);
+
+  nebula::cpp2::ErrorCode ret;
+  if (env_->kvstore_->hasVertexCache()) {
+    folly::SharedMutex::ReadHolder rHolder(env_->cacheLock_);
+    ret = env_->kvstore_->get(spaceId_, partId, key, &val);
+  } else {
+    ret = env_->kvstore_->get(spaceId_, partId, key, &val);
+  }
+
   if (ret == nebula::cpp2::ErrorCode::SUCCEEDED) {
     return val;
   } else if (ret == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {

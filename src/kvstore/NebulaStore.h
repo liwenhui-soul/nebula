@@ -723,6 +723,8 @@ class NebulaStore : public KVStore, public Handler {
     beforeRemoveSpace_ = nullptr;
   }
 
+  bool hasVertexCache() override;
+
  private:
   /**
    * @brief Load partitions by reading system part keys in kv engine

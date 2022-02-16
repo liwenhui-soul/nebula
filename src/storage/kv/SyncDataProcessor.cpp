@@ -116,10 +116,19 @@ void SyncDataProcessor::process(const cpp2::SyncDataRequest& req) {
     }
     auto batch = encodeBatchValue(batchHolder->getBatch());
     DCHECK(!batch.empty());
-    env_->kvstore_->asyncAppendBatch(
-        spaceId_, partId, std::move(batch), [partId, this](nebula::cpp2::ErrorCode code) {
-          handleAsync(spaceId_, partId, code);
-        });
+    if (env_->kvstore_->hasVertexCache()) {
+      // write need to acquire the lock from read to avoid cache incoherence
+      folly::SharedMutex::WriteHolder wHolder(env_->cacheLock_);
+      env_->kvstore_->asyncAppendBatch(
+          spaceId_, partId, std::move(batch), [partId, this](nebula::cpp2::ErrorCode code) {
+            handleAsync(spaceId_, partId, code);
+          });
+    } else {
+      env_->kvstore_->asyncAppendBatch(
+          spaceId_, partId, std::move(batch), [partId, this](nebula::cpp2::ErrorCode code) {
+            handleAsync(spaceId_, partId, code);
+          });
+    }
   }
 }
 

@@ -225,8 +225,17 @@ class UpdateTagNode : public UpdateNode<VertexID> {
       ret = code;
       baton.post();
     };
-    context_->env()->kvstore_->asyncAppendBatch(
-        context_->spaceId(), partId, std::move(batch).value(), callback);
+
+    if (context_->env()->kvstore_->hasVertexCache()) {
+      // write need to acquire the lock from read to avoid cache incoherence
+      folly::SharedMutex::WriteHolder wHolder(context_->env()->cacheLock_);
+      context_->env()->kvstore_->asyncAppendBatch(
+          context_->spaceId(), partId, std::move(batch).value(), callback);
+    } else {
+      context_->env()->kvstore_->asyncAppendBatch(
+          context_->spaceId(), partId, std::move(batch).value(), callback);
+    }
+
     baton.wait();
     return ret;
   }

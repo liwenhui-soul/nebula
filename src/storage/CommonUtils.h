@@ -82,6 +82,7 @@ class StorageEnv {
   std::unique_ptr<EdgesMemLock> edgesML_{nullptr};
   std::unique_ptr<kvstore::KVEngine> adminStore_{nullptr};
   int32_t adminSeqId_{0};
+  folly::SharedMutex cacheLock_;
 
   IndexState getIndexState(GraphSpaceID space, PartitionID part) {
     auto key = std::make_tuple(space, part);

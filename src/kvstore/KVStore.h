@@ -460,6 +460,13 @@ class KVStore {
   virtual ErrorOr<nebula::cpp2::ErrorCode, std::string> getProperty(
       GraphSpaceID spaceId, const std::string& property) = 0;
 
+  /**
+   * @brief Check whether vertex cache is in use.
+   * Should be moved into the generic KVStore with refactor:
+   * https://github.com/vesoft-inc/nebula/issues/3517
+   */
+  virtual bool hasVertexCache() = 0;
+
  protected:
   KVStore() = default;
 };

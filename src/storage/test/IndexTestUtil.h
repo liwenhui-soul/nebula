@@ -389,8 +389,13 @@ class MockKVStore : public ::nebula::kvstore::KVStore {
     UNUSED(property);
     return ::nebula::cpp2::ErrorCode::SUCCEEDED;
   }
+
   void put(const std::string& key, const std::string& value) {
     kv_[key] = value;
+  }
+
+  bool hasVertexCache() override {
+    return false;
   }
 
  private:

@@ -51,7 +51,14 @@ class TagNode final : public IterateNode<VertexID> {
     VLOG(1) << "partId " << partId << ", vId " << vId << ", tagId " << tagId_ << ", prop size "
             << props_->size();
     key_ = NebulaKeyUtils::tagKey(context_->vIdLen(), partId, vId, tagId_);
-    ret = context_->env()->kvstore_->get(context_->spaceId(), partId, key_, &value_);
+
+    if (context_->env()->kvstore_->hasVertexCache()) {
+      // get operation needs to be protected to ensure cache coherence
+      folly::SharedMutex::ReadHolder rHolder(context_->env()->cacheLock_);
+      ret = context_->env()->kvstore_->get(context_->spaceId(), partId, key_, &value_);
+    } else {
+      ret = context_->env()->kvstore_->get(context_->spaceId(), partId, key_, &value_);
+    }
     if (ret == nebula::cpp2::ErrorCode::SUCCEEDED) {
       return doExecute(key_, value_);
     } else if (ret == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {

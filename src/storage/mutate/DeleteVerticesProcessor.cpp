@@ -80,7 +80,13 @@ void DeleteVerticesProcessor::process(const cpp2::DeleteVerticesRequest& req) {
         handleAsync(spaceId_, partId, code);
         continue;
       }
-      doRemove(spaceId_, partId, std::move(keys));
+      if (env_->kvstore_->hasVertexCache()) {
+        // write need to acquire the lock from read to avoid cache incoherence
+        folly::SharedMutex::WriteHolder wHolder(env_->cacheLock_);
+        doRemove(spaceId_, partId, std::move(keys));
+      } else {
+        doRemove(spaceId_, partId, std::move(keys));
+      }
       stats::StatsManager::addValue(kNumVerticesDeleted, keys.size());
     }
   } else {
@@ -96,15 +102,31 @@ void DeleteVerticesProcessor::process(const cpp2::DeleteVerticesRequest& req) {
       }
       DCHECK(!nebula::value(batch).empty());
       nebula::MemoryLockGuard<VMLI> lg(env_->verticesML_.get(), std::move(dummyLock), false, false);
-      env_->kvstore_->asyncAppendBatch(spaceId_,
-                                       partId,
-                                       std::move(nebula::value(batch)),
-                                       [l = std::move(lg), icw = std::move(wrapper), partId, this](
-                                           nebula::cpp2::ErrorCode code) {
-                                         UNUSED(l);
-                                         UNUSED(icw);
-                                         handleAsync(spaceId_, partId, code);
-                                       });
+      if (env_->kvstore_->hasVertexCache()) {
+        // write need to acquire the lock from read to avoid cache incoherence
+        folly::SharedMutex::WriteHolder wHolder(env_->cacheLock_);
+        env_->kvstore_->asyncAppendBatch(
+            spaceId_,
+            partId,
+            std::move(nebula::value(batch)),
+            [l = std::move(lg), icw = std::move(wrapper), partId, this](
+                nebula::cpp2::ErrorCode code) {
+              UNUSED(l);
+              UNUSED(icw);
+              handleAsync(spaceId_, partId, code);
+            });
+      } else {
+        env_->kvstore_->asyncAppendBatch(
+            spaceId_,
+            partId,
+            std::move(nebula::value(batch)),
+            [l = std::move(lg), icw = std::move(wrapper), partId, this](
+                nebula::cpp2::ErrorCode code) {
+              UNUSED(l);
+              UNUSED(icw);
+              handleAsync(spaceId_, partId, code);
+            });
+      }
     }
   }
 }
