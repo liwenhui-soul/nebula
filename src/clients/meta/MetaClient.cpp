@@ -64,6 +64,10 @@ DEFINE_validator(failed_login_attempts, &ValidateFailedLoginAttempts);
 namespace nebula {
 namespace meta {
 
+// The period used to check if the meta service is enterprise version in seconds
+// 10800 secs is 3 hours
+const uint32 kEntMetaCheckPeriodInSecs = 10800;
+
 Indexes buildIndexes(std::vector<cpp2::IndexItem> indexItemVec);
 
 MetaClient::MetaClient(std::shared_ptr<folly::IOThreadPoolExecutor> ioThreadPool,
@@ -143,6 +147,7 @@ bool MetaClient::waitForMetadReady(int count, int retryIntervalSecs) {
   CHECK(bgThread_->start());
   LOG(INFO) << "Register time task for heartbeat!";
   size_t delayMS = FLAGS_heartbeat_interval_secs * 1000 + folly::Random::rand32(900);
+  bgThread_->addDelayTask(delayMS, &MetaClient::entMetaCheckThreadFunc, this);
   bgThread_->addDelayTask(delayMS, &MetaClient::heartBeatThreadFunc, this);
   return ready_;
 }
@@ -175,6 +180,18 @@ void MetaClient::heartBeatThreadFunc() {
   // if MetaServer has some changes, refresh the localCache_
   loadData();
   loadCfg();
+}
+
+void MetaClient::entMetaCheckThreadFunc() {
+  SCOPE_EXIT {
+    bgThread_->addDelayTask(
+        kEntMetaCheckPeriodInSecs * 1000, &MetaClient::entMetaCheckThreadFunc, this);
+  };
+  auto ret = verifyMetaEnterprise();
+  if (!ret.ok()) {
+    LOG(ERROR) << "The meta service used in the cluster is not the enterprise version";
+    return;
+  }
 }
 
 bool MetaClient::loadUsersAndRoles() {
@@ -4010,6 +4027,28 @@ Status MetaClient::verifyVersion() {
   auto resp = std::move(respStatus).value();
   if (resp.get_code() != nebula::cpp2::ErrorCode::SUCCEEDED) {
     return Status::Error("Client verified failed: %s", resp.get_error_msg()->c_str());
+  }
+  return Status::OK();
+}
+
+Status MetaClient::verifyMetaEnterprise() {
+  cpp2::VerifyMetaEnterpriseReq req;
+  folly::Promise<StatusOr<cpp2::VerifyMetaEnterpriseResp>> promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_verifyMetaEnterprise(request); },
+      [](cpp2::VerifyMetaEnterpriseResp&& resp) -> decltype(auto) { return std::move(resp); },
+      std::move(promise));
+
+  auto respStatus = std::move(future).get();
+  if (!respStatus.ok()) {
+    return respStatus.status();
+  }
+  auto resp = std::move(respStatus).value();
+  if (resp.get_code() != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    return Status::Error("Failed to check if Meta service is enterprise: %s",
+                         resp.get_error_msg()->c_str());
   }
   return Status::OK();
 }

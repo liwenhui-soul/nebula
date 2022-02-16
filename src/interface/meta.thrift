@@ -1233,6 +1233,18 @@ struct VerifyClientVersionReq {
     3: binary build_version;
 }
 
+// Enterprise exclusive
+// Prevent using interprise graph/storage with open srource meta service
+struct VerifyMetaEnterpriseReq {
+}
+
+struct VerifyMetaEnterpriseResp {
+    1: common.ErrorCode code,
+    // Valid if ret equals E_LEADER_CHANGED.
+    2: common.HostAddr  leader,
+    3: optional binary  error_msg,
+}
+
 struct VariableItem {
     1: binary           name,
     2: common.Value     value,
@@ -1394,4 +1406,8 @@ service MetaService {
     ExecResp          setVariable(1: SetVariableReq req);
     GetVariableResp   getVariable(1: GetVariableReq req);
     ListVariablesResp listVariables(1: ListVariablesReq req);
+
+    // Enterprise exclusive
+    // Check whether the meta service is enterprise version
+    VerifyMetaEnterpriseResp verifyMetaEnterprise(1: VerifyMetaEnterpriseReq req);
 }

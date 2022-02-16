@@ -256,6 +256,11 @@ class MetaServiceHandler final : public cpp2::MetaServiceSvIf {
   folly::Future<cpp2::VerifyClientVersionResp> future_verifyClientVersion(
       const cpp2::VerifyClientVersionReq& req) override;
 
+  // Enterprise exclusive
+  // Check whether the meta service is enterprise version
+  folly::Future<cpp2::VerifyMetaEnterpriseResp> future_verifyMetaEnterprise(
+      const cpp2::VerifyMetaEnterpriseReq& req) override;
+
   folly::Future<cpp2::GetWorkerIdResp> future_getWorkerId(const cpp2::GetWorkerIdReq& req) override;
 
  private:

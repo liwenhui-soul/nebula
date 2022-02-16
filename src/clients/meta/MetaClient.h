@@ -739,6 +739,8 @@ class MetaClient {
   bool loadData();
   bool loadCfg();
   void heartBeatThreadFunc();
+  // Periodically check if the meta service is enterprise version
+  void entMetaCheckThreadFunc();
 
   bool registerCfg();
   void updateGflagsValue(const cpp2::ConfigItem& item);
@@ -828,7 +830,11 @@ class MetaClient {
 
   ListenersMap doGetListenersMap(const HostAddr& host, const LocalCache& localCache);
 
+  // Verify the version of clients
   Status verifyVersion();
+
+  // Check if the meta service is the enterise version
+  Status verifyMetaEnterprise();
 
  private:
   std::shared_ptr<folly::IOThreadPoolExecutor> ioThreadPool_;
