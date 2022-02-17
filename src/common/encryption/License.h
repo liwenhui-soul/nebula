@@ -11,7 +11,6 @@
 
 #include "common/base/Base.h"
 #include "common/base/Status.h"
-#include "common/encryption/Base64.h"
 #include "common/fs/FileUtils.h"
 
 namespace nebula {

@@ -2,10 +2,10 @@
  *
  * This source code is licensed under Apache 2.0 License.
  */
-
 #include "graph/executor/admin/UpdateUserExecutor.h"
 
-#include "common/encryption/MD5Utils.h"
+#include <proxygen/lib/utils/CryptUtil.h>
+
 #include "graph/context/QueryContext.h"
 #include "graph/planner/plan/Admin.h"
 
@@ -22,7 +22,7 @@ folly::Future<Status> UpdateUserExecutor::updateUser() {
   return qctx()
       ->getMetaClient()
       ->alterUser(*uuNode->username(),
-                  encryption::MD5Utils::md5Encode(*uuNode->password()),
+                  proxygen::md5Encode(folly::StringPiece(*uuNode->password())),
                   *uuNode->ipWhitelist())
       .via(runner())
       .thenValue([this](StatusOr<bool> resp) {

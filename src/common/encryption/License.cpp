@@ -5,15 +5,18 @@
 #include "common/encryption/License.h"
 
 #include <folly/json.h>
+#include <proxygen/lib/utils/Base64.h>
+#include <proxygen/lib/utils/CryptUtil.h>
 
 #include <bitset>
 #include <chrono>
 #include <csignal>
 #include <iomanip>
+#include <string>
+#include <string_view>
 
 #include "common/base/Status.h"
 #include "common/base/StatusOr.h"
-#include "common/encryption/Base64.h"
 #include "common/time/TimeUtils.h"
 
 namespace nebula {
@@ -22,11 +25,11 @@ namespace encryption {
 // AES key/block size
 const unsigned int kKeySize = 32;
 const unsigned int kBlockSize = 16;
-const char kAesKeyBase64[] = "241IYjd0+MKVhiXc0PWFetV7RhmsjTCJpZslOCPC5n8=";
-const char kAesIvBase64[] = "rjJJOkaaueQmwFTVtzBAxw==";
+constexpr std::string_view kAesKeyBase64 = "241IYjd0+MKVhiXc0PWFetV7RhmsjTCJpZslOCPC5n8=";
+constexpr std::string_view kAesIvBase64 = "rjJJOkaaueQmwFTVtzBAxw==";
 
 // RSA public key
-const char kPubKeyBase64[] =
+constexpr std::string_view kPubKeyBase64 =
     "LS0tLS1CRUdJTiBSU0EgUFVCTElDIEtFWS0tLS0tCk1JSUJDZ0tDQVFFQTNGR0NvSW44VHZvYVNEYmx4RmJvL0l1VitxTF"
     "l6U0IwU2QrdGkvYzJZWm9SWkJ3c0ZuTTkKNUhWYXN6UlJ5cmZw"
     "ZlFTdFdMdThUcFlkc1l4ZkxUbmo1eWlYenlRMXluZzNnbytsZmozMXlidFNKVHNVU2pmRAo2RVNTRHlET3hvT0tRUlp1Wm"
@@ -262,13 +265,21 @@ Status License::checkContent(const std::string& licensePath) {
   // Extract AES cipher and RSA signature from licenseKey
   const size_t licenseKeySize = licenseKey.size();
   std::string aesCipherBase64 = licenseKey.substr(0, licenseKeySize - kSigSize);
-  auto aesCipherText = Base64::decode(aesCipherBase64);
+  auto aesCipherBase64paddingSz =
+      aesCipherBase64.size() - (aesCipherBase64.find_last_not_of('=') + 1);
+  auto aesCipherText = proxygen::Base64::decode(aesCipherBase64, aesCipherBase64paddingSz);
+
   std::string rsaSigBase64 = licenseKey.substr(licenseKeySize - kSigSize);
-  auto rsaSig = Base64::decode(rsaSigBase64);
+  auto rsaSigBase64paddingSz = rsaSigBase64.size() - (rsaSigBase64.find_last_not_of('=') + 1);
+  auto rsaSig = proxygen::Base64::decode(rsaSigBase64, rsaSigBase64paddingSz);
 
   // Calculate message digest of AES256 encrypted license content
-  const std::string aesKey = Base64::decode(std::string(kAesKeyBase64));
-  const std::string aesIv = Base64::decode(std::string(kAesIvBase64));
+  auto kAesKeyBase64paddingSz = kAesKeyBase64.size() - (kAesKeyBase64.find_last_not_of('=') + 1);
+  const std::string aesKey =
+      proxygen::Base64::decode(std::string(kAesKeyBase64), kAesKeyBase64paddingSz);
+  auto kAesIvBase64paddingSz = kAesIvBase64.size() - (kAesIvBase64.find_last_not_of('=') + 1);
+  const std::string aesIv =
+      proxygen::Base64::decode(std::string(kAesIvBase64), kAesIvBase64paddingSz);
   std::string encryptedBody = "";
   NG_RETURN_IF_ERROR(aes256Encrypt(reinterpret_cast<const unsigned char*>(aesKey.c_str()),
                                    reinterpret_cast<const unsigned char*>(aesIv.c_str()),
@@ -278,7 +289,9 @@ Status License::checkContent(const std::string& licensePath) {
   NG_RETURN_IF_ERROR(computeSha256Digest(encryptedBody, digestBuf));
 
   // Validate rsa signature
-  const std::string pubKey = Base64::decode(kPubKeyBase64);
+  auto kPubKeyBase64paddingSz = kPubKeyBase64.size() - (kPubKeyBase64.find_last_not_of('=') + 1);
+  const std::string pubKey =
+      proxygen::Base64::decode(std::string(kPubKeyBase64), kPubKeyBase64paddingSz);
   NG_RETURN_IF_ERROR(VerifyRsaSign(const_cast<char*>(rsaSig.c_str()), 256, pubKey, digestBuf));
 
   // Decrypt license content
