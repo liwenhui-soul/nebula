@@ -144,7 +144,6 @@ nebula_add_executable(
         $<TARGET_OBJECTS:graph_thrift_obj>
         $<TARGET_OBJECTS:storage_client_base_obj>
         $<TARGET_OBJECTS:storage_client_obj>
-        $<TARGET_OBJECTS:concurrent_obj>
         $<TARGET_OBJECTS:charset_obj>
         $<TARGET_OBJECTS:graph_obj>
         $<TARGET_OBJECTS:ft_es_graph_adapter_obj>
@@ -270,7 +269,6 @@ nebula_add_executable(
         $<TARGET_OBJECTS:graph_thrift_obj>
         $<TARGET_OBJECTS:storage_client_base_obj>
         $<TARGET_OBJECTS:storage_client_obj>
-        $<TARGET_OBJECTS:concurrent_obj>
         $<TARGET_OBJECTS:charset_obj>
         $<TARGET_OBJECTS:graph_obj>
         $<TARGET_OBJECTS:ft_es_graph_adapter_obj>

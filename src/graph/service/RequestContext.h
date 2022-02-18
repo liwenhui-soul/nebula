@@ -5,6 +5,7 @@
 
 #ifndef GRAPH_REQUESTCONTEXT_H_
 #define GRAPH_REQUESTCONTEXT_H_
+#include <boost/core/noncopyable.hpp>
 
 #include "audit/AuditLogging.h"
 #include "common/base/Base.h"
@@ -28,7 +29,7 @@ namespace nebula {
 namespace graph {
 
 template <typename Response>
-class RequestContext final : public cpp::NonCopyable, public cpp::NonMovable {
+class RequestContext final : public boost::noncopyable, public cpp::NonMovable {
  public:
   RequestContext() = default;
   ~RequestContext() {
