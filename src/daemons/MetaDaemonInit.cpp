@@ -48,7 +48,6 @@ DEFINE_int32(meta_num_worker_threads, 32, "Number of workers");
 DEFINE_string(meta_data_path, "", "Root data path");
 DECLARE_string(meta_server_addrs);  // use define from grap flags.
 DECLARE_int32(ws_meta_http_port);
-DECLARE_int32(ws_meta_h2_port);
 #endif
 
 DECLARE_bool(local_config);
@@ -281,6 +280,6 @@ nebula::Status initWebService(nebula::WebService* svc,
 #ifndef BUILD_STANDALONE
   return svc->start();
 #else
-  return svc->start(FLAGS_ws_meta_http_port, FLAGS_ws_meta_h2_port);
+  return svc->start(FLAGS_ws_meta_http_port);
 #endif
 }
