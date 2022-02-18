@@ -96,7 +96,7 @@ folly::Future<AuthResponse> GraphService::future_authenticate(const std::string&
     return future;
   }
 
-  if (!sessionManager_->isOutOfConnections()) {
+  if (sessionManager_->isOutOfConnections()) {
     ctx->resp().errorCode = ErrorCode::E_TOO_MANY_CONNECTIONS;
     ctx->resp().errorMsg.reset(new std::string("Too many connections in the cluster"));
     auditLogin(ctx->auditContext(), ctx->resp().errorCode, *(ctx->resp().errorMsg));
