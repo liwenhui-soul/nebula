@@ -1565,7 +1565,7 @@ class AppendVertices final : public GetVertices {
                     nullptr,
                     false,
                     {},
-                    0,
+                    -1,
                     nullptr) {}
 
   void cloneMembers(const AppendVertices& a);
