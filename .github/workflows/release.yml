@@ -64,7 +64,7 @@ jobs:
         env:
           FROM_IMAGE: docker://${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-${{ matrix.service }}
           TO_IMAGE: docker://${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-${{ matrix.service }}
-          CMD: docker run --rm -ti quay.io/containers/skopeo:v1.4.1 copy -a --src-creds ${{ secrets.HARBOR_USERNAME }}:${{ secrets.HARBOR_PASSWORD }} --dest-creds ${{ secrets.HARBOR_USERNAME }}:${{ secrets.HARBOR_PASSWORD }}
+          CMD: docker run --rm -i quay.io/containers/skopeo:v1.4.1 copy -a --src-creds ${{ secrets.HARBOR_USERNAME }}:${{ secrets.HARBOR_PASSWORD }} --dest-creds ${{ secrets.HARBOR_USERNAME }}:${{ secrets.HARBOR_PASSWORD }}
         run: |
           ${{ env.CMD }} ${{ env.FROM_IMAGE }}:${{ steps.tagname.outputs.tag }} ${{ env.TO_IMAGE }}:${{ steps.tagname.outputs.majorver }}
           if [[ ! -z "${{ steps.docker.outputs.tag }}" ]]; then
