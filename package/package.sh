@@ -11,6 +11,7 @@
 #   -j: Number of threads, default $(nproc)
 #   -r: Whether enable compressed debug info, default ON
 #   -p: Whether dump the symbols from binary by dump_syms
+#   -f: add EULA license
 #
 # usage: ./package.sh -v <version> -n <ON/OFF> -s <TRUE/FALSE>
 #
@@ -33,8 +34,9 @@ dump_symbols=OFF
 dump_syms_tool_dir=
 system_name=
 install_prefix=/usr/local/nebula
+add_EULA="ON"
 
-while getopts v:n:s:b:d:t:r:p:j: opt;
+while getopts v:n:s:f:b:d:t:r:p:j: opt;
 do
     case $opt in
         v)
@@ -45,6 +47,9 @@ do
             ;;
         s)
             strip_enable=$OPTARG
+            ;;
+        f)
+            add_EULA=$OPTARG
             ;;
         d)
             enablesanitizer="ON"
@@ -89,10 +94,17 @@ if [[ $strip_enable != TRUE ]] && [[ $strip_enable != FALSE ]]; then
     exit 1
 fi
 
+if [[ $add_EULA != OFF ]] && [[ $add_EULA != ON ]]; then
+    echo "add_EULA is wrong, exit"
+    echo ${usage}
+    exit 1
+fi
+
 cat << EOF
 Configuration for this shell:
 version: $version
 strip_enable: $strip_enable
+add_EULA: $add_EULA
 enablesanitizer: $enablesanitizer
 static_sanitizer: $static_sanitizer
 build_type: $build_type
@@ -115,6 +127,7 @@ function _build_graph {
           -DENABLE_PACK_ONE=${package_one} \
           -DENABLE_COMPRESSED_DEBUG_INFO=${enable_compressed_debug_info} \
           -DENABLE_PACKAGE_TAR=${package_tar} \
+          -DENABLE_EULA=${add_EULA} \
           ${project_dir}
 
     if ! ( make -j ${jobs} ); then
