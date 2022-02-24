@@ -11,6 +11,10 @@
 namespace nebula {
 namespace meta {
 
+/**
+ * @brief Sync meta data. Receive meta data from drainer and write to meta leader.
+ *
+ */
 class SyncDataProcessor : public BaseProcessor<cpp2::ExecResp> {
  public:
   static SyncDataProcessor* instance(kvstore::KVStore* kvstore) {

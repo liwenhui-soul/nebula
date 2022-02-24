@@ -23,25 +23,10 @@ namespace kvstore {
 
 using DrainerClient = thrift::ThriftClientManager<drainer::cpp2::DrainerServiceAsyncClient>;
 
-// The directory structure of the storage listener is as follows:
-/* |--listenerPath_/spaceId/partId/wal
- * |------walxx
- * |------last_apply_log_partId(committedlogId + committedtermId + lastApplyLogId)
- */
-
-// The directory structure of the meta listener is as follows:
-/* |--listenerPath_/spaceId/partId/wal  walPath
- * |------walxx
- * |------last_apply_log_0(committedlogId + committedtermId + lastApplyLogId)
- * |------sync
- * |--------spaceId1
- * |----------wal
- * |------------walxx
- * |----------last_apply_log(lastApplyLogId)
- * |--------spaceId2
- * |----------wal
- * |------------walxx
- * |----------last_apply_log(lastApplyLogId)
+/**
+ * @brief This class is the public class of syncListener. According to different partId,
+ * it is divided into MetaSyncListener and StorageSyncListener.
+ *
  */
 class SyncListener : public Listener {
  public:
@@ -52,9 +37,9 @@ class SyncListener : public Listener {
                std::shared_ptr<folly::IOThreadPoolExecutor> ioPool,
                std::shared_ptr<thread::GenericThreadPool> workers,
                std::shared_ptr<folly::Executor> handlers,
-               std::shared_ptr<raftex::SnapshotManager> snapshotMan,  // nullptr
-               std::shared_ptr<RaftClient> clientMan,                 // nullptr
-               std::shared_ptr<DiskManager> diskMan,                  // nullptr
+               std::shared_ptr<raftex::SnapshotManager> snapshotMan,
+               std::shared_ptr<RaftClient> clientMan,
+               std::shared_ptr<DiskManager> diskMan,
                meta::SchemaManager* schemaMan,
                meta::ServiceManager* serviceMan,
                std::shared_ptr<DrainerClient> drainerClientMan)
@@ -71,10 +56,6 @@ class SyncListener : public Listener {
                  schemaMan,
                  serviceMan),
         drainerClientMan_(drainerClientMan) {
-    // Meta listener not check shemanMan
-    if (spaceId == nebula::kDefaultSpaceId && partId == nebula::kDefaultPartId) {
-      isMetaListener_ = true;
-    }
     CHECK(!!schemaMan);
     CHECK(!!serviceMan);
     CHECK(!!drainerClientMan_);
@@ -83,71 +64,58 @@ class SyncListener : public Listener {
   }
 
  protected:
-  void init() override;
-
-  // Process logs and then call apply to execute
-  void processLogs() override;
-
-  bool apply(const std::vector<KV>& data) override;
-
-  // send data to drainer and handle AppendLogResponse
-  bool apply(const std::vector<nebula::cpp2::LogEntry>& data,
-             LogID logIdToSend,
-             TermID logTermToSend,
-             LogID lastApplyLogId,
-             bool cleanupData = false);
-
-  bool metaApply(const std::vector<nebula::cpp2::LogEntry>& data,
-                 GraphSpaceID spaceId,
-                 LogID logIdToSend,
-                 TermID logTermToSend,
-                 LogID lastApplyLogId,
-                 HostAddr& drainerClient,
-                 std::string tospaceName,
-                 LogID& nextApplyLogId);
-
-  void sendMetaListenerDataToDrainer();
-
-  nebula::StatusOr<LogID> spacelLastApplyLogId(std::string& path);
-
-  // Used for meta
-  bool writespacelLastApplyLogId(std::string& path, LogID lastApplyLogId);
-
-  std::pair<int64_t, int64_t> commitSnapshot(const std::vector<std::string>& rows,
-                                             LogID committedLogId,
-                                             TermID committedLogTerm,
-                                             bool finished) override;
-
+  /**
+   * @brief Persist some information to the last_apply_log_partId file.
+   * Format: committedLogId_currentTerm_lastApplyLogId
+   *
+   * @param committedLogId
+   * @param currentTerm
+   * @param lastApplyLogId
+   * @return True if write successful.
+   */
   bool persist(LogID committedLogId, TermID currentTerm, LogID lastApplyLogId) override;
 
+  /**
+   * @brief Get lastCommittedLogId and lastCommittedTerm from last_apply_log_partId file
+   *
+   * @return std::pair<LogID, TermID> lastCommittedLogId, lastCommittedTerm
+   */
   std::pair<LogID, TermID> lastCommittedLogId() override;
 
+  /**
+   * @brief Get lastApplyLogId from last_apply_log_partId file
+   *
+   * @return LogID
+   */
   LogID lastApplyLogId() override;
 
+  /**
+   * @brief Stop listener
+   */
   void stop() override;
 
- private:
-  // send AppendLogRequest to drainer
-  folly::Future<nebula::drainer::cpp2::AppendLogResponse> send(
-      GraphSpaceID spaceId,
-      PartitionID partId,
-      LogID lastLogIdToSend,
-      TermID lastLogTermToSend,
-      LogID lastLogIdSent,
-      const std::vector<nebula::cpp2::LogEntry>& data,
-      HostAddr& drainerClient,
-      std::string& tospaceName,
-      bool cleanupData);
-
+  /**
+   * @brief Persist some information to the last_apply_log_partId file.
+   * Format: committedLogId_currentTerm_lastApplyLogId
+   *
+   * @param lastId
+   * @param lastTerm
+   * @param lastApplyLogId
+   * @return True if write successful.
+   */
   bool writeAppliedId(LogID lastId, TermID lastTerm, LogID lastApplyLogId);
 
+  /**
+   * @brief Encode variable to string
+   *
+   * @param lastId
+   * @param lastTerm
+   * @param lastApplyLogId
+   * @return std::string
+   */
   std::string encodeAppliedId(LogID lastId, TermID lastTerm, LogID lastApplyLogId) const noexcept;
 
-  StatusOr<GraphSpaceID> getSpaceIdInKey(const folly::StringPiece& rawKey);
-
-  bool writeSpaceLog(std::unordered_map<GraphSpaceID, std::vector<nebula::cpp2::LogEntry>>& logs);
-
- private:
+ protected:
   std::string walPath_;
 
   // File name, store lastCommittedlogId + lastCommittedtermId + lastApplyLogId
@@ -170,17 +138,306 @@ class SyncListener : public Listener {
 
   std::shared_ptr<DrainerClient> drainerClientMan_;
 
-  bool isMetaListener_{false};
-
   std::unordered_map<GraphSpaceID, std::shared_ptr<nebula::wal::FileBasedWal>> wals_;
 
-  // use for meta listener
-  std::unordered_map<GraphSpaceID, int32_t> partNums_;
-
-  // For storage listener
   int32_t lastAppendLogIdFd_ = -1;
 
   std::atomic<bool> firstInSnapshot_{false};
+};
+
+/**
+ * @brief Handle meta information synchronization.
+ *
+ * The directory structure of the meta listener is as follows:
+ * |--listenerPath_/spaceId/partId/wal  walPath
+ * |------walxx
+ * |------last_apply_log_0(committedlogId + committedtermId + lastApplyLogId)
+ * |------sync
+ * |--------spaceId1
+ * |----------wal
+ * |------------walxx
+ * |----------last_apply_log(lastApplyLogId)
+ * |--------spaceId2
+ * |----------wal
+ * |------------walxx
+ * |----------last_apply_log(lastApplyLogId)
+ */
+class MetaSyncListener : public SyncListener {
+ public:
+  MetaSyncListener(GraphSpaceID spaceId,
+                   PartitionID partId,
+                   HostAddr localAddr,
+                   const std::string& walPath,
+                   std::shared_ptr<folly::IOThreadPoolExecutor> ioPool,
+                   std::shared_ptr<thread::GenericThreadPool> workers,
+                   std::shared_ptr<folly::Executor> handlers,
+                   std::shared_ptr<raftex::SnapshotManager> snapshotMan,  // nullptr
+                   std::shared_ptr<RaftClient> clientMan,                 // nullptr
+                   std::shared_ptr<DiskManager> diskMan,                  // nullptr
+                   meta::SchemaManager* schemaMan,
+                   meta::ServiceManager* serviceMan,
+                   std::shared_ptr<DrainerClient> drainerClientMan)
+      : SyncListener(spaceId,
+                     partId,
+                     std::move(localAddr),
+                     walPath,
+                     ioPool,
+                     workers,
+                     handlers,
+                     snapshotMan,
+                     clientMan,
+                     diskMan,
+                     schemaMan,
+                     serviceMan,
+                     drainerClientMan) {}
+
+ protected:
+  // Do nothing for MetaSyncListener
+  void init() override{};
+
+  // Do nothing for MetaSyncListener
+  bool apply(const std::vector<KV>&) override {
+    return true;
+  };
+
+  /**
+   * @brief Process meta info log, and then send data to drainer. The main work is as follows:
+   *
+   * 1. Read the wal log of meta
+   * 2. Divide the meta logs according to space and write them to different space directories.
+   * 3. Send multiple synchronized space meta data in sequence.
+   *    After the meta data of each space are sent, update the last_apply_log.
+   */
+  void processLogs() override;
+
+  /**
+   * @brief Apply wal log format meta data of one space.
+   *
+   * @param data
+   * @param spaceId
+   * @param logIdToSend
+   * @param logTermToSend
+   * @param lastApplyLogId
+   * @param drainerClient
+   * @param tospaceName
+   * @param nextApplyLogId
+   * @return True if apply succesful.
+   */
+  bool metaApply(const std::vector<nebula::cpp2::LogEntry>& data,
+                 GraphSpaceID spaceId,
+                 LogID logIdToSend,
+                 TermID logTermToSend,
+                 LogID lastApplyLogId,
+                 HostAddr& drainerClient,
+                 std::string tospaceName,
+                 LogID& nextApplyLogId);
+
+  /**
+   * @brief Send multiple synchronized space meta data in sequence.
+   *
+   */
+  void sendDataToDrainer();
+
+  /**
+   * @brief Get LastApplyLogId under the space level
+   *
+   * @param path File path
+   * @return nebula::StatusOr<LogID>
+   */
+  nebula::StatusOr<LogID> spacelLastApplyLogId(std::string& path);
+
+  // Write the space-level LastApplyLogId to the corresponding file
+  bool writespacelLastApplyLogId(std::string& path, LogID lastApplyLogId);
+
+  /**
+   * @brief Handling the situation where the meta replica sends a snapshot.
+   *
+   * @param rows
+   * @param committedLogId
+   * @param committedLogTerm
+   * @param finished
+   * @return std::pair<int64_t, int64_t>
+   */
+  std::pair<int64_t, int64_t> commitSnapshot(const std::vector<std::string>& rows,
+                                             LogID committedLogId,
+                                             TermID committedLogTerm,
+                                             bool finished) override;
+
+  /**
+   * @brief Send AppendLogRequest to drainer through meta client to synchronize meta data.
+   *
+   * @param spaceId
+   * @param partId
+   * @param lastLogIdToSend
+   * @param lastLogTermToSend
+   * @param lastLogIdSent
+   * @param data
+   * @param drainerClient
+   * @param tospaceName
+   * @param cleanupData
+   * @return folly::Future<nebula::drainer::cpp2::AppendLogResponse>
+   */
+  folly::Future<nebula::drainer::cpp2::AppendLogResponse> send(
+      GraphSpaceID spaceId,
+      PartitionID partId,
+      LogID lastLogIdToSend,
+      TermID lastLogTermToSend,
+      LogID lastLogIdSent,
+      const std::vector<nebula::cpp2::LogEntry>& data,
+      HostAddr& drainerClient,
+      std::string& tospaceName,
+      bool cleanupData);
+
+ private:
+  /**
+   * @brief Get the Space Id from key.
+   * For meta, only the following 3 kinds of data are processed.
+   *
+   * key                                             value
+   * tag data
+   * __index_EntryType_spaceId__tagName              tagId
+   * _tags__spaceId__tagid_version                   length(tagName)+tagName+schema
+   *
+   * edge data
+   * __index__EntryType_spaceId__edgeName            edgeType
+   * __edges__spaceId__edgeType_version              length(edgeName)+edgeName+schema
+   *
+   * index data
+   * _index__EntryType_spaceId__indexName            indexID
+   * _indexes_spaceId_indexID                        IndexItem
+   *
+   * @param rawKey
+   * @return StatusOr<GraphSpaceID>
+   */
+  StatusOr<GraphSpaceID> getSpaceIdInKey(const folly::StringPiece& rawKey);
+
+  /**
+   * @brief Write the wal logs of different spaces to the directory under the corresponding space.
+   *
+   * @param logs
+   * @return True if write all logs successful.
+   */
+  bool writeSpaceLog(std::unordered_map<GraphSpaceID, std::vector<nebula::cpp2::LogEntry>>& logs);
+
+ private:
+  std::unordered_map<GraphSpaceID, int32_t> partNums_;
+};
+
+/**
+ * @brief Handle data information synchronization under one space.
+ *
+ * The directory structure of the storage listener is as follows:
+ * |--listenerPath_/spaceId/partId/wal
+ * |------walxx
+ * |------last_apply_log_partId(committedlogId + committedtermId + lastApplyLogId)
+ */
+class StorageSyncListener : public SyncListener {
+ public:
+  StorageSyncListener(GraphSpaceID spaceId,
+                      PartitionID partId,
+                      HostAddr localAddr,
+                      const std::string& walPath,
+                      std::shared_ptr<folly::IOThreadPoolExecutor> ioPool,
+                      std::shared_ptr<thread::GenericThreadPool> workers,
+                      std::shared_ptr<folly::Executor> handlers,
+                      std::shared_ptr<raftex::SnapshotManager> snapshotMan,  // nullptr
+                      std::shared_ptr<RaftClient> clientMan,                 // nullptr
+                      std::shared_ptr<DiskManager> diskMan,                  // nullptr
+                      meta::SchemaManager* schemaMan,
+                      meta::ServiceManager* serviceMan,
+                      std::shared_ptr<DrainerClient> drainerClientMan)
+      : SyncListener(spaceId,
+                     partId,
+                     std::move(localAddr),
+                     walPath,
+                     ioPool,
+                     workers,
+                     handlers,
+                     snapshotMan,
+                     clientMan,
+                     diskMan,
+                     schemaMan,
+                     serviceMan,
+                     drainerClientMan) {}
+
+ protected:
+  /**
+   * @brief initialize some variables
+   */
+  void init() override;
+
+  // Process logs and then call apply to execute
+  /**
+   * @brief Process storage info log, and then send data to drainer. The main work is as follows:
+   *
+   * 1. Read the wal log of storage, include heartbeat info
+   * 2. Apply the logs to drainer
+   */
+  void processLogs() override;
+
+  /**
+   * @brief Apply the logs to drainer, when sending snapshots.
+   * when sending snapshots, snapshot batch size is snapshot_batch_size.
+   *
+   * @param data
+   * @return True if apply succesfully.
+   */
+  bool apply(const std::vector<KV>& data) override;
+
+  /**
+   * @brief Send wal log format data to drainer and handle AppendLogResponse.
+   *
+   * @param data
+   * @param logIdToSend
+   * @param logTermToSend
+   * @param lastApplyLogId
+   * @param cleanupData
+   * @return True if apply succesfully.
+   */
+  bool apply(const std::vector<nebula::cpp2::LogEntry>& data,
+             LogID logIdToSend,
+             TermID logTermToSend,
+             LogID lastApplyLogId,
+             bool cleanupData = false);
+
+  /**
+   * @brief Handling the situation where the storage replica sends a snapshot.
+   *
+   * @param rows
+   * @param committedLogId
+   * @param committedLogTerm
+   * @param finished
+   * @return std::pair<int64_t, int64_t>
+   */
+  std::pair<int64_t, int64_t> commitSnapshot(const std::vector<std::string>& rows,
+                                             LogID committedLogId,
+                                             TermID committedLogTerm,
+                                             bool finished) override;
+
+  /**
+   * @brief Send AppendLogRequest to drainer
+   *
+   * @param spaceId
+   * @param partId
+   * @param lastLogIdToSend
+   * @param lastLogTermToSend
+   * @param lastLogIdSent
+   * @param data
+   * @param drainerClient
+   * @param tospaceName
+   * @param cleanupData
+   * @return folly::Future<nebula::drainer::cpp2::AppendLogResponse>
+   */
+  folly::Future<nebula::drainer::cpp2::AppendLogResponse> send(
+      GraphSpaceID spaceId,
+      PartitionID partId,
+      LogID lastLogIdToSend,
+      TermID lastLogTermToSend,
+      LogID lastLogIdSent,
+      const std::vector<nebula::cpp2::LogEntry>& data,
+      HostAddr& drainerClient,
+      std::string& tospaceName,
+      bool cleanupData);
 };
 
 }  // namespace kvstore

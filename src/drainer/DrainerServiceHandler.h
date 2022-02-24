@@ -20,6 +20,12 @@ class DrainerServiceHandler final : public cpp2::DrainerServiceSvIf {
  public:
   explicit DrainerServiceHandler(DrainerEnv* env);
 
+  /**
+   * @brief Handling append log requests
+   *
+   * @param req
+   * @return folly::Future<drainer::cpp2::AppendLogResponse>
+   */
   folly::Future<drainer::cpp2::AppendLogResponse> future_appendLog(
       const drainer::cpp2::AppendLogRequest& req) override;
 

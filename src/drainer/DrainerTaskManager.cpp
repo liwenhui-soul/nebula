@@ -25,7 +25,7 @@ bool DrainerTaskManager::init(DrainerEnv* env,
   ioThreadPool_ = ioThreadPool,
   interClient_ = std::make_unique<storage::InternalStorageClient>(ioThreadPool_, env_->metaClient_);
 
-  LOG(INFO) << "Max concurrenct sub drainer task: " << FLAGS_max_concurrent_subdrainertasks;
+  VLOG(3) << "Max concurrenct sub drainer task: " << FLAGS_max_concurrent_subdrainertasks;
   pool_ = std::make_unique<ThreadPool>(FLAGS_max_concurrent_subdrainertasks);
   bgThread_ = std::make_unique<thread::GenericWorker>();
   if (!bgThread_->start()) {
@@ -38,7 +38,6 @@ bool DrainerTaskManager::init(DrainerEnv* env,
   return true;
 }
 
-// schedule
 void DrainerTaskManager::schedule() {
   std::chrono::milliseconds interval{20};  // 20ms
   while (!shutdown_.load(std::memory_order_acquire)) {
@@ -65,7 +64,7 @@ void DrainerTaskManager::schedule() {
     }
 
     if (shutdown_.load(std::memory_order_acquire)) {
-      LOG(INFO) << "detect DrainerTaskManager::shutdown()";
+      LOG(INFO) << "Detect DrainerTaskManager::shutdown()";
       return;
     }
     if (!optTaskHandle) {
@@ -73,10 +72,10 @@ void DrainerTaskManager::schedule() {
     }
 
     auto spaceId = *optTaskHandle;
-    VLOG(3) << folly::stringPrintf("dequeue drainer task(%d)", spaceId);
+    VLOG(3) << folly::sformat("Dequeue drainer task {}", spaceId);
     auto it = tasks_.find(spaceId);
     if (it == tasks_.end()) {
-      LOG(ERROR) << folly::stringPrintf("Trying to exec non-exist drainer task(%d)", spaceId);
+      VLOG(3) << folly::stringPrintf("Trying to exec non exist drainer task(%d)", spaceId);
       continue;
     }
     VLOG(3) << apache::thrift::util::enumNameSafe(tasks_[spaceId]->rc_.load());
@@ -85,9 +84,9 @@ void DrainerTaskManager::schedule() {
     auto statusCode = drainerTask->status();
     if (statusCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
       // remove cancelled tasks
-      LOG(INFO) << folly::sformat("Remove drainer task {} genSubTask failed, err={}",
-                                  spaceId,
-                                  apache::thrift::util::enumNameSafe(statusCode));
+      VLOG(3) << folly::sformat("Remove drainer task {} genSubTask failed, err={}",
+                                spaceId,
+                                apache::thrift::util::enumNameSafe(statusCode));
       tasks_.erase(spaceId);
       continue;
     }
@@ -114,7 +113,7 @@ void DrainerTaskManager::schedule() {
     drainerTask->unFinishedSubTask_ = subTasks.size();
 
     if (0 == subTasks.size()) {
-      FLOG_INFO("drainer task(%d) finished, no subtask", spaceId);
+      VLOG(3) << folly::sformat("Drainer task {} finished, no subtask", spaceId);
       drainerTask->finish();
       tasks_.erase(spaceId);
       continue;
@@ -129,16 +128,16 @@ void DrainerTaskManager::schedule() {
       pool_->add(std::bind(&DrainerTaskManager::runSubTask, this, spaceId));
     }
   }  // end while (!shutdown_)
-  LOG(INFO) << "DrainerTaskManager::pickTaskThread(~)";
+  VLOG(3) << "DrainerTaskManager::pickTaskThread(~)";
 }
 
 void DrainerTaskManager::addAsyncTask(GraphSpaceID spaceId, std::shared_ptr<DrainerTask> task) {
-  LOG(INFO) << taskQueue_.size();
-  LOG(INFO) << tasks_.size();
+  VLOG(3) << taskQueue_.size();
+  VLOG(3) << tasks_.size();
   taskQueue_.add(spaceId);
   auto ret = tasks_.insert(spaceId, task).second;
   DCHECK(ret);
-  LOG(INFO) << apache::thrift::util::enumNameSafe(tasks_[spaceId]->rc_.load());
+  VLOG(3) << apache::thrift::util::enumNameSafe(tasks_[spaceId]->rc_.load());
 }
 
 // The directory structure of the data is as follows:
@@ -174,7 +173,7 @@ Status DrainerTaskManager::addAsyncTask() {
       // check space exists
       auto spaceNameRet = env_->schemaMan_->toGraphSpaceName(spaceId);
       if (!spaceNameRet.ok()) {
-        LOG(ERROR) << "Space id " << spaceId << " no found";
+        VLOG(3) << "Space id " << spaceId << " no found";
         // remove invalid sync listener space data
         if (FLAGS_auto_remove_invalid_drainer_space) {
           removeSpaceDir(spaceDir);
@@ -185,7 +184,7 @@ Status DrainerTaskManager::addAsyncTask() {
       // load space meta info
       auto ret = loadSpaceMeta(spaceDir, spaceId);
       if (!ret.ok()) {
-        LOG(ERROR) << "Load space " << spaceId << " meta failed.";
+        VLOG(3) << "Load space " << spaceId << " meta failed.";
         return ret;
       }
 
@@ -265,8 +264,7 @@ Status DrainerTaskManager::loadSpaceMeta(std::string& spaceDir, GraphSpaceID toS
     auto clustetIter = env_->spaceClusters_.find(toSpaceId);
     auto oldPartNumIter = env_->spaceOldParts_.find(toSpaceId);
     if (clustetIter == env_->spaceClusters_.end() || oldPartNumIter == env_->spaceOldParts_.end()) {
-      LOG(ERROR) << "Not find space id " << toSpaceId
-                 << " in spaceClusters or spaceOldParts of env.";
+      VLOG(2) << "Not find space id " << toSpaceId << " in spaceClusters or spaceOldParts of env.";
       return Status::Error("Get space %d meta failed.", toSpaceId);
     }
   } else {
@@ -278,7 +276,7 @@ Status DrainerTaskManager::loadSpaceMeta(std::string& spaceDir, GraphSpaceID toS
 
     auto spaceMetaRet = DrainerCommon::readSpaceMeta(spaceFile);
     if (!spaceMetaRet.ok()) {
-      LOG(ERROR) << spaceMetaRet.status();
+      VLOG(2) << spaceMetaRet.status();
       return spaceMetaRet.status();
     }
     std::tie(fromClusterId, fromSpaceId, fromPartNum, toClusterId) = spaceMetaRet.value();
@@ -292,7 +290,7 @@ Status DrainerTaskManager::loadSpaceMeta(std::string& spaceDir, GraphSpaceID toS
     // Get new parts from schema
     auto partRet = env_->schemaMan_->getPartsNum(toSpaceId);
     if (!partRet.ok()) {
-      LOG(ERROR) << "Get space partition number failed from schema";
+      VLOG(2) << "Get space partition number failed from schema";
       return partRet.status();
     }
     auto parts = partRet.value();
@@ -301,22 +299,10 @@ Status DrainerTaskManager::loadSpaceMeta(std::string& spaceDir, GraphSpaceID toS
   return Status::OK();
 }
 
-// For the continuity of logId, do nothing
-bool DrainerTaskManager::preProcessLog(LogID logId,
-                                       TermID termId,
-                                       ClusterID clusterId,
-                                       const std::string& log) {
-  UNUSED(logId);
-  UNUSED(termId);
-  UNUSED(clusterId);
-  UNUSED(log);
-  return true;
-}
-
 void DrainerTaskManager::runSubTask(GraphSpaceID spaceId) {
   auto it = tasks_.find(spaceId);
   if (it == tasks_.cend()) {
-    FLOG_INFO("task(%d) runSubTask() exit", spaceId);
+    VLOG(3) << folly::sformat("Task {} runSubTask() exit", spaceId);
     return;
   }
   auto task = it->second;
@@ -348,7 +334,7 @@ void DrainerTaskManager::runSubTask(GraphSpaceID spaceId) {
       pool_->add(std::bind(&DrainerTaskManager::runSubTask, this, spaceId));
     }
   } else {
-    FLOG_INFO("drainer task(%d) runSubTask() exit", spaceId);
+    VLOG(2) << folly::sformat("drainer task {} runSubTask() exit", spaceId);
   }
 }
 
@@ -365,7 +351,7 @@ nebula::cpp2::ErrorCode DrainerTaskManager::cancelTask(GraphSpaceID spaceId) {
 }
 
 void DrainerTaskManager::shutdown() {
-  LOG(INFO) << "Enter DrainerTaskManager::shutdown()";
+  VLOG(2) << "Enter DrainerTaskManager::shutdown()";
   shutdown_.store(true, std::memory_order_release);
   bgThread_->stop();
   bgThread_->wait();
@@ -375,7 +361,7 @@ void DrainerTaskManager::shutdown() {
   }
 
   pool_->join();
-  LOG(INFO) << "Exit DrainerTaskManager::shutdown()";
+  LOG(INFO) << "DrainerTaskManager::shutdown()";
 }
 
 bool DrainerTaskManager::isFinished(GraphSpaceID spaceId) {
@@ -389,7 +375,7 @@ bool DrainerTaskManager::isFinished(GraphSpaceID spaceId) {
 
 void DrainerTaskManager::removeSpaceDir(const std::string& dir) {
   try {
-    LOG(INFO) << "Try to remove space directory: " << dir;
+    VLOG(2) << "Try to remove space directory: " << dir;
     boost::filesystem::remove_all(dir);
   } catch (const boost::filesystem::filesystem_error& e) {
     LOG(ERROR) << "Exception caught while remove directory, please delelte it "

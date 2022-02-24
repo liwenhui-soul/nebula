@@ -18,6 +18,9 @@
 namespace nebula {
 namespace drainer {
 
+/**
+ * @brief This class manages the drainer task
+ */
 class DrainerTaskManager {
   FRIEND_TEST(DrainerTaskManagerTest, ctor);
   FRIEND_TEST(DrainerTaskManagerTest, happy_path_task1_sub1);
@@ -50,38 +53,96 @@ class DrainerTaskManager {
     return &drainerTaskManager;
   }
 
-  // By default, one space can be synchronized at the same time,
-  // Each space synchronizes max_concurrent_subdrainertasks parts at the same time.
-  // Initialize wals_ according to drainerPath_ from DrainerEnv
+  /**
+   * @brief Initialize some member information, then use a background thread to execute the
+   * schedule function.
+   *
+   * @param env
+   * @param ioThreadPool
+   * @return True if init succeeded
+   */
   bool init(DrainerEnv* env, std::shared_ptr<folly::IOThreadPoolExecutor> ioThreadPool);
 
-  // Only for test
+  /**
+   * @brief Add an asynchronous task，only used for UT.
+   *
+   * @param spaceId
+   * @param task
+   */
   void addAsyncTask(GraphSpaceID spaceId, std::shared_ptr<DrainerTask> task);
 
-  // Read the directory under drainerPath_ in DrainerEnv and initialize the drainer task
+  /**
+   * @brief Read the directory under drainerPath_ in DrainerEnv and initialize the drainer task.
+   * Then put the drainer task on the task queue. A space creates a drainer task.
+   *
+   * @return Status
+   */
   Status addAsyncTask();
 
-  void invoke();
-
-  // For drainer, stop sending data to storage
+  /**
+   * @brief If the spaceId drainer task is on the task queue, cancel the execution of the task.
+   *
+   * @param spaceId
+   * @return nebula::cpp2::ErrorCode Whether cancelTask was successful
+   */
   nebula::cpp2::ErrorCode cancelTask(GraphSpaceID spaceId);
 
+  /**
+   * @brief Wait for the background thread to exit, exit the DrainerTaskManager
+   */
   void shutdown();
 
+  /**
+   * @brief Check whether the drainer task of spaceId is finished
+   *
+   * @param spaceId the drainer task corresponding to spaceId
+   * @return True if the drainer task corresponding to spaceid is not on the task queue or has been
+   * executed.
+   */
   bool isFinished(GraphSpaceID spaceId);
 
+  /**
+   * @brief Remove invalid sync listener space data
+   *
+   * @param dir Space directory name
+   */
   void removeSpaceDir(const std::string& dir);
 
-  // For the continuity of logId, do nothing
-  bool preProcessLog(LogID logId, TermID termId, ClusterID clusterId, const std::string& log);
+  /**
+   * @brief For the continuity of logId, do nothing
+   *
+   * @return True
+   */
+  bool preProcessLog(LogID, TermID, ClusterID, const std::string&) {
+    return true;
+  }
 
-  // load space meta
+  /**
+   * @brief Get some meta information of the toSpaceId
+   *
+   * @param spaceDir Space path
+   * @param toSpaceId The Space Id to process.
+   * @return Status::OK() If successful.
+   */
   Status loadSpaceMeta(std::string& spaceDir, GraphSpaceID toSpaceId);
 
  protected:
+  /**
+   * @brief General schedule interface.
+   * When the drainer task queue is empty, execute addAsyncTask periodically.
+   * 1）Generate drainer tasks according to the space and put them on the drainer task queue.
+   * 2）Then drainer tasks are executed serially.
+   * 3）Each drainer task generates multiple drainer subtasks according to the part, and the drainer
+   * subtasks are executed in parallel.
+   *
+   */
   void schedule();
 
-  // Get a subtask execution from drainer task
+  /**
+   * @brief Execute a subtask of the drainer task of spaceId
+   *
+   * @param spaceId
+   */
   void runSubTask(GraphSpaceID spaceId);
 
  protected:
@@ -93,7 +154,6 @@ class DrainerTaskManager {
   std::unique_ptr<thread::GenericWorker> bgThread_{nullptr};
 
   std::shared_ptr<folly::IOThreadPoolExecutor> ioThreadPool_{nullptr};
-  // inter storage client
   std::unique_ptr<nebula::storage::InternalStorageClient> interClient_{nullptr};
 };
 

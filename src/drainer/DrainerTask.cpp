@@ -24,7 +24,7 @@ ErrorOr<nebula::cpp2::ErrorCode, std::vector<DrainerSubTask>> DrainerTask::genSu
   // Check whether the drainer is legal under the space of the slave cluster
   auto drainersRet = env_->serviceMan_->getDrainerServer(spaceId_);
   if (!drainersRet.ok()) {
-    LOG(ERROR) << folly::stringPrintf("space id %d", spaceId_) << drainersRet.status();
+    VLOG(2) << folly::stringPrintf("space id %d", spaceId_) << drainersRet.status();
     return nebula::cpp2::ErrorCode::E_DRAINER_NOT_FOUND;
   }
 
@@ -34,11 +34,11 @@ ErrorOr<nebula::cpp2::ErrorCode, std::vector<DrainerSubTask>> DrainerTask::genSu
     return h.get_host() == localHost;
   });
   if (drainerIter == drainers.end()) {
-    LOG(ERROR) << "Drainer host " << localHost << " not in space " << spaceId_;
+    VLOG(2) << "Drainer host " << localHost << " not in space " << spaceId_;
     return nebula::cpp2::ErrorCode::E_DRAINER_NOT_FOUND;
   }
   if (drainerIter->get_status() != meta::cpp2::HostStatus::ONLINE) {
-    LOG(ERROR) << "Drainer host " << localHost << " status not online";
+    VLOG(2) << "Drainer host " << localHost << " status not online";
     return nebula::cpp2::ErrorCode::E_DRAINER_NOT_FOUND;
   }
 
@@ -47,21 +47,21 @@ ErrorOr<nebula::cpp2::ErrorCode, std::vector<DrainerSubTask>> DrainerTask::genSu
 
   auto retVidLens = env_->schemaMan_->getSpaceVidLen(spaceId_);
   if (!retVidLens.ok()) {
-    LOG(ERROR) << retVidLens.status();
+    VLOG(2) << retVidLens.status();
     return nebula::cpp2::ErrorCode::E_INVALID_SPACEVIDLEN;
   }
   vIdLen_ = retVidLens.value();
 
   auto oldPartIter = env_->spaceOldParts_.find(spaceId_);
   if (oldPartIter == env_->spaceOldParts_.end()) {
-    LOG(ERROR) << "Do not set old partNum in space: " << spaceId_;
+    VLOG(2) << "Do not set old partNum in space: " << spaceId_;
     return nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND;
   }
   auto oldPartNum = oldPartIter->second;
 
   auto newPartIter = env_->spaceNewParts_.find(spaceId_);
   if (newPartIter == env_->spaceNewParts_.end()) {
-    LOG(ERROR) << "Do not set new partNum in space: " << spaceId_;
+    VLOG(2) << "Do not set new partNum in space: " << spaceId_;
     return nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND;
   }
   newPartNum_ = newPartIter->second;
@@ -84,7 +84,7 @@ nebula::cpp2::ErrorCode DrainerTask::genSubTask(PartitionID part, nebula::wal::F
   // Only the part directory exists, sendLogFile must exist
   auto ret = readSendLog(sendLogFile, spaceId_, part);
   if (!ret.ok()) {
-    LOG(ERROR) << ret.status();
+    VLOG(2) << "Read send log failed " << ret.status();
     return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
   }
 
@@ -99,12 +99,12 @@ nebula::cpp2::ErrorCode DrainerTask::genSubTask(PartitionID part, nebula::wal::F
   // Only the part directory exists, recvLogFile must exist
   ret = readRecvLog(recvLogFile, spaceId_, part);
   if (!ret.ok()) {
-    LOG(ERROR) << ret.status();
+    VLOG(2) << "Read recv log failed " << ret.status();
     return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
   }
   auto lastRecvLogId = ret.value();
   if (lastRecvLogId > lastId) {
-    LOG(ERROR) << "recv log id should not be greater than lastId.";
+    VLOG(2) << "Recv logId should not be greater than lastId.";
     return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
   }
 
@@ -147,8 +147,8 @@ nebula::cpp2::ErrorCode DrainerTask::genSubTask(PartitionID part, nebula::wal::F
       case kvstore::OP_BATCH_WRITE: {
         // Check whether the clusterId of each log is the master clusterId
         if (iter->logSource() != masterClusterId_) {
-          LOG(ERROR) << "Cluster Id does not match, expect clusterId " << masterClusterId_
-                     << " actual clusterid " << iter->logSource();
+          VLOG(2) << "Cluster Id does not match, expect clusterId " << masterClusterId_
+                  << " actual clusterid " << iter->logSource();
           return nebula::cpp2::ErrorCode::E_WRONGCLUSTER;
         }
 
@@ -157,7 +157,7 @@ nebula::cpp2::ErrorCode DrainerTask::genSubTask(PartitionID part, nebula::wal::F
         // When repartition, one log may generate multiple logs
         auto partAndLogsRet = ProcessData(part, log.toString());
         if (!partAndLogsRet.ok()) {
-          LOG(ERROR) << "Process data failed in space " << spaceId_ << " part " << part;
+          VLOG(2) << "Process data failed in space " << spaceId_ << " part " << part;
           terminate = true;
           // logId is continuous
           logIdToSend--;
@@ -178,8 +178,8 @@ nebula::cpp2::ErrorCode DrainerTask::genSubTask(PartitionID part, nebula::wal::F
         break;
       }
       default: {
-        LOG(WARNING) << "Drainer task space " << spaceId_ << " partId " << part
-                     << " unknown operation: " << static_cast<int32_t>(log[0]);
+        VLOG(2) << "Drainer task space " << spaceId_ << " partId " << part
+                << " unknown operation: " << static_cast<int32_t>(log[0]);
       }
     }
 
@@ -193,12 +193,12 @@ nebula::cpp2::ErrorCode DrainerTask::genSubTask(PartitionID part, nebula::wal::F
         // Persist to the sendLog file
         auto updateSendLogIdRet = updateSendLog(sendLogFile, spaceId_, part, logIdToSend);
         if (!updateSendLogIdRet) {
-          LOG(ERROR) << "Update sendLogId failed.";
+          VLOG(2) << "Update sendLogId failed.";
           return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
         }
         logs.clear();
       } else {
-        LOG(ERROR) << resp.toString();
+        VLOG(2) << "Send data failed " << resp.toString();
         return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
       }
     }
@@ -212,11 +212,11 @@ nebula::cpp2::ErrorCode DrainerTask::genSubTask(PartitionID part, nebula::wal::F
       // Persist to the sendLog file
       auto updateSendLogIdRet = updateSendLog(sendLogFile, spaceId_, part, logIdToSend);
       if (!updateSendLogIdRet) {
-        LOG(ERROR) << "Update sendLogId failed.";
+        VLOG(2) << "Update sendLogId failed.";
         return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
       }
     } else {
-      LOG(ERROR) << resp.toString();
+      VLOG(2) << "Send data failed " << resp.toString();
       return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
     }
   } else {
@@ -224,7 +224,7 @@ nebula::cpp2::ErrorCode DrainerTask::genSubTask(PartitionID part, nebula::wal::F
     if (logIdToSend != -1) {
       auto updateSendLogIdRet = updateSendLog(sendLogFile, spaceId_, part, logIdToSend);
       if (!updateSendLogIdRet) {
-        LOG(ERROR) << "Update sendLogId failed.";
+        VLOG(2) << "Update sendLogId failed.";
         return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
       }
     }
@@ -258,7 +258,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
       // 1) check schema and repart
       auto ret = checkSchemaAndRepartition(part, key, val, true);
       if (!ret.ok()) {
-        LOG(ERROR) << ret.status().toString();
+        VLOG(2) << "Check schema and repart failed " << ret.status().toString();
         return ret.status();
       }
       auto partAndKey = ret.value();
@@ -276,7 +276,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
         auto& val = kvs[i + 1];
         auto ret = checkSchemaAndRepartition(part, key, val, true);
         if (!ret.ok()) {
-          LOG(ERROR) << ret.status().toString();
+          VLOG(2) << "Check schema and repart failed " << ret.status().toString();
           return ret.status();
         }
         auto partAndKey = ret.value();
@@ -292,7 +292,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
       auto key = kvstore::decodeSingleValue(log);
       auto ret = checkSchemaAndRepartition(part, key, "", false);
       if (!ret.ok()) {
-        LOG(ERROR) << ret.status().toString();
+        VLOG(2) << "Check schema and repart failed " << ret.status().toString();
         return ret.status();
       }
       auto partAndKey = ret.value();
@@ -306,7 +306,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
       for (auto key : keys) {
         auto ret = checkSchemaAndRepartition(part, key, "", false);
         if (!ret.ok()) {
-          LOG(ERROR) << ret.status().toString();
+          VLOG(2) << "Check schema and repart failed " << ret.status().toString();
           return ret.status();
         }
         auto partAndKey = ret.value();
@@ -326,7 +326,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
     case kvstore::OP_REMOVE_RANGE: {
       // auto range = kvstore::decodeMultiValues(log);
       // DCHECK_EQ(2, range.size());
-      // Can only ignore for now
+      // Ignore for now
       LOG(INFO) << "A remove range operation has occurred in the master cluster.";
       break;
     }
@@ -339,7 +339,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
           auto& val = op.second.second;
           auto ret = checkSchemaAndRepartition(part, key, val, true);
           if (!ret.ok()) {
-            LOG(ERROR) << ret.status().toString();
+            VLOG(2) << "Check schema and repart failed " << ret.status().toString();
             return ret.status();
           }
           auto partAndKey = ret.value();
@@ -354,7 +354,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
           auto key = op.second.first;
           auto ret = checkSchemaAndRepartition(part, key, "", false);
           if (!ret.ok()) {
-            LOG(ERROR) << ret.status().toString();
+            VLOG(2) << "Check schema and repart failed " << ret.status().toString();
             return ret.status();
           }
           auto partAndKey = ret.value();
@@ -365,7 +365,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
           }
           batchHolders[partId]->remove(std::move(partAndKey.second));
         } else if (op.first == kvstore::BatchLogType::OP_BATCH_REMOVE_RANGE) {
-          // Can only ignore for now
+          // Ignore for now
           LOG(INFO) << "A remove range of batch operation has occurred in the master cluster.";
         }
       }
@@ -378,16 +378,14 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
     }
     default: {
       // It has been filtered before. Shouldn't get here.
-      LOG(ERROR) << "Unknown operation: " << static_cast<int32_t>(log[0]) << " in space "
-                 << spaceId_ << " partId " << part;
+      VLOG(2) << "Unknown operation: " << static_cast<int32_t>(log[0]) << " in space " << spaceId_
+              << " partId " << part;
       return Status::Error("Unknown operation: %d", static_cast<int32_t>(log[0]));
     }
   }
   return result;
 }
 
-// For meta data
-// replace spaceId, so that only one decode operation is required
 StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask::ProcessMetaData(
     const std::string& log) {
   // replace the spaceId of schema data
@@ -418,7 +416,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
       auto& key = pieces[0];
       auto ret = adjustSpaceIdInKey(spaceId_, key);
       if (!ret.ok()) {
-        LOG(ERROR) << ret.status().toString();
+        VLOG(2) << "Adjust spaceId in key failed " << ret.status().toString();
         return ret.status();
       }
       auto newKey = ret.value();
@@ -435,7 +433,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
         auto key = kvs[i];
         auto ret = adjustSpaceIdInKey(spaceId_, key);
         if (!ret.ok()) {
-          LOG(ERROR) << ret.status().toString();
+          VLOG(2) << "Adjust spaceId in key failed " << ret.status().toString();
           return ret.status();
         }
         auto newKey = ret.value();
@@ -449,7 +447,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
       auto key = kvstore::decodeSingleValue(log);
       auto ret = adjustSpaceIdInKey(spaceId_, key);
       if (!ret.ok()) {
-        LOG(ERROR) << ret.status().toString();
+        VLOG(2) << "Adjust spaceId in key failed " << ret.status().toString();
         return ret.status();
       }
       auto newKey = ret.value();
@@ -463,7 +461,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
       for (auto key : keys) {
         auto ret = adjustSpaceIdInKey(spaceId_, key);
         if (!ret.ok()) {
-          LOG(ERROR) << ret.status().toString();
+          VLOG(2) << "Adjust spaceId in key failed " << ret.status().toString();
           return ret.status();
         }
         auto newKey = ret.value();
@@ -478,7 +476,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
     case kvstore::OP_REMOVE_RANGE: {
       // auto range = kvstore::decodeMultiValues(log);
       // DCHECK_EQ(2, range.size());
-      // Can only ignore for now
+      // Ignore for now
       LOG(INFO) << "A remove range operation has occurred in the master cluster.";
       break;
     }
@@ -490,7 +488,7 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
           auto key = op.second.first;
           auto ret = adjustSpaceIdInKey(spaceId_, key);
           if (!ret.ok()) {
-            LOG(ERROR) << ret.status().toString();
+            VLOG(2) << "Adjust spaceId in key failed " << ret.status().toString();
             return ret.status();
           }
           auto newKey = ret.value();
@@ -499,13 +497,13 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
           auto key = op.second.first;
           auto ret = adjustSpaceIdInKey(spaceId_, key);
           if (!ret.ok()) {
-            LOG(ERROR) << ret.status().toString();
+            VLOG(2) << "Adjust spaceId in key failed " << ret.status().toString();
             return ret.status();
           }
           auto newKey = ret.value();
           batchHolder->remove(std::move(newKey));
         } else if (op.first == kvstore::BatchLogType::OP_BATCH_REMOVE_RANGE) {
-          // Can only ignore for now
+          // Ignore for now
           LOG(INFO) << "A remove range of batch operation has occurred in the master cluster.";
         }
       }
@@ -516,8 +514,8 @@ StatusOr<std::unordered_map<PartitionID, std::vector<std::string>>> DrainerTask:
     }
 
     default: {
-      LOG(WARNING) << "Drainer task space " << spaceId_ << " partId 0 "
-                   << " unknown operation: " << static_cast<int32_t>(log[0]);
+      VLOG(2) << "Drainer task space " << spaceId_ << " partId 0 "
+              << " unknown operation: " << static_cast<int32_t>(log[0]);
     }
   }
   return result;
@@ -548,15 +546,14 @@ StatusOr<std::pair<PartitionID, std::string>> DrainerTask::checkSchemaAndReparti
   // Illegal data info
   constexpr int32_t len = static_cast<int32_t>(sizeof(NebulaKeyType));
   auto type = readInt<uint32_t>(rawKey.data(), len) & kTypeMask;
-  LOG(ERROR) << type;
-  LOG(ERROR) << "Not tag/edge/index data " << folly::hexDump(rawKey.data(), rawKey.size());
+  VLOG(2) << "Data type " << type << " not tag/edge/index data "
+          << folly::hexDump(rawKey.data(), rawKey.size());
   return Status::Error("Not tag/edge/index data");
 }
 
 StatusOr<std::pair<PartitionID, std::string>> DrainerTask::vertexRepart(
     PartitionID part, const folly::StringPiece& rawKey) {
   if (repart_) {
-    // 1) repartition
     auto vertexId = nebula::NebulaKeyUtils::getVertexIdFromVertexKey(vIdLen_, rawKey).toString();
     auto newPartId = env_->metaClient_->partId(newPartNum_, vertexId);
     auto newKey = nebula::NebulaKeyUtils::updatePartIdVertexKey(newPartId, rawKey.toString());
@@ -580,8 +577,8 @@ StatusOr<std::pair<PartitionID, std::string>> DrainerTask::checkTagSchemaAndRepa
       auto tagId = nebula::NebulaKeyUtils::getTagId(vIdLen_, rawKey);
       auto schema = env_->schemaMan_->getTagSchema(spaceId_, tagId, schemaVer);
       if (schema == nullptr) {
-        LOG(ERROR) << "The tag schema in the data is too new and needs to be sent next time "
-                   << " in space " << spaceId_ << " partId " << part;
+        VLOG(2) << "The tag schema in the data is too new and needs to be sent next time "
+                << " in space " << spaceId_ << " partId " << part;
         return Status::Error(
             "The tag schema in the data is too new and needs to be sent next time"
             " in space %d  partId %d",
@@ -589,14 +586,13 @@ StatusOr<std::pair<PartitionID, std::string>> DrainerTask::checkTagSchemaAndRepa
             part);
       }
     } else {
-      LOG(ERROR) << "Tag schema illegal "
-                 << " in space " << spaceId_ << " partId " << part;
+      VLOG(2) << "Tag schema illegal in space " << spaceId_ << " partId " << part;
       return Status::Error("Tag schema illegal in space %d  partId %d", spaceId_, part);
     }
   }
 
+  // 2) repartition
   if (repart_) {
-    // 2) repartition
     auto vertexId = nebula::NebulaKeyUtils::getVertexId(vIdLen_, rawKey).toString();
     auto newPartId = env_->metaClient_->partId(newPartNum_, vertexId);
     auto newKey = nebula::NebulaKeyUtils::updatePartIdTagKey(newPartId, rawKey.toString());
@@ -620,8 +616,8 @@ StatusOr<std::pair<PartitionID, std::string>> DrainerTask::checkEdgeSchemaAndRep
       auto edgeType = std::abs(nebula::NebulaKeyUtils::getEdgeType(vIdLen_, rawKey));
       auto schema = env_->schemaMan_->getEdgeSchema(spaceId_, edgeType, schemaVer);
       if (schema == nullptr) {
-        LOG(ERROR) << "The edge schema in the data is too new and needs to be sent next time "
-                   << " in space " << spaceId_ << " partId " << part;
+        VLOG(2) << "The edge schema in the data is too new and needs to be sent next time "
+                << "in space " << spaceId_ << " partId " << part;
         return Status::Error(
             "The edge schema in the data is too new and needs to be sent next time"
             " in space %d  partId %d",
@@ -629,14 +625,13 @@ StatusOr<std::pair<PartitionID, std::string>> DrainerTask::checkEdgeSchemaAndRep
             part);
       }
     } else {
-      LOG(ERROR) << "Edge schema illegal "
-                 << " in space " << spaceId_ << " partId " << part;
+      VLOG(2) << "Edge schema illegal in space " << spaceId_ << " partId " << part;
       return Status::Error("Edge schema illegal in space %d  partId %d", spaceId_, part);
     }
   }
 
+  // 2) repartition
   if (repart_) {
-    // 2) repartition
     auto srcId = nebula::NebulaKeyUtils::getSrcId(vIdLen_, rawKey).toString();
     auto newPartId = env_->metaClient_->partId(newPartNum_, srcId);
     auto newKey = nebula::NebulaKeyUtils::updatePartIdEdgeKey(newPartId, rawKey.toString());
@@ -659,8 +654,7 @@ StatusOr<std::pair<PartitionID, std::string>> DrainerTask::checkIndexAndRepart(
     if (tRet.ok()) {
       VertexId = nebula::IndexKeyUtils::getIndexVertexID(vIdLen_, rawKey).toString();
     } else {
-      LOG(ERROR) << "Index data illegal "
-                 << " in space " << spaceId_ << " partId " << part;
+      VLOG(2) << "Index data illegal in space " << spaceId_ << " partId " << part;
       return Status::Error("Index data illegal in space %d  partId %d", spaceId_, part);
     }
   }
@@ -699,17 +693,17 @@ Status DrainerTask::sendData(std::unordered_map<PartitionID, std::vector<std::st
         if (ret.ok()) {
           return Status::OK();
         } else {
-          LOG(ERROR) << ret.toString() << " retryCnt " << retryCnt;
+          VLOG(2) << ret.toString() << " retryCnt " << retryCnt;
           if (retryCnt == 0) {
             return Status::Error(
-                "drainer send data to storage failed, space %d part %d", spaceId_, part);
+                "Drainer send data to storage failed, space %d part %d", spaceId_, part);
           }
         }
       } catch (const std::exception& e) {
         LOG(ERROR) << "Send drainer data to storage failed exception " << e.what();
         if (retryCnt == 0) {
           return Status::Error(
-              "drainer send data to storage failed, space %d part %d", spaceId_, part);
+              "Drainer send data to storage failed, space %d part %d", spaceId_, part);
         }
       }
     }
@@ -726,7 +720,7 @@ Status DrainerTask::sendData(std::unordered_map<PartitionID, std::vector<std::st
               .thenValue([spaceId = spaceId_](StatusOr<bool> resp) {
                 if (!resp.ok()) {
                   LOG(ERROR) << resp.status();
-                  return Status::Error("drainer send data to meta failed, space %d", spaceId);
+                  return Status::Error("Drainer send data to meta failed, space %d", spaceId);
                 }
                 return Status::OK();
               });
@@ -736,15 +730,15 @@ Status DrainerTask::sendData(std::unordered_map<PartitionID, std::vector<std::st
         if (ret.ok()) {
           return Status::OK();
         } else {
-          LOG(ERROR) << ret.toString() << " retryCnt " << retryCnt;
+          VLOG(2) << ret.toString() << " retryCnt " << retryCnt;
           if (retryCnt == 0) {
-            return Status::Error("drainer send data to meta failed, space %d", spaceId_);
+            return Status::Error("Drainer send data to meta failed, space %d", spaceId_);
           }
         }
       } catch (const std::exception& e) {
         LOG(ERROR) << "Send drainer data to meta failed exception " << e.what();
         if (retryCnt == 0) {
-          return Status::Error("drainer send data to meta failed, space %d", spaceId_);
+          return Status::Error("Drainer send data to meta failed, space %d", spaceId_);
         }
       }
     }
@@ -772,7 +766,7 @@ StatusOr<std::string> DrainerTask::adjustSpaceIdInKey(GraphSpaceID space,
     return MetaKeyUtils::replaceIndexKey(space, key);
   }
 
-  LOG(ERROR) << "Not tag/edge/index schema data ";
+  VLOG(2) << "Not tag/edge/index schema data ";
   return Status::Error("Not tag/edge/index schema data");
 }
 
@@ -795,8 +789,8 @@ bool DrainerTask::updateSendLog(const std::string& sendLogFile,
   if (sendLogFdIter == env_->sendLogIdFd_.end()) {
     int32_t fd = open(sendLogFile.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
     if (fd < 0) {
-      LOG(ERROR) << "Failed to open file " << sendLogFile << "errno(" << errno
-                 << "): " << strerror(errno);
+      VLOG(2) << "Failed to open file " << sendLogFile << "errno(" << errno
+              << "): " << strerror(errno);
       return false;
     }
     auto ret = env_->sendLogIdFd_.insert(key, fd).second;
@@ -809,12 +803,12 @@ bool DrainerTask::updateSendLog(const std::string& sendLogFile,
   try {
     currFd = env_->sendLogIdFd_.at(key);
   } catch (...) {
-    LOG(ERROR) << "Failed to read the file " << sendLogFile;
+    VLOG(2) << "Failed to read the file " << sendLogFile;
     return false;
   }
   if (lseek(currFd, 0, SEEK_SET) < 0) {
-    LOG(ERROR) << "Failed to seek the send.log, space " << spaceId << " part " << part
-               << "error: " << strerror(errno);
+    VLOG(2) << "Failed to seek the send.log, space " << spaceId << " part " << part
+            << "error: " << strerror(errno);
     close(currFd);
     env_->sendLogIdFd_.erase(key);
     return false;
@@ -825,8 +819,8 @@ bool DrainerTask::updateSendLog(const std::string& sendLogFile,
   val.append(reinterpret_cast<const char*>(&lastLogIdSend), sizeof(LogID));
   ssize_t written = write(currFd, val.c_str(), val.size());
   if (written != (ssize_t)val.size()) {
-    LOG(ERROR) << "bytesWritten:" << written << ", expected:" << val.size()
-               << ", error:" << strerror(errno);
+    VLOG(2) << "BytesWritten:" << written << ", expected:" << val.size()
+            << ", error:" << strerror(errno);
     close(currFd);
     env_->sendLogIdFd_.erase(key);
     return false;
@@ -875,15 +869,16 @@ StatusOr<LogID> DrainerTask::readSendLog(const std::string& sendLogFile,
 }
 
 // recv.log(last_log_id_recv)
-StatusOr<LogID> DrainerTask::readRecvLog(const std::string& path,
+StatusOr<LogID> DrainerTask::readRecvLog(const std::string& recvLogFile,
                                          GraphSpaceID spaceId,
                                          PartitionID part) {
   auto key = std::make_pair(spaceId, part);
   auto recvLogFdIter = env_->recvLogIdFd_.find(key);
   if (recvLogFdIter == env_->recvLogIdFd_.end()) {
-    int32_t fd = open(path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
+    int32_t fd = open(recvLogFile.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
     if (fd < 0) {
-      return Status::Error("Failed to open the file %s, error: %s", path.c_str(), strerror(errno));
+      return Status::Error(
+          "Failed to open the file %s, error: %s", recvLogFile.c_str(), strerror(errno));
     }
     auto ret = env_->recvLogIdFd_.insert(key, fd).second;
     if (!ret) {
@@ -895,14 +890,14 @@ StatusOr<LogID> DrainerTask::readRecvLog(const std::string& path,
   try {
     currFd = env_->recvLogIdFd_.at(key);
   } catch (...) {
-    return Status::Error("Failed to read the file %s", path.c_str());
+    return Status::Error("Failed to read the file %s", recvLogFile.c_str());
   }
   LogID lastLogIdRecv;
   auto ret = pread(currFd, reinterpret_cast<char*>(&lastLogIdRecv), sizeof(LogID), 0);
   if (ret != static_cast<ssize_t>(sizeof(LogID))) {
     close(currFd);
     env_->recvLogIdFd_.erase(key);
-    return Status::Error("Failed to read the file %s.", path.c_str());
+    return Status::Error("Failed to read the file %s.", recvLogFile.c_str());
   }
   return lastLogIdRecv;
 }

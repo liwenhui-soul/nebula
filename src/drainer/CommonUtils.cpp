@@ -8,7 +8,6 @@
 namespace nebula {
 namespace drainer {
 
-// write cluster_space_id file
 Status DrainerCommon::writeSpaceMeta(const std::string& path,
                                      ClusterID fromClusterId,
                                      GraphSpaceID fromSpaceId,
@@ -35,7 +34,6 @@ Status DrainerCommon::writeSpaceMeta(const std::string& path,
   return Status::OK();
 }
 
-// write cluster_space_id file
 StatusOr<std::tuple<ClusterID, GraphSpaceID, int32_t, ClusterID>> DrainerCommon::readSpaceMeta(
     const std::string& path) {
   ClusterID fromClusterId;

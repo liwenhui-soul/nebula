@@ -254,10 +254,10 @@ struct CheckpointInfo {
     3: binary                path,
 }
 
-// used for drainer
+// Log entries being sent from listner to drainer
 struct LogEntry {
     1: ClusterID cluster;
-    2: binary log_str;
+    2: binary    log_str;
 }
 
 // These are all data types supported in the graph properties

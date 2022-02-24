@@ -19,18 +19,28 @@ namespace kvstore {
 class ListenerFactory {
  public:
   template <typename... Args>
+
   /**
    * @brief Create a Listener object
    *
    * @param type Type of listener
+   * @param spaceId The spaceId where the Listener is
+   * @param partId The partId where the Listener is
    * @param args Other parameters
    * @return std::shared_ptr<Listener>
    */
-  static std::shared_ptr<Listener> createListener(meta::cpp2::ListenerType type, Args&&... args) {
+  static std::shared_ptr<Listener> createListener(meta::cpp2::ListenerType type,
+                                                  GraphSpaceID spaceId,
+                                                  PartitionID partId,
+                                                  Args&&... args) {
     if (type == meta::cpp2::ListenerType::ELASTICSEARCH) {
-      return std::make_shared<ESListener>(std::forward<Args>(args)...);
+      return std::make_shared<ESListener>(spaceId, partId, std::forward<Args>(args)...);
     } else if (type == meta::cpp2::ListenerType::SYNC) {
-      return std::make_shared<SyncListener>(std::forward<Args>(args)...);
+      if (spaceId == nebula::kDefaultSpaceId && partId == nebula::kDefaultPartId) {
+        return std::make_shared<MetaSyncListener>(spaceId, partId, std::forward<Args>(args)...);
+      } else {
+        return std::make_shared<StorageSyncListener>(spaceId, partId, std::forward<Args>(args)...);
+      }
     }
     LOG(FATAL) << "Should not reach here";
     return nullptr;

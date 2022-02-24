@@ -28,7 +28,7 @@ void AppendLogProcessor::process(const cpp2::AppendLogRequest& req) {
   auto toSpaceName = req.get_to_space_name();
   auto space = env_->schemaMan_->toGraphSpaceID(toSpaceName);
   if (!space.ok()) {
-    LOG(ERROR) << folly::stringPrintf("space %s not found", toSpaceName.c_str());
+    VLOG(2) << folly::stringPrintf("space %s not found", toSpaceName.c_str());
     pushResultCode(nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND);
     onFinished();
     return;
@@ -59,7 +59,7 @@ void AppendLogProcessor::process(const cpp2::AppendLogRequest& req) {
   auto iter = env_->requestOnGoing_.find(pair);
   if (iter != env_->requestOnGoing_.end()) {
     if (env_->requestOnGoing_[pair].load()) {
-      LOG(ERROR) << "part is processing request";
+      VLOG(2) << "part is processing request";
       pushResultCode(nebula::cpp2::ErrorCode::E_REQ_CONFLICT);
       onFinished();
       return;
@@ -69,7 +69,7 @@ void AppendLogProcessor::process(const cpp2::AppendLogRequest& req) {
 
   auto retCode = checkAndBuildContexts(req);
   if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
-    LOG(ERROR) << "Failure build contexts!";
+    VLOG(2) << "Failure build contexts!";
     env_->requestOnGoing_[pair].store(false);
     pushResultCode(retCode);
     onProcessFinished();
@@ -77,7 +77,7 @@ void AppendLogProcessor::process(const cpp2::AppendLogRequest& req) {
     return;
   }
 
-  VLOG(1) << "Write wal data to the latest wal file of the current part, partId " << fromPartId_;
+  VLOG(2) << "Write wal data to the latest wal file of the current part, partId " << fromPartId_;
   retCode = appendWalData();
   env_->requestOnGoing_[pair].store(false);
   pushResultCode(retCode);
@@ -134,17 +134,17 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkAndBuildContexts(
   auto datapath = folly::stringPrintf("%s/nebula/%d", env_->drainerPath_.c_str(), toSpaceId_);
   if (FileUtils::fileType(datapath.c_str()) == FileType::NOTEXIST) {
     if (!FileUtils::makeDir(datapath)) {
-      LOG(ERROR) << "makeDir " << datapath << " failed!";
+      VLOG(2) << "MakeDir " << datapath << " failed!";
       return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
     }
   }
 
   if (FileUtils::fileType(datapath.c_str()) != FileType::DIRECTORY) {
-    LOG(ERROR) << datapath << " is not a directory!";
+    VLOG(2) << "Data path " << datapath << " is not a directory!";
     return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
   }
 
-  // 3)  create or check data/drainer/nebula/toSpaceId/cluster_space_id file
+  // 3) create or check data/drainer/nebula/toSpaceId/cluster_space_id file
   // If it is meta data. partId is 0, But partNum is the parts of this space.
   clusterSpaceIdFile_ = folly::stringPrintf("%s/cluster_space_id", datapath.c_str());
   bool result;
@@ -165,13 +165,13 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkAndBuildContexts(
   walPath_ = folly::stringPrintf("%s/%d/wal", datapath.c_str(), fromPartId_);
   if (FileUtils::fileType(walPath_.c_str()) == FileType::NOTEXIST) {
     if (!FileUtils::makeDir(walPath_)) {
-      LOG(ERROR) << "makeDir " << walPath_ << " failed";
+      VLOG(2) << "MakeDir " << walPath_ << " failed";
       return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
     }
   }
 
   if (FileUtils::fileType(walPath_.c_str()) != FileType::DIRECTORY) {
-    LOG(ERROR) << walPath_ << " is not directory";
+    VLOG(2) << "Wal path " << walPath_ << " is not directory";
     return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
   }
 
@@ -232,14 +232,14 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkSpaceVidType(const cpp2::Append
   } else {
     auto vidType = env_->schemaMan_->getSpaceVidType(toSpaceId_);
     if (!vidType.ok()) {
-      LOG(ERROR) << "Get target space vid type failed: " << vidType.status();
+      VLOG(2) << "Get target space vid type failed: " << vidType.status();
       return nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND;
     }
     vType = vidType.value();
 
     auto vidLen = env_->schemaMan_->getSpaceVidLen(toSpaceId_);
     if (!vidLen.ok()) {
-      LOG(ERROR) << "Get target space vid len failed: " << vidLen.status();
+      VLOG(2) << "Get target space vid len failed: " << vidLen.status();
       return nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND;
     }
     vLen = vidLen.value();
@@ -247,7 +247,7 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkSpaceVidType(const cpp2::Append
   }
 
   if (vType != fromSpaceVidType || vLen != fromSpaceVidLen) {
-    LOG(ERROR) << "The vidType of the source space and the target space are inconsistent.";
+    VLOG(2) << "The vidType of the source space and the target space are inconsistent.";
     return nebula::cpp2::ErrorCode::E_SPACE_MISMATCH;
   }
   return nebula::cpp2::ErrorCode::SUCCEEDED;
@@ -260,7 +260,7 @@ bool AppendLogProcessor::writeSpaceMetaFile(ClusterID fromClusterId,
   auto writeRet = DrainerCommon::writeSpaceMeta(
       clusterSpaceIdFile_, fromClusterId, fromSpaceId, fromPartNum, toClusterId);
   if (!writeRet.ok()) {
-    LOG(ERROR) << writeRet.toString();
+    VLOG(2) << writeRet.toString();
     return false;
   }
   env_->spaceMatch_.emplace(toSpaceId_, fromSpaceId);
@@ -283,8 +283,7 @@ bool AppendLogProcessor::checkSpaceMeta() {
     auto clustetIter = env_->spaceClusters_.find(toSpaceId_);
     auto oldPartNumIter = env_->spaceOldParts_.find(toSpaceId_);
     if (clustetIter == env_->spaceClusters_.end() || oldPartNumIter == env_->spaceOldParts_.end()) {
-      LOG(ERROR) << "Not find space id " << toSpaceId_
-                 << " in spaceClusters or spaceOldParts of env.";
+      VLOG(2) << "Not find space id " << toSpaceId_ << " in spaceClusters or spaceOldParts of env.";
       return false;
     }
     fromClusterId = clustetIter->second.first;
@@ -293,7 +292,7 @@ bool AppendLogProcessor::checkSpaceMeta() {
   } else {
     auto spaceMetaRet = DrainerCommon::readSpaceMeta(clusterSpaceIdFile_);
     if (!spaceMetaRet.ok()) {
-      LOG(ERROR) << spaceMetaRet.status();
+      VLOG(2) << spaceMetaRet.status();
       return false;
     }
     std::tie(fromClusterId, fromSpaceId, fromPartNum, toClusterId) = spaceMetaRet.value();
@@ -304,11 +303,11 @@ bool AppendLogProcessor::checkSpaceMeta() {
 
   if (fromClusterId != fromClusterId_ || fromSpaceId != fromSpaceId_ ||
       fromPartNum != fromPartNum_ || toClusterId != FLAGS_cluster_id) {
-    LOG(ERROR) << "The clusterId and spaceId of source and destination do not match."
-               << " source clusterId " << fromClusterId << " expect clusterId " << fromClusterId_
-               << " source spaceId " << fromSpaceId << " expect spaceId " << fromSpaceId_
-               << " source space partNum " << fromPartNum << " expect spaceId " << fromPartNum_
-               << " desc clusterId " << toClusterId << " expect clusterId " << FLAGS_cluster_id;
+    VLOG(2) << "The clusterId and spaceId of source and destination do not match."
+            << " source clusterId " << fromClusterId << " expect clusterId " << fromClusterId_
+            << " source spaceId " << fromSpaceId << " expect spaceId " << fromSpaceId_
+            << " source space partNum " << fromPartNum << " expect spaceId " << fromPartNum_
+            << " desc clusterId " << toClusterId << " expect clusterId " << FLAGS_cluster_id;
     return false;
   }
   return true;
@@ -320,8 +319,8 @@ bool AppendLogProcessor::updateRecvLog(LogID lastLogIdRecv) {
   if (recvLogFdIter == env_->recvLogIdFd_.end()) {
     int32_t fd = open(recvLogFile_.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
     if (fd < 0) {
-      LOG(ERROR) << "Failed to open file " << recvLogFile_ << "errno(" << errno
-                 << "): " << strerror(errno);
+      VLOG(2) << "Failed to open file " << recvLogFile_ << "errno(" << errno
+              << "): " << strerror(errno);
       return false;
     }
     auto ret = env_->recvLogIdFd_.insert(key, fd).second;
@@ -334,12 +333,12 @@ bool AppendLogProcessor::updateRecvLog(LogID lastLogIdRecv) {
   try {
     currFd = env_->recvLogIdFd_.at(key);
   } catch (...) {
-    LOG(ERROR) << "Failed to read the file " << recvLogFile_;
+    VLOG(2) << "Failed to read the file " << recvLogFile_;
     return false;
   }
   if (lseek(currFd, 0, SEEK_SET) < 0) {
-    LOG(ERROR) << "Failed to seek the recv.log, space " << toSpaceId_ << " part " << fromPartId_
-               << "error: " << strerror(errno);
+    VLOG(2) << "Failed to seek the recv.log, space " << toSpaceId_ << " part " << fromPartId_
+            << "error: " << strerror(errno);
     close(currFd);
     env_->recvLogIdFd_.erase(key);
     return false;
@@ -350,8 +349,8 @@ bool AppendLogProcessor::updateRecvLog(LogID lastLogIdRecv) {
   val.append(reinterpret_cast<const char*>(&lastLogIdRecv), sizeof(LogID));
   ssize_t written = write(currFd, val.c_str(), val.size());
   if (written != (ssize_t)val.size()) {
-    LOG(ERROR) << "Bytes written:" << written << ", expected:" << val.size()
-               << ", error:" << strerror(errno);
+    VLOG(2) << "Bytes written:" << written << ", expected:" << val.size()
+            << ", error:" << strerror(errno);
     close(currFd);
     env_->recvLogIdFd_.erase(key);
     return false;
@@ -366,8 +365,8 @@ bool AppendLogProcessor::updateSendLog(LogID lastLogIdSend) {
   if (sendLogFdIter == env_->sendLogIdFd_.end()) {
     int32_t fd = open(sendLogFile_.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
     if (fd < 0) {
-      LOG(ERROR) << "Failed to open file " << sendLogFile_ << "errno(" << errno
-                 << "): " << strerror(errno);
+      VLOG(2) << "Failed to open file " << sendLogFile_ << "errno(" << errno
+              << "): " << strerror(errno);
       return false;
     }
     auto ret = env_->sendLogIdFd_.insert(key, fd).second;
@@ -380,12 +379,12 @@ bool AppendLogProcessor::updateSendLog(LogID lastLogIdSend) {
   try {
     currFd = env_->sendLogIdFd_.at(key);
   } catch (...) {
-    LOG(ERROR) << "Failed to read the file " << sendLogFile_;
+    VLOG(2) << "Failed to read the file " << sendLogFile_;
     return false;
   }
   if (lseek(currFd, 0, SEEK_SET) < 0) {
-    LOG(ERROR) << "Failed to seek the send.log, space " << toSpaceId_ << " part " << fromPartId_
-               << "error: " << strerror(errno);
+    VLOG(2) << "Failed to seek the send.log, space " << toSpaceId_ << " part " << fromPartId_
+            << "error: " << strerror(errno);
     close(currFd);
     env_->sendLogIdFd_.erase(key);
     return false;
@@ -396,8 +395,8 @@ bool AppendLogProcessor::updateSendLog(LogID lastLogIdSend) {
   val.append(reinterpret_cast<const char*>(&lastLogIdSend), sizeof(LogID));
   ssize_t written = write(currFd, val.c_str(), val.size());
   if (written != (ssize_t)val.size()) {
-    LOG(ERROR) << "Bytes written:" << written << ", expected:" << val.size()
-               << ", error:" << strerror(errno);
+    VLOG(2) << "Bytes written:" << written << ", expected:" << val.size()
+            << ", error:" << strerror(errno);
     close(currFd);
     env_->sendLogIdFd_.erase(key);
     return false;
@@ -417,8 +416,8 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogId() {
     if (recvLogFdIter == env_->recvLogIdFd_.end()) {
       int32_t fd = open(recvLogFile_.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
       if (fd < 0) {
-        LOG(ERROR) << "Failed to open file " << recvLogFile_ << "errno(" << errno
-                   << "): " << strerror(errno);
+        VLOG(2) << "Failed to open file " << recvLogFile_ << "errno(" << errno
+                << "): " << strerror(errno);
         return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
       }
       auto ret = env_->recvLogIdFd_.insert(key, fd).second;
@@ -432,13 +431,13 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogId() {
     try {
       currFd = env_->recvLogIdFd_.at(key);
     } catch (...) {
-      LOG(ERROR) << "Failed to read the file " << recvLogFile_;
+      VLOG(2) << "Failed to read the file " << recvLogFile_;
       return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
     }
     auto ret = pread(currFd, reinterpret_cast<char*>(&lastLogIdRecv), sizeof(LogID), 0);
     if (ret != static_cast<ssize_t>(sizeof(LogID))) {
-      LOG(ERROR) << "Failed to read the file " << recvLogFile_ << " (errno: " << errno
-                 << "): " << strerror(errno);
+      VLOG(2) << "Failed to read the file " << recvLogFile_ << " (errno: " << errno
+              << "): " << strerror(errno);
       close(currFd);
       env_->recvLogIdFd_.erase(key);
       return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
@@ -447,8 +446,8 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogId() {
     // the wal log data sent has expired
     // logId is continuous. But the term is not necessarily continuous
     if (lastLogIdRecv > lastLogIdRecv_) {
-      LOG(ERROR) << "Sync data expired! lastLogIdRecv from Listener: " << lastLogIdRecv_
-                 << ", lastLogIdRecv from drainer: " << lastLogIdRecv;
+      VLOG(2) << "Sync data expired! lastLogIdRecv from Listener: " << lastLogIdRecv_
+              << ", lastLogIdRecv from drainer: " << lastLogIdRecv;
       // Maybe needs more detailed processing
       nextLastLogIdRecv_ = lastLogIdRecv;
       return nebula::cpp2::ErrorCode::E_LOG_STALE;
@@ -459,8 +458,8 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogId() {
       // file is 0
       if (lastLogIdRecv != 0) {
         // There is a gap in the wal log data
-        LOG(ERROR) << "Sync data has a gap! lastLogIdRecv from listener: " << lastLogIdRecv_
-                   << ", lastLogIdRecv from drainer: " << lastLogIdRecv;
+        VLOG(2) << "Sync data has a gap! lastLogIdRecv from listener: " << lastLogIdRecv_
+                << ", lastLogIdRecv from drainer: " << lastLogIdRecv;
         nextLastLogIdRecv_ = lastLogIdRecv;
         return nebula::cpp2::ErrorCode::E_LOG_GAP;
       }
@@ -470,8 +469,8 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogId() {
     // should be 0
     if (lastLogIdRecv_ != 0) {
       // There is a gap in the wal log data
-      LOG(ERROR) << "Sync data has a gap! lastLogIdRecv from listener: " << lastLogIdRecv_
-                 << ", drainer not receive log";
+      VLOG(2) << "Sync data has a gap! lastLogIdRecv from listener: " << lastLogIdRecv_
+              << ", drainer not receive log";
       nextLastLogIdRecv_ = 0;
       return nebula::cpp2::ErrorCode::E_LOG_GAP;
     }
@@ -509,14 +508,14 @@ nebula::cpp2::ErrorCode AppendLogProcessor::appendWalData() {
     }
     return nebula::cpp2::ErrorCode::SUCCEEDED;
   } else {
-    LOG_EVERY_N(WARNING, 100) << "Failed to append logs to WAL";
+    VLOG(1) << "Failed to append logs to WAL";
     return nebula::cpp2::ErrorCode::E_LOG_STALE;
   }
 }
 
 void AppendLogProcessor::onProcessFinished() {
   if (nextLastLogIdRecv_ != 0) {
-    resp_.last_log_id_ref() = std::move(nextLastLogIdRecv_);
+    resp_.last_matched_log_id_ref() = std::move(nextLastLogIdRecv_);
   }
 }
 

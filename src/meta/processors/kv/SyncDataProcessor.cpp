@@ -16,8 +16,8 @@ void SyncDataProcessor::process(const cpp2::SyncDataReq& req) {
   const auto& LogEntrys = req.get_logs();
 
   if (clusterId != FLAGS_cluster_id) {
-    LOG(ERROR) << "Cluster Id does not match, expect clusterId " << FLAGS_cluster_id
-               << " actual clusterid " << clusterId;
+    LOG(INFO) << "Cluster Id does not match, expect clusterId " << FLAGS_cluster_id
+              << " actual clusterid " << clusterId;
     handleErrorCode(nebula::cpp2::ErrorCode::E_WRONGCLUSTER);
     onFinished();
     return;
@@ -25,8 +25,8 @@ void SyncDataProcessor::process(const cpp2::SyncDataReq& req) {
 
   // Sync meta data here (spaceId is 0), so it is not to check whether space 0 exists.
   if (spaceId != 0) {
-    LOG(ERROR) << "The meta data synchronized here, spaceId should be 0. "
-               << "But space in request is" << spaceId;
+    LOG(INFO) << "The meta data synchronized here, spaceId should be 0. "
+              << "But space in request is" << spaceId;
     handleErrorCode(nebula::cpp2::ErrorCode::E_INVALID_PARM);
     onFinished();
     return;
@@ -90,7 +90,7 @@ void SyncDataProcessor::process(const cpp2::SyncDataReq& req) {
         break;
       }
       default: {
-        LOG(ERROR) << "Unknown operation: " << static_cast<int32_t>(log[0]) << " in meta";
+        LOG(INFO) << "Unknown operation: " << static_cast<int32_t>(log[0]) << " in meta";
         code = nebula::cpp2::ErrorCode::E_DATA_ILLEGAL;
       }
     }  // end switch

@@ -22,13 +22,22 @@ class WebService;
 
 namespace drainer {
 
+/**
+ * @brief This class starts a service that receives data from the master cluster's sync listener
+ * and sends data to the slave cluster's meta or storage for data synchronization.
+ * This service belongs to the slave cluster.
+ */
 class DrainerServer final {
  public:
   DrainerServer(HostAddr localHost, std::vector<HostAddr> metaAddrs, std::string dataPath);
 
   ~DrainerServer();
 
-  // Return false if failed.
+  /**
+   * @brief Start the service
+   *
+   * @return True If sucessed.
+   */
   bool start();
 
   void stop();

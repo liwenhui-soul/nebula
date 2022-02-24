@@ -40,6 +40,9 @@ struct ProcessorCounters {
   }
 };
 
+/**
+ * @brief The environment of the drainer service.
+ */
 class DrainerEnv {
  public:
   meta::SchemaManager *schemaMan_{nullptr};
@@ -50,17 +53,18 @@ class DrainerEnv {
   // local drainer host
   HostAddr localHost_;
 
-  // data/drainer/nebula
+  // the path of drainer data, usually is data/drainer/nebula.
   std::string drainerPath_;
 
-  // write wal info, writes sync listener data to drainer wal.
-  // and read drainer wal data to storage client or meta client(schema data)
-  // The spaceId here is the slave cluster spaceId, so it is unique.
+  // Write wal info
+  // writes sync listener data to drainer wal.
+  // and read drainer wal data and then send to storage client or meta client.
+  // The spaceId here is from the slave cluster, so it is unique.
   std::unordered_map<GraphSpaceID,
                      std::unordered_map<PartitionID, std::shared_ptr<nebula::wal::FileBasedWal>>>
       wals_;
 
-  // get from space meta
+  // get space meta info
   // slave cluster spaceId-> <masterClusterId, slaveClusterId>
   std::unordered_map<GraphSpaceID, std::pair<ClusterID, ClusterID>> spaceClusters_;
   // slave cluster spaceId-> oldPartsNum
@@ -77,29 +81,41 @@ class DrainerEnv {
   // Todo(pandasheep)
   std::shared_ptr<kvstore::DiskManager> diskMan_;
 
-  // add cache for acceleration
   // slave cluster toSpaceId_ -> <SpaceVidType, VidLen>
   std::unordered_map<GraphSpaceID, std::pair<nebula::cpp2::PropertyType, int32_t>> spaceVidTypeLen_;
 
-  // recv part
-  // slave cluster <toSpaceId_, fromPartId_> -> recv.log fd
+  // <slave cluster toSpaceId, fromPartId> -> recv.log fd
   folly::ConcurrentHashMap<std::pair<GraphSpaceID, PartitionID>, int32_t> recvLogIdFd_;
 
-  // send part
-  // slave cluster <toSpaceId_, fromPartId_> -> send.log fd
+  // <slave cluster toSpaceId, fromPartId> -> send.log fd
   folly::ConcurrentHashMap<std::pair<GraphSpaceID, PartitionID>, int32_t> sendLogIdFd_;
 };
 
 class DrainerCommon final {
  public:
-  // write cluster_space_id file
+  /**
+   * @brief Write cluster_space_id file
+   *
+   * @param path The path of cluster_space_id file
+   * @param fromClusterId
+   * @param fromSpaceId
+   * @param fromPartNum
+   * @param toClusterId
+   * @return Status Status::OK if successful.
+   */
   static Status writeSpaceMeta(const std::string &path,
                                ClusterID fromClusterId,
                                GraphSpaceID fromSpaceId,
                                int32_t fromPartNum,
                                ClusterID toClusterId);
 
-  // read cluster_space_id file
+  /**
+   * @brief Read cluster_space_id file
+   *
+   * @param path The path of cluster_space_id file
+   * @return StatusOr<std::tuple<ClusterID, GraphSpaceID, int32_t, ClusterID>>
+   * If successful, return the corresponding values.
+   */
   static StatusOr<std::tuple<ClusterID, GraphSpaceID, int32_t, ClusterID>> readSpaceMeta(
       const std::string &path);
 };

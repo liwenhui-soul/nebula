@@ -21,8 +21,8 @@ void SyncDataProcessor::process(const cpp2::SyncDataRequest& req) {
   const auto& partLogEntry = req.get_parts();
 
   if (clusterId != FLAGS_cluster_id) {
-    LOG(ERROR) << "Cluster Id does not match, expect clusterId " << FLAGS_cluster_id
-               << " actual clusterid " << clusterId;
+    VLOG(2) << "Cluster Id does not match, expect clusterId " << FLAGS_cluster_id
+            << " actual clusterid " << clusterId;
     for (auto& part : partLogEntry) {
       pushResultCode(nebula::cpp2::ErrorCode::E_WRONGCLUSTER, part.first);
     }
@@ -33,7 +33,7 @@ void SyncDataProcessor::process(const cpp2::SyncDataRequest& req) {
   CHECK_NOTNULL(env_->schemaMan_);
   auto retCode = getSpaceVidLen(spaceId_);
   if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
-    LOG(ERROR) << "SpaceId " << spaceId_ << " not found";
+    VLOG(2) << "SpaceId " << spaceId_ << " not found";
     for (auto& part : partLogEntry) {
       pushResultCode(retCode, part.first);
     }
@@ -103,8 +103,8 @@ void SyncDataProcessor::process(const cpp2::SyncDataRequest& req) {
           break;
         }
         default: {
-          LOG(ERROR) << "Unknown operation: " << static_cast<int32_t>(log[0]) << " in space "
-                     << spaceId_ << " partId " << partId;
+          VLOG(2) << "Unknown operation: " << static_cast<int32_t>(log[0]) << " in space "
+                  << spaceId_ << " partId " << partId;
           retCode = nebula::cpp2::ErrorCode::E_DATA_ILLEGAL;
         }
       }  // end switch

@@ -14,6 +14,11 @@ namespace storage {
 
 extern ProcessorCounters kSyncDataCounters;
 
+/**
+ * @brief Sync storage(vertex, tag, edge, index) data.
+ * Receive storage data from drainer and write to part leader.
+ *
+ */
 class SyncDataProcessor : public BaseProcessor<cpp2::ExecResponse> {
  public:
   static SyncDataProcessor* instance(StorageEnv* env,
