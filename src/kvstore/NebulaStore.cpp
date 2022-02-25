@@ -24,7 +24,7 @@ DEFINE_int32(custom_filter_interval_secs,
              "default minor compaction");
 DEFINE_int32(num_workers, 4, "Number of worker threads");
 DEFINE_int32(clean_wal_interval_secs, 600, "interval to trigger clean expired wal");
-DEFINE_bool(auto_remove_invalid_space, false, "whether remove data of invalid space when restart");
+DEFINE_bool(auto_remove_invalid_space, true, "whether remove data of invalid space when restart");
 DEFINE_int32(sync_meta_listener_interval_secs, 60, "inerval to sync meta listener");
 
 DECLARE_bool(rocksdb_disable_wal);
