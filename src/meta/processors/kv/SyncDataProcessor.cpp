@@ -32,7 +32,7 @@ void SyncDataProcessor::process(const cpp2::SyncDataReq& req) {
     return;
   }
 
-  folly::SharedMutex::ReadHolder rHolder(LockUtils::spaceLock());
+  folly::SharedMutex::ReadHolder holder(LockUtils::lock());
   auto code = nebula::cpp2::ErrorCode::SUCCEEDED;
   std::unique_ptr<kvstore::BatchHolder> batchHolder = std::make_unique<kvstore::BatchHolder>();
   // Drainer has processed the meta listener data.

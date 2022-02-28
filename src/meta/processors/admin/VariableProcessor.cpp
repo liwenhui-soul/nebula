@@ -26,8 +26,7 @@ void GetVariableProcessor::process(const cpp2::GetVariableReq& req) {
   }
 
   auto type = ret.first;
-  folly::SharedMutex::ReadHolder rsHolder(LockUtils::spaceLock());
-  folly::SharedMutex::ReadHolder rvHolder(LockUtils::variableLock());
+  folly::SharedMutex::ReadHolder holder(LockUtils::lock());
 
   cpp2::VariableItem item;
   std::string value;
@@ -89,8 +88,7 @@ void SetVariableProcessor::process(const cpp2::SetVariableReq& req) {
   auto name = req.get_item().get_name();
   auto value = req.get_item().get_value();
 
-  folly::SharedMutex::ReadHolder rHolder(LockUtils::spaceLock());
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::variableLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   auto ret = checkVariableNameAndValue(name, value);
 
   if (!nebula::ok(ret)) {
@@ -111,8 +109,7 @@ void ListVariablesProcessor::process(const cpp2::ListVariablesReq& req) {
   auto space = req.get_space_id();
   CHECK_SPACE_ID_AND_RETURN(space);
 
-  folly::SharedMutex::ReadHolder rsHolder(LockUtils::spaceLock());
-  folly::SharedMutex::ReadHolder rvHolder(LockUtils::variableLock());
+  folly::SharedMutex::ReadHolder holder(LockUtils::lock());
 
   auto allVariableInfo = MetaKeyUtils::getAllVariableInfo();
   std::unordered_map<std::string, Value> data;

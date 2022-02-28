@@ -17,6 +17,7 @@ namespace meta {
 void AddDrainerProcessor::process(const cpp2::AddDrainerReq& req) {
   auto space = req.get_space_id();
   CHECK_SPACE_ID_AND_RETURN(space);
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   const auto& hosts = req.get_hosts();
   auto ret = drainerExist(space);
   if (ret != nebula::cpp2::ErrorCode::E_DRAINER_NOT_FOUND) {
@@ -30,9 +31,6 @@ void AddDrainerProcessor::process(const cpp2::AddDrainerReq& req) {
     onFinished();
     return;
   }
-
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::drainerLock());
-  folly::SharedMutex::ReadHolder rHolder(LockUtils::spaceLock());
 
   // For the slave cluster, after the drainer server is started,
   // it will send a heartbeat to the meta. Therefore, the drainer server added
@@ -67,7 +65,7 @@ void RemoveDrainerProcessor::process(const cpp2::RemoveDrainerReq& req) {
   auto space = req.get_space_id();
   CHECK_SPACE_ID_AND_RETURN(space);
 
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::drainerLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   const auto& drainerKey = MetaKeyUtils::drainerKey(space);
   auto ret = doGet(drainerKey);
   if (!nebula::ok(ret)) {
@@ -93,7 +91,7 @@ void RemoveDrainerProcessor::process(const cpp2::RemoveDrainerReq& req) {
 void ListDrainersProcessor::process(const cpp2::ListDrainersReq& req) {
   auto space = req.get_space_id();
   CHECK_SPACE_ID_AND_RETURN(space);
-  folly::SharedMutex::ReadHolder rHolder(LockUtils::drainerLock());
+  folly::SharedMutex::ReadHolder holder(LockUtils::lock());
 
   const auto& drainerKey = MetaKeyUtils::drainerKey(space);
   auto ret = doGet(drainerKey);

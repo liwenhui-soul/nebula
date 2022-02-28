@@ -14,7 +14,7 @@ namespace nebula {
 namespace meta {
 
 void CreateUserProcessor::process(const cpp2::CreateUserReq& req) {
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::userLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   const auto& account = req.get_account();
   const auto& password = req.get_encoded_pwd();
   const auto& ipWhitelist = req.get_ip_whitelist();
@@ -44,7 +44,7 @@ void CreateUserProcessor::process(const cpp2::CreateUserReq& req) {
 }
 
 void AlterUserProcessor::process(const cpp2::AlterUserReq& req) {
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::userLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   const auto& account = req.get_account();
   const auto& password = req.get_encoded_pwd();
   const auto& ipWhitelist = req.get_ip_whitelist();
@@ -74,7 +74,7 @@ void AlterUserProcessor::process(const cpp2::AlterUserReq& req) {
 }
 
 void DropUserProcessor::process(const cpp2::DropUserReq& req) {
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::userLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   const auto& account = req.get_account();
 
   auto retCode = userExist(account);
@@ -126,8 +126,7 @@ void DropUserProcessor::process(const cpp2::DropUserReq& req) {
 }
 
 void GrantProcessor::process(const cpp2::GrantRoleReq& req) {
-  folly::SharedMutex::WriteHolder userHolder(LockUtils::userLock());
-  folly::SharedMutex::ReadHolder spaceHolder(LockUtils::spaceLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   const auto& roleItem = req.get_role_item();
   auto spaceId = roleItem.get_space_id();
   const auto& account = roleItem.get_user_id();
@@ -159,8 +158,7 @@ void GrantProcessor::process(const cpp2::GrantRoleReq& req) {
 }
 
 void RevokeProcessor::process(const cpp2::RevokeRoleReq& req) {
-  folly::SharedMutex::WriteHolder userHolder(LockUtils::userLock());
-  folly::SharedMutex::ReadHolder spaceHolder(LockUtils::spaceLock());
+  folly::SharedMutex::ReadHolder holder(LockUtils::lock());
   const auto& roleItem = req.get_role_item();
   auto spaceId = roleItem.get_space_id();
   CHECK_SPACE_ID_AND_RETURN(spaceId);
@@ -204,7 +202,7 @@ void RevokeProcessor::process(const cpp2::RevokeRoleReq& req) {
 }
 
 void ChangePasswordProcessor::process(const cpp2::ChangePasswordReq& req) {
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::userLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   const auto& account = req.get_account();
   auto userRet = userExist(account);
   if (userRet != nebula::cpp2::ErrorCode::SUCCEEDED) {
@@ -245,9 +243,8 @@ void ChangePasswordProcessor::process(const cpp2::ChangePasswordReq& req) {
   doSyncPutAndUpdate(std::move(data));
 }
 
-void ListUsersProcessor::process(const cpp2::ListUsersReq& req) {
-  UNUSED(req);
-  folly::SharedMutex::ReadHolder rHolder(LockUtils::userLock());
+void ListUsersProcessor::process(const cpp2::ListUsersReq&) {
+  folly::SharedMutex::ReadHolder holder(LockUtils::lock());
   std::string prefix = MetaKeyUtils::userPrefix();
   auto ret = doPrefix(prefix);
   if (!nebula::ok(ret)) {
@@ -273,9 +270,8 @@ void ListUsersProcessor::process(const cpp2::ListUsersReq& req) {
   onFinished();
 }
 
-void ListIpWhitelistsProcessor::process(const cpp2::ListIpWhitelistsReq& req) {
-  UNUSED(req);
-  folly::SharedMutex::ReadHolder rHolder(LockUtils::userLock());
+void ListIpWhitelistsProcessor::process(const cpp2::ListIpWhitelistsReq&) {
+  folly::SharedMutex::ReadHolder holder(LockUtils::lock());
   std::string prefix = "__ip_whitelist__";
   auto ipWhitelistsRet = doPrefix(prefix);
   if (!nebula::ok(ipWhitelistsRet)) {
@@ -328,7 +324,7 @@ void ListRolesProcessor::process(const cpp2::ListRolesReq& req) {
   auto spaceId = req.get_space_id();
   CHECK_SPACE_ID_AND_RETURN(spaceId);
 
-  folly::SharedMutex::ReadHolder rHolder(LockUtils::userLock());
+  folly::SharedMutex::ReadHolder holder(LockUtils::lock());
   auto prefix = MetaKeyUtils::roleSpacePrefix(spaceId);
   auto ret = doPrefix(prefix);
   if (!nebula::ok(ret)) {
@@ -359,7 +355,7 @@ void ListRolesProcessor::process(const cpp2::ListRolesReq& req) {
 }
 
 void GetUserRolesProcessor::process(const cpp2::GetUserRolesReq& req) {
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::userLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   const auto& act = req.get_account();
 
   auto prefix = MetaKeyUtils::rolesPrefix();

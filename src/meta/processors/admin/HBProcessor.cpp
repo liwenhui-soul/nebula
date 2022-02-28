@@ -45,6 +45,7 @@ void HBProcessor::process(const cpp2::HBReq& req) {
     return;
   }
 
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   if (role == cpp2::HostRole::STORAGE || role == cpp2::HostRole::META_LISTENER ||
       role == cpp2::HostRole::STORAGE_LISTENER) {
     if (role == cpp2::HostRole::STORAGE) {

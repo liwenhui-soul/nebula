@@ -9,7 +9,7 @@ namespace nebula {
 namespace meta {
 
 void SignInServiceProcessor::process(const cpp2::SignInServiceReq& req) {
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::serviceLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   auto type = req.get_type();
 
   auto serviceKey = MetaKeyUtils::serviceKey(type);
@@ -35,7 +35,7 @@ void SignInServiceProcessor::process(const cpp2::SignInServiceReq& req) {
 }
 
 void SignOutServiceProcessor::process(const cpp2::SignOutServiceReq& req) {
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::serviceLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   auto type = req.get_type();
 
   auto serviceKey = MetaKeyUtils::serviceKey(type);
@@ -57,7 +57,7 @@ void SignOutServiceProcessor::process(const cpp2::SignOutServiceReq& req) {
 }
 
 void ListServiceClientsProcessor::process(const cpp2::ListServiceClientsReq& req) {
-  folly::SharedMutex::ReadHolder rHolder(LockUtils::serviceLock());
+  folly::SharedMutex::ReadHolder holder(LockUtils::lock());
   auto type = req.get_type();
 
   std::unordered_map<cpp2::ExternalServiceType, std::vector<cpp2::ServiceClient>> serviceClients;
@@ -84,8 +84,7 @@ void SignInSpaceServiceProcessor::process(const cpp2::SignInSpaceServiceReq& req
   auto space = req.get_space_id();
   CHECK_SPACE_ID_AND_RETURN(space);
 
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::spaceServiceLock());
-  folly::SharedMutex::ReadHolder rHolder(LockUtils::spaceLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   auto type = req.get_type();
 
   auto serviceKey = MetaKeyUtils::spaceServiceKey(space, type);
@@ -114,7 +113,7 @@ void SignInSpaceServiceProcessor::process(const cpp2::SignInSpaceServiceReq& req
 void SignOutSpaceServiceProcessor::process(const cpp2::SignOutSpaceServiceReq& req) {
   auto space = req.get_space_id();
   CHECK_SPACE_ID_AND_RETURN(space)
-  folly::SharedMutex::WriteHolder wHolder(LockUtils::spaceServiceLock());
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
   auto type = req.get_type();
 
   auto serviceKey = MetaKeyUtils::spaceServiceKey(space, type);
@@ -139,7 +138,7 @@ void ListSpaceServiceClientsProcessor::process(const cpp2::ListSpaceServiceClien
   auto space = req.get_space_id();
   CHECK_SPACE_ID_AND_RETURN(space)
 
-  folly::SharedMutex::ReadHolder rHolder(LockUtils::spaceServiceLock());
+  folly::SharedMutex::ReadHolder holder(LockUtils::lock());
   auto type = req.get_type();
 
   std::unordered_map<cpp2::ExternalSpaceServiceType, std::vector<cpp2::ServiceClient>>

@@ -251,8 +251,8 @@ class MetaClient {
   FRIEND_TEST(MetaClientTest, RetryUntilLimitTest);
   FRIEND_TEST(MetaClientTest, RocksdbOptionsTest);
   FRIEND_TEST(MetaClientTest, VerifyClientTest);
-  friend class KillQueryMetaWrapper;
   FRIEND_TEST(ChainAddEdgesTest, AddEdgesLocalTest);
+  friend class KillQueryMetaWrapper;
   friend class storage::MetaClientTestUpdater;
 
  public:
