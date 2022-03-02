@@ -101,10 +101,13 @@ void SyncDataProcessor::process(const cpp2::SyncDataReq& req) {
     onFinished();
     return;
   }
+
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(batchHolder.get(), timeInMilliSec);
   auto batch = encodeBatchValue(batchHolder->getBatch());
   DCHECK(!batch.empty());
   LOG(INFO) << "Append batch data";
-  doSyncAppendBatchAndUpdate(batch);
+  doBatchOperation(std::move(batch));
 }
 
 }  // namespace meta

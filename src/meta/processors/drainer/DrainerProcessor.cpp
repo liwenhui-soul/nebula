@@ -5,6 +5,7 @@
 
 #include "meta/processors/drainer/DrainerProcessor.h"
 
+#include "kvstore/LogEncoder.h"
 #include "meta/ActiveHostsMan.h"
 
 DECLARE_int32(heartbeat_interval_secs);
@@ -56,9 +57,12 @@ void AddDrainerProcessor::process(const cpp2::AddDrainerReq& req) {
 
   std::vector<kvstore::KV> data;
   data.emplace_back(MetaKeyUtils::drainerKey(space), MetaKeyUtils::drainerVal(hosts));
-
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(data, timeInMilliSec);
   LOG(INFO) << "Add drainer, spaceId " << space;
-  doSyncPutAndUpdate(std::move(data));
+  auto result = doSyncPut(std::move(data));
+  handleErrorCode(result);
+  onFinished();
 }
 
 void RemoveDrainerProcessor::process(const cpp2::RemoveDrainerReq& req) {
@@ -66,7 +70,7 @@ void RemoveDrainerProcessor::process(const cpp2::RemoveDrainerReq& req) {
   CHECK_SPACE_ID_AND_RETURN(space);
 
   folly::SharedMutex::WriteHolder holder(LockUtils::lock());
-  const auto& drainerKey = MetaKeyUtils::drainerKey(space);
+  auto drainerKey = MetaKeyUtils::drainerKey(space);
   auto ret = doGet(drainerKey);
   if (!nebula::ok(ret)) {
     auto retCode = nebula::error(ret);
@@ -81,11 +85,13 @@ void RemoveDrainerProcessor::process(const cpp2::RemoveDrainerReq& req) {
     return;
   }
 
-  std::vector<std::string> keys;
-  keys.emplace_back(drainerKey);
-
   LOG(INFO) << "Rmove drainer, spaceId " << space;
-  doSyncMultiRemoveAndUpdate(std::move(keys));
+  auto batchHolder = std::make_unique<kvstore::BatchHolder>();
+  batchHolder->remove(std::move(drainerKey));
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(batchHolder.get(), timeInMilliSec);
+  auto batch = encodeBatchValue(std::move(batchHolder)->getBatch());
+  doBatchOperation(std::move(batch));
 }
 
 void ListDrainersProcessor::process(const cpp2::ListDrainersReq& req) {

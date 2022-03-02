@@ -10,6 +10,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "kvstore/LogEncoder.h"
+
 namespace nebula {
 namespace meta {
 
@@ -40,7 +42,11 @@ void CreateUserProcessor::process(const cpp2::CreateUserReq& req) {
   data.emplace_back(MetaKeyUtils::userKey(account), MetaKeyUtils::userVal(password));
   data.emplace_back(MetaKeyUtils::ipWhitelistKey(account),
                     MetaKeyUtils::ipWhitelistVal(ipWhitelist));
-  doSyncPutAndUpdate(std::move(data));
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(data, timeInMilliSec);
+  auto ret = doSyncPut(std::move(data));
+  handleErrorCode(ret);
+  onFinished();
 }
 
 void AlterUserProcessor::process(const cpp2::AlterUserReq& req) {
@@ -70,7 +76,11 @@ void AlterUserProcessor::process(const cpp2::AlterUserReq& req) {
   data.emplace_back(std::move(userKey), std::move(userVal));
   data.emplace_back(MetaKeyUtils::ipWhitelistKey(account),
                     MetaKeyUtils::ipWhitelistVal(ipWhitelist));
-  doSyncPutAndUpdate(std::move(data));
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(data, timeInMilliSec);
+  auto ret = doSyncPut(std::move(data));
+  handleErrorCode(ret);
+  onFinished();
 }
 
 void DropUserProcessor::process(const cpp2::DropUserReq& req) {
@@ -94,9 +104,9 @@ void DropUserProcessor::process(const cpp2::DropUserReq& req) {
     return;
   }
 
-  std::vector<std::string> keys;
-  keys.emplace_back(MetaKeyUtils::userKey(account));
-  keys.emplace_back(MetaKeyUtils::ipWhitelistKey(account));
+  auto batchHolder = std::make_unique<kvstore::BatchHolder>();
+  batchHolder->remove(MetaKeyUtils::userKey(account));
+  batchHolder->remove(MetaKeyUtils::ipWhitelistKey(account));
 
   // Collect related roles by user.
   auto prefix = MetaKeyUtils::rolesPrefix();
@@ -116,13 +126,16 @@ void DropUserProcessor::process(const cpp2::DropUserReq& req) {
     auto key = iter->key();
     auto user = MetaKeyUtils::parseRoleUser(key);
     if (user == account) {
-      keys.emplace_back(key);
+      batchHolder->remove(key.str());
     }
     iter->next();
   }
 
   LOG(INFO) << "Drop User " << account;
-  doSyncMultiRemoveAndUpdate({std::move(keys)});
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(batchHolder.get(), timeInMilliSec);
+  auto batch = encodeBatchValue(std::move(batchHolder)->getBatch());
+  doBatchOperation(std::move(batch));
 }
 
 void GrantProcessor::process(const cpp2::GrantRoleReq& req) {
@@ -154,7 +167,11 @@ void GrantProcessor::process(const cpp2::GrantRoleReq& req) {
   std::vector<kvstore::KV> data;
   data.emplace_back(MetaKeyUtils::roleKey(spaceId, account),
                     MetaKeyUtils::roleVal(roleItem.get_role_type()));
-  doSyncPutAndUpdate(std::move(data));
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(data, timeInMilliSec);
+  auto ret = doSyncPut(std::move(data));
+  handleErrorCode(ret);
+  onFinished();
 }
 
 void RevokeProcessor::process(const cpp2::RevokeRoleReq& req) {
@@ -198,7 +215,13 @@ void RevokeProcessor::process(const cpp2::RevokeRoleReq& req) {
 
   LOG(INFO) << "Revoke user " << account
             << "'s role: " << apache::thrift::util::enumNameSafe(roleItem.get_role_type());
-  doSyncMultiRemoveAndUpdate({std::move(roleKey)});
+
+  auto batchHolder = std::make_unique<kvstore::BatchHolder>();
+  batchHolder->remove(std::move(roleKey));
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(batchHolder.get(), timeInMilliSec);
+  auto batch = encodeBatchValue(std::move(batchHolder)->getBatch());
+  doBatchOperation(std::move(batch));
 }
 
 void ChangePasswordProcessor::process(const cpp2::ChangePasswordReq& req) {
@@ -240,7 +263,11 @@ void ChangePasswordProcessor::process(const cpp2::ChangePasswordReq& req) {
   auto userVal = MetaKeyUtils::userVal(req.get_new_encoded_pwd());
   std::vector<kvstore::KV> data;
   data.emplace_back(std::move(userKey), std::move(userVal));
-  doSyncPutAndUpdate(std::move(data));
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(data, timeInMilliSec);
+  auto ret = doSyncPut(std::move(data));
+  handleErrorCode(ret);
+  onFinished();
 }
 
 void ListUsersProcessor::process(const cpp2::ListUsersReq&) {
@@ -355,7 +382,7 @@ void ListRolesProcessor::process(const cpp2::ListRolesReq& req) {
 }
 
 void GetUserRolesProcessor::process(const cpp2::GetUserRolesReq& req) {
-  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
+  folly::SharedMutex::ReadHolder holder(LockUtils::lock());
   const auto& act = req.get_account();
 
   auto prefix = MetaKeyUtils::rolesPrefix();

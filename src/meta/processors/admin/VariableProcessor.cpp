@@ -102,7 +102,11 @@ void SetVariableProcessor::process(const cpp2::SetVariableReq& req) {
   auto valStr = nebula::value(ret);
   std::vector<kvstore::KV> data;
   data.emplace_back(MetaKeyUtils::variableKey(space, name), valStr);
-  doSyncPutAndUpdate(std::move(data));
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(data, timeInMilliSec);
+  auto result = doSyncPut(std::move(data));
+  handleErrorCode(result);
+  onFinished();
 }
 
 void ListVariablesProcessor::process(const cpp2::ListVariablesReq& req) {

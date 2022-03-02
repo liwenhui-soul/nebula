@@ -5,6 +5,8 @@
 
 #include "meta/processors/parts/DropSpaceProcessor.h"
 
+#include "kvstore/LogEncoder.h"
+
 namespace nebula {
 namespace meta {
 
@@ -32,7 +34,7 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
   }
 
   auto spaceId = nebula::value(spaceRet);
-  std::vector<std::string> deleteKeys;
+  auto batchHolder = std::make_unique<kvstore::BatchHolder>();
 
   // 1. Delete related part meta data.
   auto prefix = MetaKeyUtils::partPrefix(spaceId);
@@ -48,13 +50,14 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
 
   auto iter = nebula::value(iterRet).get();
   while (iter->valid()) {
-    deleteKeys.emplace_back(iter->key());
+    auto key = iter->key();
+    batchHolder->remove(key.str());
     iter->next();
   }
 
   // 2. Delete this space data
-  deleteKeys.emplace_back(MetaKeyUtils::indexSpaceKey(spaceName));
-  deleteKeys.emplace_back(MetaKeyUtils::spaceKey(spaceId));
+  batchHolder->remove(MetaKeyUtils::indexSpaceKey(spaceName));
+  batchHolder->remove(MetaKeyUtils::spaceKey(spaceId));
 
   // 3. Delete related role data.
   auto rolePrefix = MetaKeyUtils::roleSpacePrefix(spaceId);
@@ -72,7 +75,8 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
   while (roleIter->valid()) {
     VLOG(3) << "Revoke role " << MetaKeyUtils::parseRoleStr(roleIter->val()) << " for user "
             << MetaKeyUtils::parseRoleUser(roleIter->key());
-    deleteKeys.emplace_back(roleIter->key());
+    auto key = roleIter->key();
+    batchHolder->remove(key.str());
     roleIter->next();
   }
 
@@ -90,7 +94,8 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
 
   auto lstIter = nebula::value(lstRet).get();
   while (lstIter->valid()) {
-    deleteKeys.emplace_back(lstIter->key());
+    auto key = lstIter->key();
+    batchHolder->remove(key.str());
     lstIter->next();
   }
 
@@ -108,17 +113,18 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
 
   auto lstDrainerIter = nebula::value(lstDrainerRet).get();
   while (lstDrainerIter->valid()) {
-    deleteKeys.emplace_back(lstDrainerIter->key());
+    auto key = lstDrainerIter->key();
+    batchHolder->remove(key.str());
     lstDrainerIter->next();
   }
 
   // 6.Delete related drainer meta data
   auto drainerKey = MetaKeyUtils::drainerKey(spaceId);
-  deleteKeys.emplace_back(drainerKey);
+  batchHolder->remove(std::move(drainerKey));
 
   // 7. Delete related statis data
   auto statskey = MetaKeyUtils::statsKey(spaceId);
-  deleteKeys.emplace_back(statskey);
+  batchHolder->remove(std::move(statskey));
 
   // 8. Delete related fulltext index meta data
   auto ftPrefix = MetaKeyUtils::fulltextIndexPrefix();
@@ -131,18 +137,20 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
     onFinished();
     return;
   }
+
   auto ftIter = nebula::value(ftRet).get();
   while (ftIter->valid()) {
     auto index = MetaKeyUtils::parsefulltextIndex(ftIter->val());
     if (index.get_space_id() == spaceId) {
-      deleteKeys.emplace_back(ftIter->key());
+      auto key = ftIter->key();
+      batchHolder->remove(key.str());
     }
     ftIter->next();
   }
 
   // 9. Delete local_id meta data
   auto localIdkey = MetaKeyUtils::localIdKey(spaceId);
-  deleteKeys.emplace_back(localIdkey);
+  batchHolder->remove(std::move(localIdkey));
 
   // 10. Delete space leval external service data
   auto spaceServicePre = MetaKeyUtils::spaceServicePrefix(spaceId);
@@ -157,7 +165,8 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
   }
   auto spaceServiceIter = nebula::value(spaceServiceRet).get();
   while (spaceServiceIter->valid()) {
-    deleteKeys.emplace_back(spaceServiceIter->key());
+    auto key = spaceServiceIter->key();
+    batchHolder->remove(key.str());
     spaceServiceIter->next();
   }
 
@@ -174,11 +183,15 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
   }
   auto variableIter = nebula::value(variableRet).get();
   while (variableIter->valid()) {
-    deleteKeys.emplace_back(ftIter->key());
+    auto key = ftIter->key();
+    batchHolder->remove(key.str());
     variableIter->next();
   }
 
-  doSyncMultiRemoveAndUpdate(std::move(deleteKeys));
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(batchHolder.get(), timeInMilliSec);
+  auto batch = encodeBatchValue(std::move(batchHolder)->getBatch());
+  doBatchOperation(std::move(batch));
   LOG(INFO) << "Drop space " << spaceName << ", id " << spaceId;
 }
 

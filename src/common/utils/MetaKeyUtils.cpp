@@ -880,16 +880,6 @@ bool MetaKeyUtils::isIndexIndexKey(const std::string& key) {
   return false;
 }
 
-std::string MetaKeyUtils::indexGroupKey(const std::string& name) {
-  EntryType type = EntryType::GROUP;
-  std::string key;
-  key.reserve(128);
-  key.append(kIndexTable.data(), kIndexTable.size())
-      .append(reinterpret_cast<const char*>(&type), sizeof(EntryType))
-      .append(name);
-  return key;
-}
-
 std::string MetaKeyUtils::indexZoneKey(const std::string& name) {
   EntryType type = EntryType::ZONE;
   std::string key;
