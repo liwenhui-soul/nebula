@@ -105,7 +105,9 @@ folly::Future<Status> TraverseExecutor::getNeighbors() {
                      finalStep ? traverse_->dedup() : false,
                      finalStep ? traverse_->random() : false,
                      finalStep ? traverse_->orderBy() : std::vector<storage::cpp2::OrderBy>(),
-                     finalStep ? traverse_->limit(qctx()) : -1,
+                     // The result of Traverse is union of all steps, so could apply limit
+                     // to each independent step.
+                     traverse_->limit(),
                      finalStep ? traverse_->filter() : nullptr)
       .via(runner())
       .thenValue([this, getNbrTime](StorageRpcResponse<GetNeighborsResponse>&& resp) mutable {
