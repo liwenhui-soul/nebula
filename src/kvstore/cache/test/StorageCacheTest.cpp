@@ -17,6 +17,10 @@ DECLARE_uint32(vertex_pool_capacity);
 
 DECLARE_uint32(vertex_item_ttl);
 
+DECLARE_uint32(empty_key_pool_capacity);
+
+DECLARE_uint32(empty_key_item_ttl);
+
 namespace nebula {
 namespace kvstore {
 /*
@@ -39,6 +43,7 @@ class StorageCacheTest : public ::testing::Test {
   std::string vertexKey1 = "test key";
   std::string vertexProp1 = "test prop";
   std::string vertexKeyNotExist = "key not exist";
+  std::string emptyValue = "";
   std::unique_ptr<StorageCache> cache;
 };
 
@@ -122,6 +127,32 @@ TEST_F(StorageCacheTest, PutIntoNonExistingPool) {
   EXPECT_TRUE(ret);
 
   ret = cache->putVertexProp(vertexKey1, vertexProp1);
+  EXPECT_FALSE(ret);
+}
+
+TEST_F(StorageCacheTest, EmptyKeyPoolTest) {
+  // creating cache instance
+  bool ret = false;
+  ret = cache->init();
+  EXPECT_TRUE(ret);
+
+  // adding vertext pool
+  FLAGS_empty_key_pool_capacity = 512;
+  ret = cache->createEmptyKeyPool();
+  EXPECT_TRUE(ret);
+
+  // put vertex
+  ret = cache->addEmptyKey(vertexKey1);
+  EXPECT_TRUE(ret);
+
+  // get value
+  std::string value;
+  ret = cache->getVertexProp(vertexKey1, &value);
+  EXPECT_TRUE(ret);
+  EXPECT_TRUE(value == emptyValue);
+
+  // get non-existing key
+  ret = cache->getVertexProp(vertexKeyNotExist, &value);
   EXPECT_FALSE(ret);
 }
 

@@ -62,6 +62,9 @@
 # The default block cache size used in BlockBasedTable.
 # The unit is MB.
 --rocksdb_block_cache=4
+# Disable page cache to better control memory used by rocksdb.
+# Caution: Make sure to allocate enough block cache if disabling page cache!
+--disable_page_cache=false
 # The type of storage engine, `rocksdb', `memory', etc.
 --engine_type=rocksdb
 
@@ -131,3 +134,10 @@
 --vertex_pool_capacity=50
 # TTL in seconds for vertex items in the cache
 --vertex_item_ttl=300
+
+# Whether to add empty key pool in cache. Only valid when storage cache is enabled.
+--enable_empty_key_pool=false
+# Empty key pool size in MB
+--empty_key_pool_capacity=50
+# TTL in seconds for empty key items in the cache
+--empty_key_item_ttl=300

@@ -133,6 +133,13 @@
 # TTL in seconds for vertex items in the cache
 --vertex_item_ttl=300
 
+# Whether to add empty key pool in cache. Only valid when storage cache is enabled.
+--enable_empty_key_pool=false
+# Empty key pool size in MB
+--empty_key_pool_capacity=50
+# TTL in seconds for empty key items in the cache
+--empty_key_item_ttl=300
+
 ############### misc ####################
 --snapshot_part_rate_limit=10485760
 --snapshot_batch_size=1048576

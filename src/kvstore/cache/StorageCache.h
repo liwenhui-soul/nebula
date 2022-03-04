@@ -13,12 +13,21 @@ namespace nebula {
 namespace kvstore {
 
 static const char kVertexPoolName[] = "VertextPool";
+static const char kEmptyKeyPoolName[] = "EmptyKeyPool";
 static const char kStorageCacheName[] = "__StorageCache__";
+static const char kEmptyValue[] = "";
 
 struct VertexPoolInfo {
   std::string poolName_;
   uint32_t capacity_;
   VertexPoolInfo(std::string poolName, uint32_t capacity)
+      : poolName_(poolName), capacity_(capacity) {}
+};
+
+struct EmptyKeyPoolInfo {
+  std::string poolName_;
+  uint32_t capacity_;
+  EmptyKeyPoolInfo(std::string poolName, uint32_t capacity)
       : poolName_(poolName), capacity_(capacity) {}
 };
 
@@ -41,13 +50,12 @@ class StorageCache {
   bool createVertexPool(std::string poolName = kVertexPoolName);
 
   /**
-   * @brief create a edge pool
+   * @brief create an empty key pool to store keys that are queried but not existed
    *
-   * @param key
-   * @param value
+   * @param poolName
    * @return
    */
-  bool createEdgePool(std::string& key, std::string* value);
+  bool createEmptyKeyPool(std::string poolName = kEmptyKeyPoolName);
 
   /**
    * @brief get the property of a vertex
@@ -66,6 +74,14 @@ class StorageCache {
    * @return
    */
   bool putVertexProp(const std::string& key, std::string& value);
+
+  /**
+   * @brief add the key to empty key pool
+   *
+   * @param key
+   * @return
+   */
+  bool addEmptyKey(const std::string& key);
 
   /**
    * @brief evict a vertex in cache
@@ -98,6 +114,15 @@ class StorageCache {
   }
 
   /**
+   * @brief check whether empty key pool exists
+   *
+   * @return bool
+   */
+  bool emptyKeyPoolExists() {
+    return emptyKeyPool_ != nullptr;
+  }
+
+  /**
    * @brief add a key to vector to invalidate in cache later
    *
    * @param spaceId:
@@ -112,6 +137,7 @@ class StorageCache {
   uint32_t capacity_ = 0;  // in MB
   std::unique_ptr<CacheLibLRU> cacheInternal_{nullptr};
   std::shared_ptr<VertexPoolInfo> vertexPool_{nullptr};
+  std::shared_ptr<EmptyKeyPoolInfo> emptyKeyPool_{nullptr};
 };
 
 }  // namespace kvstore

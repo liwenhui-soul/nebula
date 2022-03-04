@@ -35,6 +35,7 @@ DECLARE_uint32(expired_time_factor);
 
 DECLARE_bool(enable_storage_cache);
 DECLARE_bool(enable_vertex_pool);
+DECLARE_bool(enable_empty_key_pool);
 
 namespace nebula {
 namespace kvstore {
@@ -69,6 +70,14 @@ bool NebulaStore::init() {
       ret = storageCache_->createVertexPool();
       if (!ret) {
         LOG(ERROR) << "adding vertex cache pool failed";
+        return false;
+      }
+    }
+
+    if (FLAGS_enable_empty_key_pool) {
+      ret = storageCache_->createEmptyKeyPool();
+      if (!ret) {
+        LOG(ERROR) << "adding empty key cache pool failed";
         return false;
       }
     }
@@ -634,17 +643,33 @@ nebula::cpp2::ErrorCode NebulaStore::get(GraphSpaceID spaceId,
                                          bool canReadFromFollower) {
   // Currently nebula only reads from leader. We may have to revisit this if we support reading from
   // follower.
-  if (storageCache_ && storageCache_->vertexPoolExists()) {
+  if (storageCache_ && (storageCache_->vertexPoolExists() || storageCache_->emptyKeyPoolExists())) {
     auto cacheKey = NebulaKeyUtils::cacheKey(spaceId, key);
     auto exist = storageCache_->getVertexProp(cacheKey, value);
     if (exist) {
-      return nebula::cpp2::ErrorCode::SUCCEEDED;
+      // Cache hit! Check if the key is in empty key pool first.
+      if (storageCache_->emptyKeyPoolExists() && *value == kEmptyValue) {
+        return nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND;
+      } else {
+        // Cache hit must be from vertex pool.
+        return nebula::cpp2::ErrorCode::SUCCEEDED;
+      }
     } else {
+      // cache miss
       auto ret = getFromKVEngine(spaceId, partId, key, value, canReadFromFollower);
-      if (ret == nebula::cpp2::ErrorCode::SUCCEEDED) {  // only write cache when the tag is found
+      if (storageCache_->vertexPoolExists() && ret == nebula::cpp2::ErrorCode::SUCCEEDED) {
+        // write to vertex pool when the tag is found
         folly::Baton<true, std::atomic> baton;
         bgWorkers_->addTask([this, cacheKey = std::move(cacheKey), value, &baton] {
           this->storageCache_->putVertexProp(cacheKey, *value);
+          baton.post();
+        });
+        baton.wait();
+      } else if (storageCache_->emptyKeyPoolExists() &&
+                 ret == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+        folly::Baton<true, std::atomic> baton;
+        bgWorkers_->addTask([this, cacheKey = std::move(cacheKey), &baton] {
+          this->storageCache_->addEmptyKey(cacheKey);
           baton.post();
         });
         baton.wait();

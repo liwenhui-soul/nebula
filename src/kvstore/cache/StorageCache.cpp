@@ -24,8 +24,12 @@ DEFINE_uint32(storage_cache_locks_power,
 DEFINE_uint32(vertex_pool_capacity, 50, "Vertex pool size in MB");
 DEFINE_uint32(vertex_item_ttl, 300, "TTL for vertex item in the cache");
 
+DEFINE_uint32(empty_key_pool_capacity, 50, "Empty key pool size in MB");
+DEFINE_uint32(empty_key_item_ttl, 300, "TTL for empty key item in the cache");
+
 DEFINE_bool(enable_storage_cache, false, "Whether to enable storage cache");
 DEFINE_bool(enable_vertex_pool, false, "Whether to add vertex pool in cache");
+DEFINE_bool(enable_empty_key_pool, false, "Whether to add empty key pool in cache");
 
 namespace nebula {
 namespace kvstore {
@@ -57,6 +61,16 @@ bool StorageCache::createVertexPool(std::string poolName) {
   return true;
 }
 
+bool StorageCache::createEmptyKeyPool(std::string poolName) {
+  LOG(INFO) << "Create empty key pool: " << poolName;
+  auto ret = cacheInternal_->addPool(poolName, FLAGS_empty_key_pool_capacity);
+  if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    return false;
+  }
+  emptyKeyPool_ = std::make_unique<EmptyKeyPoolInfo>(poolName, FLAGS_empty_key_pool_capacity);
+  return true;
+}
+
 bool StorageCache::getVertexProp(const std::string& key, std::string* value) {
   auto ret = cacheInternal_->get(key, value);
   if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
@@ -75,6 +89,19 @@ bool StorageCache::putVertexProp(const std::string& key, std::string& value) {
     return false;
   }
   auto ret = cacheInternal_->put(key, value, vertexPool_->poolName_, FLAGS_vertex_item_ttl);
+  if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    return false;
+  }
+  return true;
+}
+
+bool StorageCache::addEmptyKey(const std::string& key) {
+  if (!emptyKeyPool_) {
+    LOG(ERROR) << "No empty key pool exists!";
+    return false;
+  }
+  auto ret =
+      cacheInternal_->put(key, kEmptyValue, emptyKeyPool_->poolName_, FLAGS_empty_key_item_ttl);
   if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
     return false;
   }
