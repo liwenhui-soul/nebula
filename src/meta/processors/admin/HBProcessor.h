@@ -60,6 +60,8 @@ class HBProcessor : public BaseProcessor<cpp2::HBResp> {
 
   nebula::cpp2::ErrorCode checkNodeNumber(const cpp2::HostRole role, const HostAddr& host);
 
+  void setLeaderInfo();
+
   ClusterID clusterId_{0};
   const HBCounters* counters_{nullptr};
   static std::atomic<int64_t> metaVersion_;
