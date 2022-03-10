@@ -5,7 +5,7 @@ ARG BRANCH=master
 COPY . /home/nebula/BUILD
 
 RUN cd /home/nebula/BUILD/package \
-  && ./package.sh -n OFF -b ${BRANCH} -f OFF
+  && ./package.sh -n OFF -b ${BRANCH} -f OFF -c OFF
 
 FROM centos:7 as graphd
 
