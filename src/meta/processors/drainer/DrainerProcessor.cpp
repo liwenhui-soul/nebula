@@ -85,7 +85,7 @@ void RemoveDrainerProcessor::process(const cpp2::RemoveDrainerReq& req) {
     return;
   }
 
-  LOG(INFO) << "Rmove drainer, spaceId " << space;
+  LOG(INFO) << "Remove drainer, spaceId " << space;
   auto batchHolder = std::make_unique<kvstore::BatchHolder>();
   batchHolder->remove(std::move(drainerKey));
   auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
