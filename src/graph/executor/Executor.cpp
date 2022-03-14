@@ -502,6 +502,12 @@ Executor *Executor::makeExecutor(QueryContext *qctx, const PlanNode *node) {
     case PlanNode::Kind::kShowListener: {
       return pool->add(new ShowListenerExecutor(node, qctx));
     }
+    case PlanNode::Kind::kStopSync: {
+      return pool->add(new StopSyncExecutor(node, qctx));
+    }
+    case PlanNode::Kind::kRestartSync: {
+      return pool->add(new RestartSyncExecutor(node, qctx));
+    }
     case PlanNode::Kind::kAddDrainer: {
       return pool->add(new AddDrainerExecutor(node, qctx));
     }

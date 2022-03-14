@@ -3218,6 +3218,16 @@ TEST_F(ParserTest, SyncServiceTest) {
     ASSERT_TRUE(result.ok()) << result.status();
   }
   {
+    std::string query = "STOP SYNC";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
+    std::string query = "RESTART SYNC";
+    auto result = parse(query);
+    ASSERT_TRUE(result.ok()) << result.status();
+  }
+  {
     std::string query = "SHOW LISTENER";
     auto result = parse(query);
     ASSERT_TRUE(result.ok()) << result.status();

@@ -297,6 +297,20 @@ std::string ShowDrainersSentence::toString() const {
   return buf;
 }
 
+std::string StopSyncSentence::toString() const {
+  std::string buf;
+  buf.reserve(64);
+  buf += "STOP SYNC ";
+  return buf;
+}
+
+std::string RestartSyncSentence::toString() const {
+  std::string buf;
+  buf.reserve(64);
+  buf += "RESTART SYNC ";
+  return buf;
+}
+
 std::string AdminJobSentence::toString() const {
   switch (op_) {
     case meta::cpp2::AdminJobOp::ADD: {

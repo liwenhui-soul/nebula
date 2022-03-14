@@ -165,6 +165,7 @@ LABEL_FULL_WIDTH            {CN_EN_FULL_WIDTH}{CN_EN_NUM_FULL_WIDTH}*
 "IP"                        { return TokenType::KW_IP; }
 "WHITELIST"                 { return TokenType::KW_WHITELIST; }
 "ACROSS"                    { return TokenType::KW_ACROSS; }
+"RESTART"                   { return TokenType::KW_RESTART; }
 
  /**
   * TODO(dutor) Manage the dynamic allocated objects with an object pool,

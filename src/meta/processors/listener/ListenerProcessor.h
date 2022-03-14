@@ -13,7 +13,7 @@ namespace meta {
 
 /**
  * @brief Add typed listeners for given space, assign one listener for each part round robin.
- *        Notice that in each space, listeners could be only added once now.
+ *        Notice that in each space, each type of listeners could be only added once now.
  *        But, of course, you could remove them and re-add new ones.
  *        It will use heartbeat to instruct the relative storaged to add listeners physically.
  *
@@ -66,6 +66,11 @@ class ListListenersProcessor : public BaseProcessor<cpp2::ListListenersResp> {
       : BaseProcessor<cpp2::ListListenersResp>(kvstore) {}
 };
 
+/**
+ * @brief Allocate the drainer client of the space to the sync listener in the way of round robin.
+ * For the master cluster, the survival status of the drainer cluster is unknown.
+ *
+ */
 class ListListenerDrainersProcessor : public BaseProcessor<cpp2::ListListenerDrainersResp> {
  public:
   static ListListenerDrainersProcessor* instance(kvstore::KVStore* kvstore) {
@@ -77,6 +82,39 @@ class ListListenerDrainersProcessor : public BaseProcessor<cpp2::ListListenerDra
  private:
   explicit ListListenerDrainersProcessor(kvstore::KVStore* kvstore)
       : BaseProcessor<cpp2::ListListenerDrainersResp>(kvstore) {}
+};
+
+/**
+ * @brief The sync listener of specified space stops sending data to the drainer.
+ *
+ */
+class StopSyncProcessor : public BaseProcessor<cpp2::ExecResp> {
+ public:
+  static StopSyncProcessor* instance(kvstore::KVStore* kvstore) {
+    return new StopSyncProcessor(kvstore);
+  }
+
+  void process(const cpp2::StopSyncReq& req);
+
+ private:
+  explicit StopSyncProcessor(kvstore::KVStore* kvstore) : BaseProcessor<cpp2::ExecResp>(kvstore) {}
+};
+
+/**
+ * @brief The sync listener of specified space restarts sending data to the drainer.
+ *
+ */
+class RestartSyncProcessor : public BaseProcessor<cpp2::ExecResp> {
+ public:
+  static RestartSyncProcessor* instance(kvstore::KVStore* kvstore) {
+    return new RestartSyncProcessor(kvstore);
+  }
+
+  void process(const cpp2::RestartSyncReq& req);
+
+ private:
+  explicit RestartSyncProcessor(kvstore::KVStore* kvstore)
+      : BaseProcessor<cpp2::ExecResp>(kvstore) {}
 };
 
 }  // namespace meta

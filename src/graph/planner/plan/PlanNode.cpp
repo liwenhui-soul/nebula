@@ -264,6 +264,10 @@ const char* PlanNode::toString(PlanNode::Kind kind) {
       return "RemoveListener";
     case Kind::kShowListener:
       return "ShowListener";
+    case Kind::kStopSync:
+      return "StopSync";
+    case Kind::kRestartSync:
+      return "RestartSync";
     case Kind::kAddDrainer:
       return "AddDrainer";
     case Kind::kRemoveDrainer:

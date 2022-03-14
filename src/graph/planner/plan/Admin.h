@@ -578,6 +578,28 @@ class ShowDrainers final : public SingleDependencyNode {
       : SingleDependencyNode(qctx, Kind::kShowDrainers, input) {}
 };
 
+class StopSync final : public SingleDependencyNode {
+ public:
+  static StopSync* make(QueryContext* qctx, PlanNode* input) {
+    return qctx->objPool()->add(new StopSync(qctx, input));
+  }
+
+ private:
+  explicit StopSync(QueryContext* qctx, PlanNode* input)
+      : SingleDependencyNode(qctx, Kind::kStopSync, input) {}
+};
+
+class RestartSync final : public SingleDependencyNode {
+ public:
+  static RestartSync* make(QueryContext* qctx, PlanNode* input) {
+    return qctx->objPool()->add(new RestartSync(qctx, input));
+  }
+
+ private:
+  explicit RestartSync(QueryContext* qctx, PlanNode* input)
+      : SingleDependencyNode(qctx, Kind::kRestartSync, input) {}
+};
+
 class Download final : public SingleDependencyNode {
  public:
   static Download* make(QueryContext* qctx,

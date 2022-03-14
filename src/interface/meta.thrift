@@ -922,19 +922,34 @@ struct ListListenersReq {
     2: ListenerType            type,
 }
 
+enum SyncStatus {
+    UNKNOWN = 0x00,
+    ONLINE  = 0x01,
+    OFFLINE = 0x02,
+} (cpp.enum_strict)
+
 struct ListenerInfo {
     1: ListenerType            type,
     2: common.HostAddr         host,
     3: common.PartitionID      part_id,
     4: HostStatus              status,
+    5: optional SyncStatus     sync_status,
     // To space name
-    5: optional binary         space_name,
+    6: optional binary         space_name,
 }
 
 struct ListListenersResp {
     1: common.ErrorCode        code,
     2: common.HostAddr         leader,
     3: list<ListenerInfo>      listeners,
+}
+
+struct StopSyncReq {
+    1: common.GraphSpaceID     space_id,
+}
+
+struct RestartSyncReq {
+    1: common.GraphSpaceID     space_id,
 }
 
 struct ListListenerDrainersReq {
@@ -1368,6 +1383,8 @@ service MetaService {
     ExecResp                 removeListener(1: RemoveListenerReq req);
     ListListenersResp        listListeners(1: ListListenersReq req);
     ListListenerDrainersResp listListenerDrainers(1: ListListenerDrainersReq req);
+    ExecResp                 stopSync(1: StopSyncReq req);
+    ExecResp                 restartSync(1: RestartSyncReq req);
 
     ExecResp         addDrainer(1: AddDrainerReq req);
     ExecResp         removeDrainer(1: RemoveDrainerReq req);

@@ -55,6 +55,7 @@ static const std::unordered_map<
                  {"leader_terms", {"__leader_terms__", nullptr}},
                  {"listener", {"__listener__", nullptr}},
                  {"listener_drainer", {"__listener_drainer__", nullptr}},
+                 {"sync_status", {"__sync_status__", nullptr}},
                  {"drainer", {"__drainer__", nullptr}},
                  {"stats", {"__stats__", MetaKeyUtils::parseStatsSpace}},
                  {"balance_task", {"__balance_task__", nullptr}},
@@ -87,6 +88,7 @@ static const std::string kGroupsTable         = systemTableMaps.at("groups").fir
 static const std::string kZonesTable          = systemTableMaps.at("zones").first;          // NOLINT
 static const std::string kListenerTable       = tableMaps.at("listener").first;             // NOLINT
 static const std::string kListenerDrainerTable  = tableMaps.at("listener_drainer").first;   // NOLINT
+static const std::string kSyncStatusTable     = tableMaps.at("sync_status").first;             // NOLINT
 static const std::string kDrainerTable        = tableMaps.at("drainer").first;              // NOLINT
 static const std::string kDiskPartsTable      = tableMaps.at("disk_parts").first;           // NOLINT
 static const std::string kVariableTable       = tableMaps.at("variable").first;             // NOLINT
@@ -1364,6 +1366,26 @@ GraphSpaceID MetaKeyUtils::parseListenerSpace(folly::StringPiece rawData) {
 PartitionID MetaKeyUtils::parseListenerPart(folly::StringPiece rawData) {
   auto offset = kListenerTable.size() + sizeof(meta::cpp2::ListenerType) + sizeof(GraphSpaceID);
   return *reinterpret_cast<const PartitionID*>(rawData.data() + offset);
+}
+
+std::string MetaKeyUtils::syncStatusKey(GraphSpaceID spaceId) {
+  std::string key;
+  key.reserve(kSyncStatusTable.size() + sizeof(GraphSpaceID));
+  key.append(kSyncStatusTable.data(), kSyncStatusTable.size())
+      .append(reinterpret_cast<const char*>(&spaceId), sizeof(GraphSpaceID));
+  return key;
+}
+
+std::string MetaKeyUtils::syncStatusVal(const meta::cpp2::SyncStatus& status) {
+  std::string val;
+  apache::thrift::CompactSerializer::serialize(status, &val);
+  return val;
+}
+
+meta::cpp2::SyncStatus MetaKeyUtils::parseSyncStatusVal(const folly::StringPiece& rawData) {
+  meta::cpp2::SyncStatus syncStatus;
+  apache::thrift::CompactSerializer::deserialize(rawData, syncStatus);
+  return syncStatus;
 }
 
 std::string MetaKeyUtils::drainerKey(GraphSpaceID spaceId) {

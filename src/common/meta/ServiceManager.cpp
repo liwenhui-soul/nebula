@@ -74,5 +74,13 @@ StatusOr<std::vector<std::pair<GraphSpaceID, std::string>>> ServiceManager::getM
   return std::move(ret).value();
 }
 
+StatusOr<bool> ServiceManager::checkListenerCanSync(GraphSpaceID spaceId) {
+  auto ret = metaClient_->checkListenerCanSync(spaceId);
+  if (!ret.ok()) {
+    return ret.status();
+  }
+  return std::move(ret).value();
+}
+
 }  // namespace meta
 }  // namespace nebula

@@ -92,6 +92,8 @@ Status PermissionCheck::permissionCheck(ClientSession *session,
     case Sentence::Kind::kDropFTIndex:
     case Sentence::Kind::kAddListener:
     case Sentence::Kind::kRemoveListener:
+    case Sentence::Kind::kStopSync:
+    case Sentence::Kind::kRestartSync:
     case Sentence::Kind::kAddDrainer:
     case Sentence::Kind::kRemoveDrainer: {
       return PermissionManager::canWriteSchema(session, vctx);

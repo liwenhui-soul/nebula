@@ -218,6 +218,10 @@ class MetaServiceHandler final : public cpp2::MetaServiceSvIf {
   folly::Future<cpp2::ListListenerDrainersResp> future_listListenerDrainers(
       const cpp2::ListListenerDrainersReq& req) override;
 
+  folly::Future<cpp2::ExecResp> future_stopSync(const cpp2::StopSyncReq& req) override;
+
+  folly::Future<cpp2::ExecResp> future_restartSync(const cpp2::RestartSyncReq& req) override;
+
   // drainer
   folly::Future<cpp2::ExecResp> future_addDrainer(const cpp2::AddDrainerReq& req) override;
 

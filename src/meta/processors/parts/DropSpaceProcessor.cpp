@@ -117,6 +117,8 @@ void DropSpaceProcessor::process(const cpp2::DropSpaceReq& req) {
     batchHolder->remove(key.str());
     lstDrainerIter->next();
   }
+  auto syncStatusKey = MetaKeyUtils::syncStatusKey(spaceId);
+  batchHolder->remove(std::move(syncStatusKey));
 
   // 6.Delete related drainer meta data
   auto drainerKey = MetaKeyUtils::drainerKey(spaceId);

@@ -687,6 +687,24 @@ class ShowDrainersSentence final : public Sentence {
   std::string toString() const override;
 };
 
+class StopSyncSentence final : public Sentence {
+ public:
+  StopSyncSentence() {
+    kind_ = Kind::kStopSync;
+  }
+
+  std::string toString() const override;
+};
+
+class RestartSyncSentence final : public Sentence {
+ public:
+  RestartSyncSentence() {
+    kind_ = Kind::kRestartSync;
+  }
+
+  std::string toString() const override;
+};
+
 class AdminJobSentence final : public Sentence {
  public:
   explicit AdminJobSentence(meta::cpp2::AdminJobOp op,

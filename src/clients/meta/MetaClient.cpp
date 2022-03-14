@@ -637,15 +637,22 @@ bool MetaClient::loadListeners(GraphSpaceID spaceId,
     return false;
   }
   Listeners listeners;
+  cpp2::SyncStatus syncStatus = cpp2::SyncStatus::UNKNOWN;
   for (auto& listener : listenerRet.value()) {
-    if (listener.get_part_id() == 0 && listener.space_name_ref().has_value()) {
-      metaListeners[listener.get_host()].emplace_back(spaceId, *listener.space_name_ref());
+    if (listener.get_part_id() == 0 && listener.get_type() == cpp2::ListenerType::SYNC) {
+      if (listener.space_name_ref().has_value()) {
+        metaListeners[listener.get_host()].emplace_back(spaceId, *listener.space_name_ref());
+      }
+      if (listener.sync_status_ref().has_value()) {
+        syncStatus = *listener.sync_status_ref();
+      }
     } else {
       listeners[listener.get_host()].emplace_back(
           std::make_pair(listener.get_part_id(), listener.get_type()));
     }
   }
   cache->listeners_ = std::move(listeners);
+  cache->syncStatus_ = std::move(syncStatus);
   return true;
 }
 
@@ -3052,6 +3059,36 @@ MetaClient::listListenerDrainers(GraphSpaceID spaceId) {
   return future;
 }
 
+folly::Future<StatusOr<bool>> MetaClient::stopSync(GraphSpaceID spaceId) {
+  cpp2::StopSyncReq req;
+  req.space_id_ref() = spaceId;
+  folly::Promise<StatusOr<bool>> promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_stopSync(request); },
+      [](cpp2::ExecResp&& resp) -> bool {
+        return resp.get_code() == nebula::cpp2::ErrorCode::SUCCEEDED;
+      },
+      std::move(promise));
+  return future;
+}
+
+folly::Future<StatusOr<bool>> MetaClient::restartSync(GraphSpaceID spaceId) {
+  cpp2::RestartSyncReq req;
+  req.space_id_ref() = spaceId;
+  folly::Promise<StatusOr<bool>> promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_restartSync(request); },
+      [](cpp2::ExecResp&& resp) -> bool {
+        return resp.get_code() == nebula::cpp2::ErrorCode::SUCCEEDED;
+      },
+      std::move(promise));
+  return future;
+}
+
 bool MetaClient::registerCfg() {
   auto ret = regConfig(gflagsDeclared_).get();
   if (ret.ok()) {
@@ -3111,6 +3148,21 @@ StatusOr<cpp2::DrainerClientInfo> MetaClient::getMetaListenerDrainerOnSpaceFromC
   }
 
   return spaceIt->second->metaDrainerClient_;
+}
+
+StatusOr<bool> MetaClient::checkListenerCanSync(GraphSpaceID space) {
+  if (!ready_) {
+    return Status::Error("Not ready!");
+  }
+  folly::rcu_reader guard;
+  auto& metadata = *metadata_.load();
+  auto spaceIt = metadata.localCache_.find(space);
+  if (spaceIt == metadata.localCache_.end()) {
+    VLOG(3) << "Space " << space << " not found!";
+    return Status::SpaceNotFound();
+  }
+
+  return spaceIt->second->syncStatus_ == cpp2::SyncStatus::ONLINE;
 }
 
 StatusOr<ListenersMap> MetaClient::getListenersByHostFromCache(const HostAddr& host) {

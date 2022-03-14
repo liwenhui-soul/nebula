@@ -77,7 +77,7 @@ folly::Future<Status> ShowListenerExecutor::execute() {
         });
 
         if (type == meta::cpp2::ListenerType::SYNC) {
-          DataSet result({"PartId", "Type", "Host", "SpaceName", "Status"});
+          DataSet result({"PartId", "Type", "Host", "SpaceName", "Host Status", "Sync Status"});
           for (const auto& info : listenerInfos) {
             Row row;
             row.values.emplace_back(info.get_part_id());
@@ -89,11 +89,17 @@ folly::Future<Status> ShowListenerExecutor::execute() {
               row.values.emplace_back("");
             }
             row.values.emplace_back(apache::thrift::util::enumNameSafe(info.get_status()));
+
+            if (info.sync_status_ref().has_value()) {
+              row.values.emplace_back(apache::thrift::util::enumNameSafe(*info.sync_status_ref()));
+            } else {
+              row.values.emplace_back("OFFLINE");
+            }
             result.emplace_back(std::move(row));
           }
           return finish(std::move(result));
         } else {
-          DataSet result({"PartId", "Type", "Host", "Status"});
+          DataSet result({"PartId", "Type", "Host", "Host Status"});
           for (const auto& info : listenerInfos) {
             Row row;
             row.values.emplace_back(info.get_part_id());
@@ -104,6 +110,34 @@ folly::Future<Status> ShowListenerExecutor::execute() {
           }
           return finish(std::move(result));
         }
+      });
+}
+
+folly::Future<Status> StopSyncExecutor::execute() {
+  SCOPED_TIMER(&execTime_);
+  auto spaceId = qctx()->rctx()->session()->space().id;
+  return qctx()->getMetaClient()->stopSync(spaceId).via(runner()).thenValue(
+      [this](StatusOr<bool> resp) {
+        SCOPED_TIMER(&execTime_);
+        if (!resp.ok()) {
+          LOG(ERROR) << resp.status();
+          return resp.status();
+        }
+        return Status::OK();
+      });
+}
+
+folly::Future<Status> RestartSyncExecutor::execute() {
+  SCOPED_TIMER(&execTime_);
+  auto spaceId = qctx()->rctx()->session()->space().id;
+  return qctx()->getMetaClient()->restartSync(spaceId).via(runner()).thenValue(
+      [this](StatusOr<bool> resp) {
+        SCOPED_TIMER(&execTime_);
+        if (!resp.ok()) {
+          LOG(ERROR) << resp.status();
+          return resp.status();
+        }
+        return Status::OK();
       });
 }
 

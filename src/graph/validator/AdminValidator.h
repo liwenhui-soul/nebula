@@ -223,6 +223,26 @@ class ListDrainersValidator final : public Validator {
   Status toPlan() override;
 };
 
+class StopSyncValidator final : public Validator {
+ public:
+  StopSyncValidator(Sentence* sentence, QueryContext* context) : Validator(sentence, context) {}
+
+ private:
+  Status validateImpl() override;
+
+  Status toPlan() override;
+};
+
+class RestartSyncValidator final : public Validator {
+ public:
+  RestartSyncValidator(Sentence* sentence, QueryContext* context) : Validator(sentence, context) {}
+
+ private:
+  Status validateImpl() override;
+
+  Status toPlan() override;
+};
+
 class DropHostsValidator final : public Validator {
  public:
   DropHostsValidator(Sentence* sentence, QueryContext* context) : Validator(sentence, context) {

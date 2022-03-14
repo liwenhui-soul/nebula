@@ -400,6 +400,28 @@ Status ListDrainersValidator::toPlan() {
   return Status::OK();
 }
 
+Status StopSyncValidator::validateImpl() {
+  return Status::OK();
+}
+
+Status StopSyncValidator::toPlan() {
+  auto *doNode = StopSync::make(qctx_, nullptr);
+  root_ = doNode;
+  tail_ = root_;
+  return Status::OK();
+}
+
+Status RestartSyncValidator::validateImpl() {
+  return Status::OK();
+}
+
+Status RestartSyncValidator::toPlan() {
+  auto *doNode = RestartSync::make(qctx_, nullptr);
+  root_ = doNode;
+  tail_ = root_;
+  return Status::OK();
+}
+
 // Register hosts, unregistered host won't be allowed to join cluster.
 Status AddHostsValidator::validateImpl() {
   auto sentence = static_cast<AddHostsSentence *>(sentence_);

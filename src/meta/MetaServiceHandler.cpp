@@ -502,6 +502,17 @@ folly::Future<cpp2::ListListenerDrainersResp> MetaServiceHandler::future_listLis
   RETURN_FUTURE(processor);
 }
 
+folly::Future<cpp2::ExecResp> MetaServiceHandler::future_stopSync(const cpp2::StopSyncReq& req) {
+  auto* processor = StopSyncProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
+folly::Future<cpp2::ExecResp> MetaServiceHandler::future_restartSync(
+    const cpp2::RestartSyncReq& req) {
+  auto* processor = RestartSyncProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
 folly::Future<cpp2::ExecResp> MetaServiceHandler::future_addDrainer(
     const cpp2::AddDrainerReq& req) {
   auto* processor = AddDrainerProcessor::instance(kvstore_);

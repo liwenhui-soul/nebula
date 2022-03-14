@@ -128,6 +128,8 @@ class Sentence {
     kAddDrainer,
     kRemoveDrainer,
     kShowDrainers,
+    kStopSync,
+    kRestartSync,
     kSignInService,
     kSignOutService,
     kSignInSpaceService,

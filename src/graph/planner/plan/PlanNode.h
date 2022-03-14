@@ -169,6 +169,8 @@ class PlanNode {
     kAddListener,
     kRemoveListener,
     kShowListener,
+    kStopSync,
+    kRestartSync,
 
     // drainer related
     kAddDrainer,

@@ -113,6 +113,9 @@ struct SpaceInfoCache {
   // drainer server for slave cluster
   std::vector<cpp2::DrainerInfo> drainerServer_;
 
+  // If there is a sync listener, set sync status
+  cpp2::SyncStatus syncStatus_;
+
   // space level variable
   std::unordered_map<std::string, Value> variables_;
 
@@ -134,6 +137,7 @@ struct SpaceInfoCache {
         drainerclients_(info.drainerclients_),
         metaDrainerClient_(info.metaDrainerClient_),
         drainerServer_(info.drainerServer_),
+        syncStatus_(info.syncStatus_),
         variables_(info.variables_) {}
 
   ~SpaceInfoCache() = default;
@@ -448,7 +452,6 @@ class MetaClient {
   folly::Future<StatusOr<std::vector<cpp2::Snapshot>>> listSnapshots();
 
   // Operations for listener.
-
   folly::Future<StatusOr<bool>> addListener(GraphSpaceID spaceId,
                                             cpp2::ListenerType type,
                                             std::vector<HostAddr> storageHosts,
@@ -474,6 +477,10 @@ class MetaClient {
 
   StatusOr<std::vector<RemoteListenerInfo>> getListenerHostTypeBySpacePartType(GraphSpaceID spaceId,
                                                                                PartitionID partId);
+
+  folly::Future<StatusOr<bool>> stopSync(GraphSpaceID spaceId);
+
+  folly::Future<StatusOr<bool>> restartSync(GraphSpaceID spaceId);
 
   // Opeartions for drainer.
   folly::Future<StatusOr<bool>> addDrainer(GraphSpaceID spaceId, std::vector<HostAddr> hosts);
@@ -641,6 +648,8 @@ class MetaClient {
       HostAddr host);
 
   StatusOr<cpp2::DrainerClientInfo> getMetaListenerDrainerOnSpaceFromCache(GraphSpaceID space);
+
+  StatusOr<bool> checkListenerCanSync(GraphSpaceID space);
 
   StatusOr<TermID> getTermFromCache(GraphSpaceID spaceId, PartitionID);
 

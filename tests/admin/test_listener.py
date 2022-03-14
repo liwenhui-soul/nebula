@@ -64,8 +64,28 @@ class TestListener(NebulaTestSuite):
         # Show listener
         resp = self.client.execute('SHOW LISTENER SYNC;')
         self.check_resp_succeeded(resp)
-        self.search_result(resp, [[0, "SYNC", '"127.0.0.1":7899', "default_space", "OFFLINE"]])
-        self.search_result(resp, [[1, "SYNC", '"127.0.0.1":7999', "default_space", "OFFLINE"]])
+        self.search_result(resp, [[0, "SYNC", '"127.0.0.1":7899', "default_space", "OFFLINE", "ONLINE"]])
+        self.search_result(resp, [[1, "SYNC", '"127.0.0.1":7999', "default_space", "OFFLINE", "ONLINE"]])
+
+        # Stop listener
+        resp = self.client.execute('STOP SYNC;')
+        self.check_resp_succeeded(resp)
+
+        # Show listener
+        resp = self.client.execute('SHOW LISTENER SYNC;')
+        self.check_resp_succeeded(resp)
+        self.search_result(resp, [[0, "SYNC", '"127.0.0.1":7899', "default_space", "OFFLINE", "OFFLINE"]])
+        self.search_result(resp, [[1, "SYNC", '"127.0.0.1":7999', "default_space", "OFFLINE", "OFFLINE"]])
+
+        # Restart listener
+        resp = self.client.execute('RESTART SYNC;')
+        self.check_resp_succeeded(resp)
+
+        # Show listener
+        resp = self.client.execute('SHOW LISTENER SYNC;')
+        self.check_resp_succeeded(resp)
+        self.search_result(resp, [[0, "SYNC", '"127.0.0.1":7899', "default_space", "OFFLINE", "ONLINE"]])
+        self.search_result(resp, [[1, "SYNC", '"127.0.0.1":7999', "default_space", "OFFLINE", "ONLINE"]])
 
         # Remove listener
         resp = self.client.execute('REMOVE LISTENER SYNC;')

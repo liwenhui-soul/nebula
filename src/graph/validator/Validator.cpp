@@ -236,6 +236,10 @@ std::unique_ptr<Validator> Validator::makeValidator(Sentence* sentence, QueryCon
       return std::make_unique<RemoveDrainerValidator>(sentence, context);
     case Sentence::Kind::kShowDrainers:
       return std::make_unique<ListDrainersValidator>(sentence, context);
+    case Sentence::Kind::kStopSync:
+      return std::make_unique<StopSyncValidator>(sentence, context);
+    case Sentence::Kind::kRestartSync:
+      return std::make_unique<RestartSyncValidator>(sentence, context);
     case Sentence::Kind::kShowStats:
       return std::make_unique<ShowStatusValidator>(sentence, context);
     case Sentence::Kind::kShowServiceClients:

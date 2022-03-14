@@ -2765,7 +2765,7 @@ TEST(MetaClientTest, DrainerServiceAndListenerTest) {
   TestUtils::setupHB(kv, {{"2", 1}}, cpp2::HostRole::META_LISTENER, gitInfoSha());
 
   {
-    // add sync listener，failed
+    // add sync listener failed，because there is no sign in drainer service.
     auto addRet =
         client
             ->addListener(
@@ -2795,6 +2795,7 @@ TEST(MetaClientTest, DrainerServiceAndListenerTest) {
     ASSERT_TRUE(addRet.ok()) << addRet.status();
   }
   {
+    // sync_status default is ONLINE
     auto listRet = client->listListeners(space, cpp2::ListenerType::SYNC).get();
     ASSERT_TRUE(listRet.ok()) << listRet.status();
     auto listeners = listRet.value();
@@ -2806,6 +2807,7 @@ TEST(MetaClientTest, DrainerServiceAndListenerTest) {
     ml.host_ref() = metaListener;
     ml.part_id_ref() = 0;
     ml.status_ref() = cpp2::HostStatus::ONLINE;
+    ml.sync_status_ref() = cpp2::SyncStatus::ONLINE;
     ml.space_name_ref() = toSpaceName;
     expected.emplace_back(std::move(ml));
 
@@ -2815,6 +2817,77 @@ TEST(MetaClientTest, DrainerServiceAndListenerTest) {
       l.host_ref() = listenerHosts[i % 4];
       l.part_id_ref() = i + 1;
       l.status_ref() = cpp2::HostStatus::ONLINE;
+      l.sync_status_ref() = cpp2::SyncStatus::ONLINE;
+      l.space_name_ref() = toSpaceName;
+      expected.emplace_back(std::move(l));
+    }
+
+    ASSERT_EQ(expected, listeners);
+  }
+  {
+    // stop sync succeed
+    auto addRet = client->stopSync(space).get();
+    ASSERT_TRUE(addRet.ok()) << addRet.status();
+  }
+  {
+    // sync_status default is OFFLINE
+    auto listRet = client->listListeners(space, cpp2::ListenerType::SYNC).get();
+    ASSERT_TRUE(listRet.ok()) << listRet.status();
+    auto listeners = listRet.value();
+    ASSERT_EQ(10, listeners.size());
+    std::vector<cpp2::ListenerInfo> expected;
+    // meta listener
+    cpp2::ListenerInfo ml;
+    ml.type_ref() = cpp2::ListenerType::SYNC;
+    ml.host_ref() = metaListener;
+    ml.part_id_ref() = 0;
+    ml.status_ref() = cpp2::HostStatus::ONLINE;
+    ml.sync_status_ref() = cpp2::SyncStatus::OFFLINE;
+    ml.space_name_ref() = toSpaceName;
+    expected.emplace_back(std::move(ml));
+
+    for (size_t i = 0; i < 9; i++) {
+      cpp2::ListenerInfo l;
+      l.type_ref() = cpp2::ListenerType::SYNC;
+      l.host_ref() = listenerHosts[i % 4];
+      l.part_id_ref() = i + 1;
+      l.status_ref() = cpp2::HostStatus::ONLINE;
+      l.sync_status_ref() = cpp2::SyncStatus::OFFLINE;
+      l.space_name_ref() = toSpaceName;
+      expected.emplace_back(std::move(l));
+    }
+
+    ASSERT_EQ(expected, listeners);
+  }
+  {
+    // Restart sync succeed
+    auto addRet = client->restartSync(space).get();
+    ASSERT_TRUE(addRet.ok()) << addRet.status();
+  }
+  {
+    // sync_status default is ONLINE
+    auto listRet = client->listListeners(space, cpp2::ListenerType::SYNC).get();
+    ASSERT_TRUE(listRet.ok()) << listRet.status();
+    auto listeners = listRet.value();
+    ASSERT_EQ(10, listeners.size());
+    std::vector<cpp2::ListenerInfo> expected;
+    // meta listener
+    cpp2::ListenerInfo ml;
+    ml.type_ref() = cpp2::ListenerType::SYNC;
+    ml.host_ref() = metaListener;
+    ml.part_id_ref() = 0;
+    ml.status_ref() = cpp2::HostStatus::ONLINE;
+    ml.sync_status_ref() = cpp2::SyncStatus::ONLINE;
+    ml.space_name_ref() = toSpaceName;
+    expected.emplace_back(std::move(ml));
+
+    for (size_t i = 0; i < 9; i++) {
+      cpp2::ListenerInfo l;
+      l.type_ref() = cpp2::ListenerType::SYNC;
+      l.host_ref() = listenerHosts[i % 4];
+      l.part_id_ref() = i + 1;
+      l.status_ref() = cpp2::HostStatus::ONLINE;
+      l.sync_status_ref() = cpp2::SyncStatus::ONLINE;
       l.space_name_ref() = toSpaceName;
       expected.emplace_back(std::move(l));
     }

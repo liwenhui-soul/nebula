@@ -192,7 +192,7 @@ class DrainerTask {
    */
   void finish(nebula::cpp2::ErrorCode rc) {
     if (rc == nebula::cpp2::ErrorCode::SUCCEEDED) {
-      LOG(INFO) << "Drainer task space " << spaceId_ << " succeeded";
+      VLOG(2) << "Drainer task space " << spaceId_ << " succeeded";
     } else {
       LOG(INFO) << "Drainer task space " << spaceId_ << " failed, "
                 << apache::thrift::util::enumNameSafe(rc);

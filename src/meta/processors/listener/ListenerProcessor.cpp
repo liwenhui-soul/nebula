@@ -115,8 +115,8 @@ void AddListenerProcessor::process(const cpp2::AddListenerReq& req) {
     }
   }
 
-  // For meta listener, spaceId is space, partId is 0
   if (type == cpp2::ListenerType::SYNC) {
+    // For meta listener, spaceId is space, partId is 0
     data.emplace_back(MetaKeyUtils::listenerKey(space, 0, type),
                       MetaKeyUtils::listenerVal(metaHost, spaceName));
     auto key = MetaKeyUtils::listenerDrainerKey(space, 0);
@@ -124,6 +124,11 @@ void AddListenerProcessor::process(const cpp2::AddListenerReq& req) {
     auto drainerClient = drainerClients[0];
     auto val = MetaKeyUtils::listenerDrainerVal(drainerClient.get_host(), spaceName);
     data.emplace_back(std::move(key), std::move(val));
+
+    // Set sync status to ONLINE
+    auto syncStatusKey = MetaKeyUtils::syncStatusKey(space);
+    auto syncStatusVal = MetaKeyUtils::syncStatusVal(meta::cpp2::SyncStatus::ONLINE);
+    data.emplace_back(std::move(syncStatusKey), std::move(syncStatusVal));
   }
   auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
   LastUpdateTimeMan::update(data, timeInMilliSec);
@@ -167,8 +172,8 @@ void RemoveListenerProcessor::process(const cpp2::RemoveListenerReq& req) {
     iter->next();
   }
 
-  // remove listener drainer data
   if (type == cpp2::ListenerType::SYNC) {
+    // remove listener drainer data
     auto listenerDrainerPrefix = MetaKeyUtils::listenerDrainerPrefix(space);
     auto literRet = doPrefix(listenerDrainerPrefix);
     if (!nebula::ok(literRet)) {
@@ -185,6 +190,10 @@ void RemoveListenerProcessor::process(const cpp2::RemoveListenerReq& req) {
       batchHolder->remove(key.str());
       liter->next();
     }
+
+    // remove sync status data
+    auto syncStatusKey = MetaKeyUtils::syncStatusKey(space);
+    batchHolder->remove(std::move(syncStatusKey));
   }
 
   auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
@@ -237,6 +246,25 @@ void ListListenersProcessor::process(const cpp2::ListListenersReq& req) {
   }
   auto metaActiveHosts = std::move(nebula::value(metaActiveHostsRet));
 
+  // Get sync status of current space
+  cpp2::SyncStatus syncStatus = cpp2::SyncStatus::UNKNOWN;
+  if (type == cpp2::ListenerType::SYNC || type == cpp2::ListenerType::ALL) {
+    auto syncStatusKey = MetaKeyUtils::syncStatusKey(space);
+    auto sRet = doGet(syncStatusKey);
+    if (!nebula::ok(sRet)) {
+      auto retCode = nebula::error(sRet);
+      if (retCode != nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+        LOG(INFO) << "Get sync status failed, error: "
+                  << apache::thrift::util::enumNameSafe(retCode);
+        handleErrorCode(retCode);
+        onFinished();
+        return;
+      }
+    } else {
+      syncStatus = MetaKeyUtils::parseSyncStatusVal(nebula::value(sRet));
+    }
+  }
+
   std::vector<cpp2::ListenerInfo> listeners;
   auto iter = nebula::value(iterRet).get();
   while (iter->valid()) {
@@ -245,6 +273,13 @@ void ListListenersProcessor::process(const cpp2::ListListenersReq& req) {
 
     cpp2::ListenerInfo listener;
     if (listenerType == cpp2::ListenerType::SYNC) {
+      if (syncStatus == cpp2::SyncStatus::UNKNOWN) {
+        LOG(INFO) << "Get sync status failed";
+        handleErrorCode(nebula::cpp2::ErrorCode::E_LISTENER_NOT_FOUND);
+        onFinished();
+        return;
+      }
+      listener.sync_status_ref() = syncStatus;
       listener.space_name_ref() = MetaKeyUtils::parseListenerSpacename(iter->val());
     }
     listener.type_ref() = listenerType;
@@ -274,7 +309,6 @@ void ListListenersProcessor::process(const cpp2::ListListenersReq& req) {
   onFinished();
 }
 
-// For the master cluster, the survival status of the drainer cluster is unknown
 void ListListenerDrainersProcessor::process(const cpp2::ListListenerDrainersReq& req) {
   auto space = req.get_space_id();
   CHECK_SPACE_ID_AND_RETURN(space);
@@ -304,6 +338,66 @@ void ListListenerDrainersProcessor::process(const cpp2::ListListenerDrainersReq&
   }
   resp_.drainerClients_ref() = std::move(drainerClients);
   handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+  onFinished();
+}
+
+void StopSyncProcessor::process(const cpp2::StopSyncReq& req) {
+  auto space = req.get_space_id();
+  CHECK_SPACE_ID_AND_RETURN(space);
+
+  // Check sync status
+  auto syncStatusKey = MetaKeyUtils::syncStatusKey(space);
+  auto sRet = doGet(syncStatusKey);
+  if (!nebula::ok(sRet)) {
+    auto retCode = nebula::error(sRet);
+    if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+      retCode = nebula::cpp2::ErrorCode::E_LISTENER_NOT_FOUND;
+    }
+    LOG(INFO) << "Stop sync failed, error: " << apache::thrift::util::enumNameSafe(retCode);
+    handleErrorCode(retCode);
+    onFinished();
+    return;
+  }
+
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
+  auto val = MetaKeyUtils::syncStatusVal(meta::cpp2::SyncStatus::OFFLINE);
+
+  std::vector<kvstore::KV> data;
+  data.emplace_back(std::move(syncStatusKey), std::move(val));
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(data, timeInMilliSec);
+  auto result = doSyncPut(std::move(data));
+  handleErrorCode(result);
+  onFinished();
+}
+
+void RestartSyncProcessor::process(const cpp2::RestartSyncReq& req) {
+  auto space = req.get_space_id();
+  CHECK_SPACE_ID_AND_RETURN(space);
+
+  // Check sync status
+  auto syncStatusKey = MetaKeyUtils::syncStatusKey(space);
+  auto sRet = doGet(syncStatusKey);
+  if (!nebula::ok(sRet)) {
+    auto retCode = nebula::error(sRet);
+    if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+      retCode = nebula::cpp2::ErrorCode::E_LISTENER_NOT_FOUND;
+    }
+    LOG(INFO) << "Restart sync failed, error: " << apache::thrift::util::enumNameSafe(retCode);
+    handleErrorCode(retCode);
+    onFinished();
+    return;
+  }
+
+  folly::SharedMutex::WriteHolder holder(LockUtils::lock());
+  auto val = MetaKeyUtils::syncStatusVal(meta::cpp2::SyncStatus::ONLINE);
+
+  std::vector<kvstore::KV> data;
+  data.emplace_back(std::move(syncStatusKey), std::move(val));
+  auto timeInMilliSec = time::WallClock::fastNowInMilliSec();
+  LastUpdateTimeMan::update(data, timeInMilliSec);
+  auto result = doSyncPut(std::move(data));
+  handleErrorCode(result);
   onFinished();
 }
 

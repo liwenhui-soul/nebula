@@ -330,7 +330,7 @@ void MetaSyncListener::sendDataToDrainer() {
 
   auto mLRet = serviceMan_->getMetaListenerInfo(host);
   if (!mLRet.ok()) {
-    LOG(WARNING) << "Get meta sync listener failed, " << mLRet.status().toString();
+    VLOG(2) << "Get meta sync listener failed, " << mLRet.status().toString();
     return;
   }
 
@@ -339,10 +339,19 @@ void MetaSyncListener::sendDataToDrainer() {
   for (auto& syncMetaSpace : metListenerInfos) {
     auto syncSpaceId = syncMetaSpace.first;
     auto toSpaceName = syncMetaSpace.second;
-    // Get the specified drainer client of spaceId partId
+
+    // Check the current space sync status.
+    // If it is in the OFFLINE state, the current space will not send meta data to drainer.
+    auto syncStatusRet = serviceMan_->checkListenerCanSync(syncSpaceId);
+    if (!syncStatusRet.ok() || !syncStatusRet.value()) {
+      VLOG(2) << "Sync listener sync status is not online.";
+      continue;
+    }
+
+    // Get the specified drainer client of spaceId and partId
     auto cRet = serviceMan_->getMetaListenerDrainerClient(syncSpaceId);
     if (!cRet.ok()) {
-      LOG(WARNING) << "Get meta sync drainer client failed, " << cRet.status().toString();
+      VLOG(2) << "Get meta sync drainer client failed, " << cRet.status().toString();
       return;
     }
     auto drainerClientInfo = std::move(cRet.value());
@@ -403,20 +412,20 @@ void MetaSyncListener::sendDataToDrainer() {
       VLOG(3) << "Process meta data that can be left, space  " << syncSpaceId;
       continue;
     }
-    // sync listener send wal log to drainer
+
     auto iter = wal->iterator(lastApplyLogId + 1, lastLogId);
     TermID logTermToSend = -1;
     LogID logIdToSend = -1;
     std::vector<nebula::cpp2::LogEntry> logs;
     if (iter->valid()) {
       VLOG(3) << "Prepare the list of wal log entries to send to drainer";
-      // Send data of the same term
+      // Send the same term data
       logTermToSend = iter->logTerm();
 
       for (size_t cnt = 0; iter->valid() && iter->logTerm() == logTermToSend &&
                            cnt < FLAGS_sync_listener_commit_batch_size;
            ++(*iter), ++cnt) {
-        // Skip the heartbeat
+        // The logs not contain heartbeats.
         // logMsg format in wal log: Timestamp(int64_t）+ LogType(1 char)
         // + sizeof(uint32_t val count)
         nebula::cpp2::LogEntry le;
@@ -429,7 +438,6 @@ void MetaSyncListener::sendDataToDrainer() {
 
     // When a certain amount of data is reached, data is sent to drainer
     if (logs.size() != 0) {
-      // apply to drainer
       LogID nextApplyLogId = lastApplyLogId;
       if (metaApply(logs,
                     syncSpaceId,
@@ -459,6 +467,12 @@ bool MetaSyncListener::metaApply(const std::vector<nebula::cpp2::LogEntry>& data
                                  std::string tospaceName,
                                  LogID& nextApplyLogId) {
   auto retryCnt = FLAGS_request_to_drainer_retry_times;
+  // Before sending data, check the current space listener connection status again.
+  auto syncStatusRet = serviceMan_->checkListenerCanSync(spaceId);
+  if (!syncStatusRet.ok() || !syncStatusRet.value()) {
+    VLOG(2) << "Sync listener sync status is not online.";
+    return false;
+  }
 
   while (retryCnt-- > 0) {
     auto f = send(spaceId,
@@ -765,6 +779,14 @@ void StorageSyncListener::init() {
 }
 
 void StorageSyncListener::processLogs() {
+  // Check the current space listener connection status.
+  // If it is in the OFFLINE state, the current space will not send storage data.
+  auto syncStatusRet = serviceMan_->checkListenerCanSync(spaceId_);
+  if (!syncStatusRet.ok() || !syncStatusRet.value()) {
+    VLOG(2) << "Sync listener sync status is not online.";
+    return;
+  }
+
   bool expected = false;
   if (!requestOnGoing_.compare_exchange_strong(expected, true)) {
     return;
@@ -793,8 +815,8 @@ void StorageSyncListener::processLogs() {
   LogID logIdToSend = -1;
   TermID logTermToSend = -1;
 
-  // Like the wal logs between replicas, the heartbeat is included here
-  // for the logId is continuous.
+  // Like the wal logs between replicas, the heartbeat is included here.
+  // The logId is continuous.
   std::vector<nebula::cpp2::LogEntry> logs;
 
   // When iter is invalid, maybe reset() and use snapshot
@@ -850,7 +872,6 @@ std::pair<int64_t, int64_t> StorageSyncListener::commitSnapshot(
     return std::make_pair(0, 0);
   }
 
-  // storage sync listener
   int64_t count = 0;
   int64_t size = 0;
   std::vector<KV> data;
@@ -905,6 +926,12 @@ bool StorageSyncListener::apply(const std::vector<nebula::cpp2::LogEntry>& data,
                                 LogID lastApplyLogId,
                                 bool cleanupData) {
   auto retryCnt = FLAGS_request_to_drainer_retry_times;
+  // Before sending data, check the current space listener connection status again.
+  auto syncStatusRet = serviceMan_->checkListenerCanSync(spaceId_);
+  if (!syncStatusRet.ok() || !syncStatusRet.value()) {
+    VLOG(2) << "Sync listener sync status is not online.";
+    return false;
+  }
 
   while (retryCnt-- > 0) {
     auto f = send(spaceId_,
@@ -970,7 +997,6 @@ folly::Future<nebula::drainer::cpp2::AppendLogResponse> StorageSyncListener::sen
 
   nebula::drainer::cpp2::AppendLogRequest req;
   req.clusterId_ref() = clusterId_;
-
   req.sync_meta_ref() = false;
   req.space_ref() = spaceId;
   req.part_num_ref() = partNum_;

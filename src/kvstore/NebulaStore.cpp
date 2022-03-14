@@ -451,10 +451,8 @@ void NebulaStore::removeSpace(GraphSpaceID spaceId, bool isListener) {
         }
       }
       this->spaces_.erase(spaceIt);
-      if (FLAGS_auto_remove_invalid_space) {
-        for (const auto& path : enginePaths) {
-          removeSpaceDir(path);
-        }
+      for (const auto& path : enginePaths) {
+        removeSpaceDir(path);
       }
     }
     LOG(INFO) << "Data space " << spaceId << " has been removed!";

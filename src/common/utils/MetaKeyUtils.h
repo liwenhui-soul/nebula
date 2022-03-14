@@ -391,6 +391,12 @@ class MetaKeyUtils final {
 
   static PartitionID parseListenerPart(folly::StringPiece rawData);
 
+  static std::string syncStatusKey(GraphSpaceID spaceId);
+
+  static std::string syncStatusVal(const meta::cpp2::SyncStatus& status);
+
+  static meta::cpp2::SyncStatus parseSyncStatusVal(const folly::StringPiece& rawVal);
+
   // drainer
   static std::string drainerKey(GraphSpaceID spaceId);
 
