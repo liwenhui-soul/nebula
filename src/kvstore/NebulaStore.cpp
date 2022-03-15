@@ -621,7 +621,8 @@ nebula::cpp2::ErrorCode NebulaStore::getFromKVEngine(GraphSpaceID spaceId,
                                                      PartitionID partId,
                                                      const std::string& key,
                                                      std::string* value,
-                                                     bool canReadFromFollower) {
+                                                     bool canReadFromFollower,
+                                                     const void* snapshot) {
   auto ret = part(spaceId, partId);
   if (!ok(ret)) {
     return error(ret);
@@ -631,17 +632,19 @@ nebula::cpp2::ErrorCode NebulaStore::getFromKVEngine(GraphSpaceID spaceId,
     return part->isLeader() ? nebula::cpp2::ErrorCode::E_LEADER_LEASE_FAILED
                             : nebula::cpp2::ErrorCode::E_LEADER_CHANGED;
   }
-  return part->engine()->get(key, value);
+  return part->engine()->get(key, value, snapshot);
 }
 
 nebula::cpp2::ErrorCode NebulaStore::get(GraphSpaceID spaceId,
                                          PartitionID partId,
                                          const std::string& key,
                                          std::string* value,
-                                         bool canReadFromFollower) {
+                                         bool canReadFromFollower,
+                                         const void* snapshot) {
   // Currently nebula only reads from leader. We may have to revisit this if we support reading from
   // follower.
-  if (storageCache_ && (storageCache_->vertexPoolExists() || storageCache_->emptyKeyPoolExists())) {
+  if (storageCache_ && (storageCache_->vertexPoolExists() || storageCache_->emptyKeyPoolExists()) &&
+      snapshot == nullptr) {
     auto cacheKey = NebulaKeyUtils::cacheKey(spaceId, key);
     auto exist = storageCache_->getVertexProp(cacheKey, value);
     if (exist) {
@@ -654,7 +657,7 @@ nebula::cpp2::ErrorCode NebulaStore::get(GraphSpaceID spaceId,
       }
     } else {
       // cache miss
-      auto ret = getFromKVEngine(spaceId, partId, key, value, canReadFromFollower);
+      auto ret = getFromKVEngine(spaceId, partId, key, value, canReadFromFollower, nullptr);
       if (storageCache_->vertexPoolExists() && ret == nebula::cpp2::ErrorCode::SUCCEEDED) {
         // write to vertex pool when the tag is found
         folly::Baton<true, std::atomic> baton;
@@ -676,7 +679,7 @@ nebula::cpp2::ErrorCode NebulaStore::get(GraphSpaceID spaceId,
     }
   }
 
-  return getFromKVEngine(spaceId, partId, key, value, canReadFromFollower);
+  return getFromKVEngine(spaceId, partId, key, value, canReadFromFollower, snapshot);
 }
 
 const void* NebulaStore::GetSnapshot(GraphSpaceID spaceId,
