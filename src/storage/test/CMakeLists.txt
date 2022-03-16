@@ -22,6 +22,7 @@ set(storage_test_deps
     $<TARGET_OBJECTS:log_str_list_iterator_obj>
     $<TARGET_OBJECTS:codec_obj>
     $<TARGET_OBJECTS:ws_obj>
+    $<TARGET_OBJECTS:encryption_obj>
     $<TARGET_OBJECTS:ws_common_obj>
     $<TARGET_OBJECTS:http_client_obj>
     $<TARGET_OBJECTS:storage_thrift_obj>

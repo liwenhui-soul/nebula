@@ -11,6 +11,7 @@ set(KVSTORE_TEST_LIBS
     $<TARGET_OBJECTS:meta_obj>
     $<TARGET_OBJECTS:meta_client_obj>
     $<TARGET_OBJECTS:ws_obj>
+    $<TARGET_OBJECTS:encryption_obj>
     $<TARGET_OBJECTS:ws_common_obj>
     $<TARGET_OBJECTS:http_client_obj>
     $<TARGET_OBJECTS:meta_thrift_obj>

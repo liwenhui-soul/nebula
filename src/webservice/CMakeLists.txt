@@ -11,6 +11,7 @@ nebula_add_library(
     GetStatsHandler.cpp
     Router.cpp
     StatusHandler.cpp
+    GetLicenseHandler.cpp
 )
 
 set_target_properties(ws_obj PROPERTIES COMPILE_FLAGS "-Wno-error=format-security")

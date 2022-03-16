@@ -10,6 +10,7 @@ set(drainer_test_deps
     $<TARGET_OBJECTS:drainer_thrift_obj>
     $<TARGET_OBJECTS:common_thrift_obj>
     $<TARGET_OBJECTS:ws_obj>
+    $<TARGET_OBJECTS:encryption_obj>
     $<TARGET_OBJECTS:ws_common_obj>
     $<TARGET_OBJECTS:process_obj>
     $<TARGET_OBJECTS:stats_obj>

@@ -38,6 +38,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:thrift_obj>
         $<TARGET_OBJECTS:meta_obj>
         $<TARGET_OBJECTS:ws_obj>
+        $<TARGET_OBJECTS:encryption_obj>
         $<TARGET_OBJECTS:ws_common_obj>
         $<TARGET_OBJECTS:thread_obj>
         $<TARGET_OBJECTS:time_obj>

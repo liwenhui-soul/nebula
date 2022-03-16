@@ -11,6 +11,7 @@
 
 #include "common/thread/NamedThread.h"
 #include "webservice/GetFlagsHandler.h"
+#include "webservice/GetLicenseHandler.h"
 #include "webservice/GetStatsHandler.h"
 #include "webservice/NotFoundHandler.h"
 #include "webservice/Router.h"
@@ -85,6 +86,11 @@ Status WebService::start(uint16_t httpPort) {
   router().get("/").handler([](web::PathParams&& params) {
     DCHECK(params.empty());
     return new StatusHandler();
+  });
+  // License
+  router().get("/license").handler([](web::PathParams&& params) {
+    DCHECK(params.empty());
+    return new GetLicenseHandler();
   });
 
   started_ = true;

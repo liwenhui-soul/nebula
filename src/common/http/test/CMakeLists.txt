@@ -10,6 +10,7 @@ nebula_add_test(
     OBJECTS
         $<TARGET_OBJECTS:http_client_obj>
         $<TARGET_OBJECTS:ws_obj>
+        $<TARGET_OBJECTS:encryption_obj>
         $<TARGET_OBJECTS:ws_common_obj>
         $<TARGET_OBJECTS:process_obj>
         $<TARGET_OBJECTS:fs_obj>

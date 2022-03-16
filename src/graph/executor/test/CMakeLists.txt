@@ -4,6 +4,7 @@
 
 SET(EXEC_QUERY_TEST_OBJS
     $<TARGET_OBJECTS:ws_obj>
+    $<TARGET_OBJECTS:encryption_obj>
     $<TARGET_OBJECTS:expression_obj>
     $<TARGET_OBJECTS:network_obj>
     $<TARGET_OBJECTS:process_obj>
