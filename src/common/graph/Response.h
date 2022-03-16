@@ -186,7 +186,7 @@
 
 namespace nebula {
 
-#define X(EnumName, EnumNumber) EnumName = EnumNumber,
+#define X(EnumName, EnumNumber) EnumName = (EnumNumber),
 
 enum class ErrorCode { ErrorCodeEnums };
 
@@ -296,7 +296,9 @@ struct ProfilingStats {
     ProfilingStatsObj.insert("rows", rows);
     ProfilingStatsObj.insert("execDurationInUs", execDurationInUs);
     ProfilingStatsObj.insert("totalDurationInUs", totalDurationInUs);
-    ProfilingStatsObj.insert("otherStats", folly::toDynamic(*otherStats));
+    if (otherStats) {
+      ProfilingStatsObj.insert("otherStats", folly::toDynamic(*otherStats));
+    }
 
     return ProfilingStatsObj;
   }
@@ -324,7 +326,7 @@ struct PlanNodeBranchInfo {
   }
 
   // True if loop body or then branch of select
-  bool isDoBranch{0};
+  bool isDoBranch{false};
   // select/loop node id
   int64_t conditionNodeId{-1};
 
@@ -408,22 +410,29 @@ struct PlanNodeDescription {
     planNodeDescObj.insert("id", id);
     planNodeDescObj.insert("outputVar", outputVar);
 
-    auto descriptionObj = folly::dynamic::array();
-    descriptionObj.resize(description->size());
-    std::transform(
-        description->begin(), description->end(), descriptionObj.begin(), [](const auto &ele) {
-          return ele.toJson();
-        });
-    planNodeDescObj.insert("description", descriptionObj);
-
-    auto profilesObj = folly::dynamic::array();
-    profilesObj.resize(profiles->size());
-    std::transform(profiles->begin(), profiles->end(), profilesObj.begin(), [](const auto &ele) {
-      return ele.toJson();
-    });
-    planNodeDescObj.insert("profiles", profilesObj);
-    planNodeDescObj.insert("branchInfo", branchInfo->toJson());
-    planNodeDescObj.insert("dependencies", folly::toDynamic(*dependencies));
+    if (description) {
+      auto descriptionObj = folly::dynamic::array();
+      descriptionObj.resize(description->size());
+      std::transform(
+          description->begin(), description->end(), descriptionObj.begin(), [](const auto &ele) {
+            return ele.toJson();
+          });
+      planNodeDescObj.insert("description", descriptionObj);
+    }
+    if (profiles) {
+      auto profilesObj = folly::dynamic::array();
+      profilesObj.resize(profiles->size());
+      std::transform(profiles->begin(), profiles->end(), profilesObj.begin(), [](const auto &ele) {
+        return ele.toJson();
+      });
+      planNodeDescObj.insert("profiles", profilesObj);
+    }
+    if (branchInfo) {
+      planNodeDescObj.insert("branchInfo", branchInfo->toJson());
+    }
+    if (dependencies) {
+      planNodeDescObj.insert("dependencies", folly::toDynamic(*dependencies));
+    }
 
     return planNodeDescObj;
   }
@@ -537,7 +546,7 @@ struct ExecutionResponse {
   std::unique_ptr<PlanDescription> planDesc{nullptr};
   std::unique_ptr<std::string> comment{nullptr};
 
-  // Return the response as a JSON string
+  // Returns the response as a JSON string
   // only errorCode and latencyInUs are required fields, the rest are optional
   // if the dataset contains a value of TIME or DATETIME, it will be returned in UTC.
   //
