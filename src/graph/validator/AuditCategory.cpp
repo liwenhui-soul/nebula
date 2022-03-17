@@ -37,6 +37,7 @@ std::string auditCategory(Sentence::Kind kind) {
     case Sentence::Kind::kDropSpace:
     case Sentence::Kind::kCreateFTIndex:
     case Sentence::Kind::kDropFTIndex:
+    case Sentence::Kind::kClearSpace:
       return "ddl";
     case Sentence::Kind::kGo:
     case Sentence::Kind::kMatch:

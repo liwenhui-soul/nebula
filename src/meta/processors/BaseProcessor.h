@@ -448,6 +448,15 @@ class BaseProcessor {
                                                            bool direct = false);
 
   Value variableValToValue(const std::string& varType, const std::string& varValue);
+  /**
+   * @brief Get all parts' distribution information of a space.
+   *
+   * @param spaceId
+   * @return ErrorOr<nebula::cpp2::ErrorCode, std::unordered_map<PartitionID,
+   *         std::vector<HostAddr>>> map for part id -> peer hosts.
+   */
+  ErrorOr<nebula::cpp2::ErrorCode, std::unordered_map<PartitionID, std::vector<HostAddr>>>
+  getAllParts(GraphSpaceID spaceId);
 
  protected:
   kvstore::KVStore* kvstore_ = nullptr;

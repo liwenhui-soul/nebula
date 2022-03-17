@@ -143,6 +143,7 @@ class Sentence {
     kSetVariable,
     kGetVariable,
     kAlterSpace,
+    kClearSpace,
   };
 
   Kind kind() const {
