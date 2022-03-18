@@ -50,6 +50,10 @@ DEFINE_int64(max_allowed_connections,
              std::numeric_limits<int64_t>::max(),
              "Max connections of the whole cluster");
 
+DEFINE_int32(max_sessions_per_ip_per_user,
+             300,
+             "Maximum number of sessions that can be created per IP and per user");
+
 DEFINE_bool(enable_optimizer, false, "Whether to enable optimizer");
 
 #ifndef BUILD_STANDALONE
@@ -106,6 +110,7 @@ DEFINE_string(ldap_searchattribute, "", "Attribute to match the user name in the
 DEFINE_string(ldap_searchfilter, "", "Use search filter, more flexible than searchattribute");
 
 DEFINE_int32(num_rows_to_check_memory, 1024, "number rows to check memory");
+
 // License file path
 DEFINE_string(license_path, "/nebula.license", "File path to license file");
 
