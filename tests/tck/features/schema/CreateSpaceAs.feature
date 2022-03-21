@@ -31,14 +31,13 @@ Feature: Create space as another space
       create edge index i2 on e1(col1);
       """
     Then the execution should be successful
-    And wait 3 seconds
     # insert
-    When executing query:
+    When try to execute query:
       """
       insert vertex t1(col1) values "1": (1)
       """
     Then the execution should be successful
-    When executing query:
+    When try to execute query:
       """
       insert edge e1(col1) VALUES "1" -> "2":(1);
       """

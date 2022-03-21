@@ -14,6 +14,7 @@
 #include "common/thrift/ThriftClientManager.h"
 #include "common/utils/MetaKeyUtils.h"
 #include "interface/gen-cpp2/DrainerServiceAsyncClient.h"
+#include "interface/gen-cpp2/common_types.h"
 #include "interface/gen-cpp2/drainer_types.h"
 #include "kvstore/Listener.h"
 #include "meta/processors/Common.h"
@@ -256,12 +257,12 @@ class MetaSyncListener : public SyncListener {
    * @param committedLogId
    * @param committedLogTerm
    * @param finished
-   * @return std::pair<int64_t, int64_t>
+   * @return std::tuple<cpp2::ErrorCode, int64_t, int64_t>
    */
-  std::pair<int64_t, int64_t> commitSnapshot(const std::vector<std::string>& rows,
-                                             LogID committedLogId,
-                                             TermID committedLogTerm,
-                                             bool finished) override;
+  std::tuple<cpp2::ErrorCode, int64_t, int64_t> commitSnapshot(const std::vector<std::string>& rows,
+                                                               LogID committedLogId,
+                                                               TermID committedLogTerm,
+                                                               bool finished) override;
 
   /**
    * @brief Send AppendLogRequest to drainer through meta client to synchronize meta data.
@@ -407,12 +408,12 @@ class StorageSyncListener : public SyncListener {
    * @param committedLogId
    * @param committedLogTerm
    * @param finished
-   * @return std::pair<int64_t, int64_t>
+   * @return std::tuple<cpp2::ErrorCode, int64_t, int64_t>
    */
-  std::pair<int64_t, int64_t> commitSnapshot(const std::vector<std::string>& rows,
-                                             LogID committedLogId,
-                                             TermID committedLogTerm,
-                                             bool finished) override;
+  std::tuple<cpp2::ErrorCode, int64_t, int64_t> commitSnapshot(const std::vector<std::string>& rows,
+                                                               LogID committedLogId,
+                                                               TermID committedLogTerm,
+                                                               bool finished) override;
 
   /**
    * @brief Send AppendLogRequest to drainer

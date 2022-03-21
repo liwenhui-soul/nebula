@@ -366,8 +366,19 @@ Feature: User & privilege Test
       DESC USER root
       """
     Then a PermissionError should be raised at runtime:
+    When executing query:
+      """
+      DROP SPACE IF EXISTS user_tmp_space_4;
+      """
+    Then the execution should be successful
 
   Scenario: Create User With IP Whitelist
+    When executing query:
+      """
+      CREATE SPACE IF NOT EXISTS user_tmp_space_5(partition_num=1, replica_factor=1, vid_type=FIXED_STRING(8))
+      """
+    Then the execution should be successful
+    And wait 10 seconds
     When executing query:
       """
       DROP USER IF EXISTS user_ip
@@ -380,7 +391,7 @@ Feature: User & privilege Test
     Then the execution should be successful
     When executing query:
       """
-      GRANT ROLE GUEST ON user_tmp_space_4 TO user_ip
+      GRANT ROLE GUEST ON user_tmp_space_5 TO user_ip
       """
     Then the execution should be successful
     And wait 10 seconds
@@ -408,7 +419,7 @@ Feature: User & privilege Test
       """
     Then the result should contain:
       | Name               |
-      | "user_tmp_space_4" |
+      | "user_tmp_space_5" |
     When executing query:
       """
       SHOW USERS
@@ -416,3 +427,8 @@ Feature: User & privilege Test
     Then the result should contain:
       | Account   | IP Whitelist |
       | "user_ip" | ""           |
+    When executing query:
+      """
+      DROP SPACE IF EXISTS user_tmp_space_5;
+      """
+    Then the execution should be successful

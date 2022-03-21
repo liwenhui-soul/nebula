@@ -550,16 +550,17 @@ bool MetaSyncListener::writespacelLastApplyLogId(std::string& path, LogID lastAp
   return true;
 }
 
-std::pair<int64_t, int64_t> MetaSyncListener::commitSnapshot(const std::vector<std::string>& rows,
-                                                             LogID committedLogId,
-                                                             TermID committedLogTerm,
-                                                             bool finished) {
+std::tuple<cpp2::ErrorCode, int64_t, int64_t> MetaSyncListener::commitSnapshot(
+    const std::vector<std::string>& rows,
+    LogID committedLogId,
+    TermID committedLogTerm,
+    bool finished) {
   VLOG(3) << idStr_ << "sync Listener is committing snapshot to drainer.";
   // sync listener is sending data to drainer
   bool expected = false;
   if (!requestOnGoing_.compare_exchange_strong(expected, true)) {
     LOG(ERROR) << idStr_ << "Failed to apply data to drainer while committing snapshot.";
-    return std::make_pair(0, 0);
+    return {cpp2::ErrorCode::E_RAFT_PERSIST_SNAPSHOT_FAILED, kNoSnapshotCount, kNoSnapshotSize};
   }
 
   // Meta listener writes wal files of each space level
@@ -598,7 +599,7 @@ std::pair<int64_t, int64_t> MetaSyncListener::commitSnapshot(const std::vector<s
   if (!writeSpaceLog(logs)) {
     VLOG(3) << idStr_ << "Failed to apply data to draier while committing snapshot.";
     requestOnGoing_.store(false);
-    return std::make_pair(0, 0);
+    return {cpp2::ErrorCode::E_RAFT_PERSIST_SNAPSHOT_FAILED, kNoSnapshotCount, kNoSnapshotSize};
   }
 
   if (finished) {
@@ -618,7 +619,7 @@ std::pair<int64_t, int64_t> MetaSyncListener::commitSnapshot(const std::vector<s
     // No data is sent here, and the doApply later will be sent together.
   }
   requestOnGoing_.store(false);
-  return std::make_pair(count, size);
+  return {cpp2::ErrorCode::SUCCEEDED, count, size};
 }
 
 StatusOr<GraphSpaceID> MetaSyncListener::getSpaceIdInKey(const folly::StringPiece& rawKey) {
@@ -859,7 +860,7 @@ void StorageSyncListener::processLogs() {
   requestOnGoing_.store(false);
 }
 
-std::pair<int64_t, int64_t> StorageSyncListener::commitSnapshot(
+std::tuple<cpp2::ErrorCode, int64_t, int64_t> StorageSyncListener::commitSnapshot(
     const std::vector<std::string>& rows,
     LogID committedLogId,
     TermID committedLogTerm,
@@ -869,7 +870,7 @@ std::pair<int64_t, int64_t> StorageSyncListener::commitSnapshot(
   bool expected = false;
   if (!requestOnGoing_.compare_exchange_strong(expected, true)) {
     VLOG(2) << idStr_ << "Failed to apply data to drainer while committing snapshot.";
-    return std::make_pair(0, 0);
+    return {cpp2::ErrorCode::E_RAFT_PERSIST_SNAPSHOT_FAILED, kNoSnapshotCount, kNoSnapshotSize};
   }
 
   int64_t count = 0;
@@ -885,7 +886,7 @@ std::pair<int64_t, int64_t> StorageSyncListener::commitSnapshot(
   if (!apply(data)) {
     VLOG(3) << idStr_ << "Failed to apply data to draier while committing snapshot.";
     requestOnGoing_.store(false);
-    return std::make_pair(0, 0);
+    return {cpp2::ErrorCode::E_RAFT_PERSIST_SNAPSHOT_FAILED, kNoSnapshotCount, kNoSnapshotSize};
   }
   if (finished) {
     CHECK(!raftLock_.try_lock());
@@ -902,7 +903,7 @@ std::pair<int64_t, int64_t> StorageSyncListener::commitSnapshot(
         lastApplyLogId_);
   }
   requestOnGoing_.store(false);
-  return std::make_pair(count, size);
+  return {cpp2::ErrorCode::SUCCEEDED, count, size};
 }
 
 bool StorageSyncListener::apply(const std::vector<KV>& data) {
