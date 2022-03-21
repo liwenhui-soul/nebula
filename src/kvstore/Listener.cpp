@@ -240,10 +240,11 @@ void Listener::processLogs() {
   }
 }
 
-std::pair<int64_t, int64_t> Listener::commitSnapshot(const std::vector<std::string>& rows,
-                                                     LogID committedLogId,
-                                                     TermID committedLogTerm,
-                                                     bool finished) {
+std::tuple<nebula::cpp2::ErrorCode, int64_t, int64_t> Listener::commitSnapshot(
+    const std::vector<std::string>& rows,
+    LogID committedLogId,
+    TermID committedLogTerm,
+    bool finished) {
   VLOG(2) << idStr_ << "Listener is committing snapshot.";
   int64_t count = 0;
   int64_t size = 0;
@@ -257,7 +258,8 @@ std::pair<int64_t, int64_t> Listener::commitSnapshot(const std::vector<std::stri
   }
   if (!apply(data)) {
     LOG(INFO) << idStr_ << "Failed to apply data while committing snapshot.";
-    return std::make_pair(0, 0);
+    return {
+        nebula::cpp2::ErrorCode::E_RAFT_PERSIST_SNAPSHOT_FAILED, kNoSnapshotCount, kNoSnapshotSize};
   }
   if (finished) {
     CHECK(!raftLock_.try_lock());
@@ -272,7 +274,7 @@ std::pair<int64_t, int64_t> Listener::commitSnapshot(const std::vector<std::stri
         committedLogTerm,
         lastApplyLogId_);
   }
-  return std::make_pair(count, size);
+  return {nebula::cpp2::ErrorCode::SUCCEEDED, count, size};
 }
 
 void Listener::resetListener() {
