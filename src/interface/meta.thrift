@@ -526,6 +526,16 @@ struct GetWorkerIdResp {
     3: i64              workerid,
 }
 
+struct GetSegmentIdReq {
+    1: i64 length
+}
+
+struct GetSegmentIdResp {
+    1: common.ErrorCode code,
+    2: common.HostAddr  leader,
+    3: i64              segment_id,
+}
+
 struct HBResp {
     1: common.ErrorCode code,
     2: common.HostAddr  leader,
@@ -1433,4 +1443,6 @@ service MetaService {
     // Enterprise exclusive
     // Check whether the meta service is enterprise version
     VerifyMetaEnterpriseResp verifyMetaEnterprise(1: VerifyMetaEnterpriseReq req);
+
+    GetSegmentIdResp getSegmentId(1: GetSegmentIdReq req);
 }

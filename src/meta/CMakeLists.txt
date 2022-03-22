@@ -99,6 +99,7 @@ nebula_add_library(
     processors/listener/ListenerProcessor.cpp
     processors/session/SessionManagerProcessor.cpp
     processors/drainer/DrainerProcessor.cpp
+    processors/id/GetSegmentIdProcessor.cpp
 )
 
 add_dependencies(
@@ -163,6 +164,7 @@ set(meta_test_deps
     $<TARGET_OBJECTS:datatypes_obj>
     $<TARGET_OBJECTS:base_obj>
     $<TARGET_OBJECTS:expression_obj>
+    $<TARGET_OBJECTS:segment_id_obj>
     $<TARGET_OBJECTS:function_manager_obj>
     $<TARGET_OBJECTS:wkt_wkb_io_obj>
     $<TARGET_OBJECTS:agg_function_manager_obj>

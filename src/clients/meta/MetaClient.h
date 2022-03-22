@@ -247,7 +247,14 @@ struct MetaClientOptions {
   std::string rootPath_;
 };
 
-class MetaClient {
+class BaseMetaClient {
+ public:
+  virtual folly::Future<StatusOr<int64_t>> getSegmentId(int64_t length) = 0;
+
+  virtual ~BaseMetaClient() = default;
+};
+
+class MetaClient : public BaseMetaClient {
   FRIEND_TEST(ConfigManTest, MetaConfigManTest);
   FRIEND_TEST(ConfigManTest, MockConfigTest);
   FRIEND_TEST(ConfigManTest, RocksdbOptionsTest);
@@ -266,7 +273,7 @@ class MetaClient {
              std::vector<HostAddr> addrs,
              const MetaClientOptions& options = MetaClientOptions());
 
-  virtual ~MetaClient();
+  ~MetaClient() override;
 
   bool isMetadReady();
 
@@ -725,6 +732,8 @@ class MetaClient {
   bool currentSpaceReadOnly(GraphSpaceID spaceId);
 
   folly::Future<StatusOr<int64_t>> getWorkerId(std::string ipAddr);
+
+  folly::Future<StatusOr<int64_t>> getSegmentId(int64_t length) override;
 
   HostAddr getMetaLeader() {
     return leader_;
