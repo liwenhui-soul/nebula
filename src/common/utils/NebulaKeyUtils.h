@@ -90,6 +90,7 @@ class NebulaKeyUtils final {
   static std::string systemPartKey(PartitionID partId);
 
   static std::string kvKey(PartitionID partId, const folly::StringPiece& name);
+  static std::string kvPrefix(PartitionID partId);
 
   /**
    * Prefix for tag
