@@ -80,3 +80,5 @@ install(
   )
 
 endif()
+
+nebula_add_subdirectory(unit)

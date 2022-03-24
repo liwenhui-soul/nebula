@@ -1,0 +1,7 @@
+[Service]
+Type=simple
+ExecStart=/usr/local/nebula/scripts/nebula.service start storaged
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
