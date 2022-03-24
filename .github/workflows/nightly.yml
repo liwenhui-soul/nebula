@@ -27,7 +27,7 @@ jobs:
           - centos7
           - centos8
     container:
-      image: reg.vesoft-inc.com/vesoft/nebula-dev:${{ matrix.os }}
+      image: ${{ secrets.HARBOR_REGISTRY }}/vesoft/nebula-dev:${{ matrix.os }}
       credentials:
         username: ${{ secrets.HARBOR_USERNAME }}
         password: ${{ secrets.HARBOR_PASSWORD }}
@@ -65,14 +65,6 @@ jobs:
   docker:
     name: build docker image
     runs-on: [self-hosted, nebula]
-    strategy:
-      fail-fast: false
-      matrix:
-        service:
-          - graphd
-          - metad
-          - storaged
-          - tools
     steps:
       - uses: webiny/action-post-run@2.0.1
         with:
@@ -88,8 +80,36 @@ jobs:
       - uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./docker/Dockerfile.${{ matrix.service }}
+          file: ./docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-${{ matrix.service }}:nightly
+            ${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-graphd:nightly
+          target: graphd
+          push: true
+      - uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-storaged:nightly
+          target: storaged
+          push: true
+      - uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-metad:nightly
+          target: metad
+          push: true
+      - uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ secrets.HARBOR_REGISTRY }}/vesoft-ent/nebula-tools:nightly
+          target: tools
           push: true
