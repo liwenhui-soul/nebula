@@ -25,6 +25,8 @@ DECLARE_uint32(raft_heartbeat_interval_secs);
 DECLARE_bool(auto_remove_invalid_space);
 DECLARE_bool(enable_storage_cache);
 DECLARE_bool(enable_vertex_pool);
+DECLARE_bool(enable_empty_key_pool);
+DECLARE_uint32(storage_cache_capacity);
 
 const int32_t kDefaultVidLen = 8;
 using nebula::meta::PartHosts;
@@ -1162,6 +1164,8 @@ TEST(NebulaStoreTest, BackupRestoreTest) {
 TEST(NebulaStoreTest, GetFillsCacheTest) {
   FLAGS_enable_storage_cache = true;
   FLAGS_enable_vertex_pool = true;
+  FLAGS_enable_empty_key_pool = true;
+  FLAGS_storage_cache_capacity = 150;
 
   GraphSpaceID spaceId = 0;
   std::string prefix = "prefix";
@@ -1208,7 +1212,7 @@ TEST(NebulaStoreTest, GetFillsCacheTest) {
 
     {
       // now try to get a key from kv store
-      // it should be cache miss
+      // vertex cache should be cache miss
       int key_idx = 5;
       std::string keyToFetch =
           prefix + std::string(reinterpret_cast<const char*>(&part), sizeof(int32_t)) +
@@ -1216,7 +1220,7 @@ TEST(NebulaStoreTest, GetFillsCacheTest) {
       std::string expectedRet = folly::stringPrintf("val_%d_%d", part, key_idx);
       std::string value;
 
-      // The cache should not contain the key
+      // The vertex cache should not contain the key
       auto cacheKey = NebulaKeyUtils::cacheKey(spaceId, keyToFetch);
       bool ret = store->storageCache_->getVertexProp(cacheKey, &value);
       EXPECT_FALSE(ret);
@@ -1224,7 +1228,31 @@ TEST(NebulaStoreTest, GetFillsCacheTest) {
       store->get(spaceId, part, keyToFetch, &value);
       EXPECT_TRUE(value == expectedRet);
 
-      // Now get the same key from cache again. Should be cache hit.
+      // Now get the same key from vertex cache again. Should be cache hit.
+      value.clear();
+      ret = store->storageCache_->getVertexProp(cacheKey, &value);
+      EXPECT_TRUE(ret);
+      EXPECT_TRUE(value == expectedRet);
+    }
+
+    {
+      // now try to get a non-existing key from kv store
+      int key_idx = 20;
+      std::string keyToFetch =
+          prefix + std::string(reinterpret_cast<const char*>(&part), sizeof(int32_t)) +
+          std::string(reinterpret_cast<const char*>(&key_idx), sizeof(int32_t));
+      std::string expectedRet = "";
+      std::string value;
+
+      // The empty key cache should not contain the key
+      auto cacheKey = NebulaKeyUtils::cacheKey(spaceId, keyToFetch);
+      bool ret = store->storageCache_->getVertexProp(cacheKey, &value);
+      EXPECT_FALSE(ret);
+
+      store->get(spaceId, part, keyToFetch, &value);
+      EXPECT_TRUE(value == expectedRet);
+
+      // Now get the same key again. Should be cache hit from empty key cache.
       value.clear();
       ret = store->storageCache_->getVertexProp(cacheKey, &value);
       EXPECT_TRUE(ret);
@@ -1237,6 +1265,8 @@ TEST(NebulaStoreTest, GetFillsCacheTest) {
 TEST(NebulaStoreTest, CacheInvalidationTest) {
   FLAGS_enable_storage_cache = true;
   FLAGS_enable_vertex_pool = true;
+  FLAGS_enable_empty_key_pool = true;
+  FLAGS_storage_cache_capacity = 150;
 
   GraphSpaceID spaceId = 0;
   std::string prefix = "prefix";
@@ -1355,6 +1385,54 @@ TEST(NebulaStoreTest, CacheInvalidationTest) {
       value.clear();
       EXPECT_EQ(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND,
                 store->get(spaceId, part, keyToFetch, &value));
+    }
+
+    {
+      // Check the empty key cache invalidation
+      // Get a non-existing key first. The empty key cache should be filled.
+      int key_idx = 20;
+      std::string keyToFetch = NebulaKeyUtils::vertexKey(8, part, getStringId(key_idx));
+      auto cacheKey = NebulaKeyUtils::cacheKey(spaceId, keyToFetch);
+      std::string expectedRet = "";
+      std::string value;
+
+      store->get(spaceId, part, keyToFetch, &value);
+      EXPECT_TRUE(value == expectedRet);
+
+      value.clear();
+      bool ret = store->storageCache_->getVertexProp(cacheKey, &value);
+      EXPECT_TRUE(ret);
+      EXPECT_TRUE(value == expectedRet);
+
+      // insert this key
+      std::vector<KV> newData;
+      auto keyToInsert = keyToFetch;
+      std::string newValue = "new value";
+      std::string newExpectedRet = newValue;
+
+      newData.emplace_back(keyToInsert, newValue);
+
+      folly::Baton<true, std::atomic> baton;
+      store->asyncMultiPut(0, part, std::move(newData), [&baton](nebula::cpp2::ErrorCode code) {
+        EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+        baton.post();
+      });
+      baton.wait();
+
+      // Now check the empty key cache again. The key should be removed from the cache.
+      value.clear();
+      ret = store->storageCache_->getVertexProp(cacheKey, &value);
+      EXPECT_FALSE(ret);
+
+      // get the key and now the value should not be empty and the vertex cache will be filled
+      value.clear();
+      store->get(spaceId, part, keyToFetch, &value);
+      EXPECT_TRUE(value == newExpectedRet);
+
+      value.clear();
+      ret = store->storageCache_->getVertexProp(cacheKey, &value);
+      EXPECT_TRUE(ret);
+      EXPECT_TRUE(value == newExpectedRet);
     }
   }
 }

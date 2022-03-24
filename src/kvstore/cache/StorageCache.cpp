@@ -108,11 +108,11 @@ bool StorageCache::addEmptyKey(const std::string& key) {
   return true;
 }
 
-void StorageCache::invalidateVertex(const std::string& key) {
+void StorageCache::invalidateItem(const std::string& key) {
   cacheInternal_->invalidateItem(key);
 }
 
-void StorageCache::invalidateVertices(const std::vector<std::string>& keys) {
+void StorageCache::invalidateItems(const std::vector<std::string>& keys) {
   cacheInternal_->invalidateItems(keys);
 }
 
@@ -126,9 +126,10 @@ uint32_t StorageCache::getVertexPoolSize() {
 
 void StorageCache::addCacheItemsToDelete(GraphSpaceID spaceId,
                                          const folly::StringPiece& rawKey,
-                                         std::vector<std::string>& vertexKeys) {
-  if (FLAGS_enable_vertex_pool && NebulaKeyUtils::isTagOrVertex(rawKey)) {
-    vertexKeys.emplace_back(NebulaKeyUtils::cacheKey(spaceId, rawKey));
+                                         std::vector<std::string>& keysToRemove) {
+  if ((FLAGS_enable_vertex_pool || FLAGS_enable_empty_key_pool) &&
+      NebulaKeyUtils::isTagOrVertex(rawKey)) {
+    keysToRemove.emplace_back(NebulaKeyUtils::cacheKey(spaceId, rawKey));
   }
 }
 

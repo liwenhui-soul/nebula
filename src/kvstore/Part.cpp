@@ -218,7 +218,7 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
   auto batch = engine_->startBatchWrite();
   LogID lastId = kNoCommitLogId;
   TermID lastTerm = kNoCommitLogTerm;
-  std::vector<std::string> verticesToInvalidate;
+  std::vector<std::string> cacheItemsToInvalidate;
   while (iter->valid()) {
     lastId = iter->logId();
     lastTerm = iter->logTerm();
@@ -240,7 +240,7 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
           return {code, kNoCommitLogId, kNoCommitLogTerm};
         }
         if (storageCache_) {
-          storageCache_->addCacheItemsToDelete(spaceId_, pieces[0], verticesToInvalidate);
+          storageCache_->addCacheItemsToDelete(spaceId_, pieces[0], cacheItemsToInvalidate);
         }
         break;
       }
@@ -257,7 +257,7 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
             return {code, kNoCommitLogId, kNoCommitLogTerm};
           }
           if (storageCache_) {
-            storageCache_->addCacheItemsToDelete(spaceId_, kvs[i], verticesToInvalidate);
+            storageCache_->addCacheItemsToDelete(spaceId_, kvs[i], cacheItemsToInvalidate);
           }
         }
         break;
@@ -270,7 +270,7 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
           return {code, kNoCommitLogId, kNoCommitLogTerm};
         }
         if (storageCache_) {
-          storageCache_->addCacheItemsToDelete(spaceId_, key, verticesToInvalidate);
+          storageCache_->addCacheItemsToDelete(spaceId_, key, cacheItemsToInvalidate);
         }
         break;
       }
@@ -284,7 +284,7 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
             return {code, kNoCommitLogId, kNoCommitLogTerm};
           }
           if (storageCache_) {
-            storageCache_->addCacheItemsToDelete(spaceId_, k, verticesToInvalidate);
+            storageCache_->addCacheItemsToDelete(spaceId_, k, cacheItemsToInvalidate);
           }
         }
         break;
@@ -308,13 +308,15 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
           if (op.first == BatchLogType::OP_BATCH_PUT) {
             code = batch->put(op.second.first, op.second.second);
             if (storageCache_) {
-              storageCache_->addCacheItemsToDelete(spaceId_, op.second.first, verticesToInvalidate);
+              storageCache_->addCacheItemsToDelete(
+                  spaceId_, op.second.first, cacheItemsToInvalidate);
             }
           } else if (op.first == BatchLogType::OP_BATCH_REMOVE) {
             // DeleteTags and DeleteVertices will reach here if indexes are not empty
             code = batch->remove(op.second.first);
             if (storageCache_) {
-              storageCache_->addCacheItemsToDelete(spaceId_, op.second.first, verticesToInvalidate);
+              storageCache_->addCacheItemsToDelete(
+                  spaceId_, op.second.first, cacheItemsToInvalidate);
             }
           } else if (op.first == BatchLogType::OP_BATCH_REMOVE_RANGE) {
             code = batch->removeRange(op.second.first, op.second.second);
@@ -360,10 +362,10 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
   auto code = engine_->commitBatchWrite(
       std::move(batch), FLAGS_rocksdb_disable_wal, FLAGS_rocksdb_wal_sync, wait);
   if (code == nebula::cpp2::ErrorCode::SUCCEEDED) {
-    // invalidate vertices in cache after the DB update, to avoid cache incoherence
+    // invalidate items in cache after the DB update, to avoid cache incoherence
     if (storageCache_) {
-      if (verticesToInvalidate.size()) {
-        storageCache_->invalidateVertices(std::move(verticesToInvalidate));
+      if (!cacheItemsToInvalidate.empty()) {
+        storageCache_->invalidateItems(std::move(cacheItemsToInvalidate));
       }
     }
     return {code, lastId, lastTerm};

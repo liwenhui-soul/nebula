@@ -84,18 +84,18 @@ class StorageCache {
   bool addEmptyKey(const std::string& key);
 
   /**
-   * @brief evict a vertex in cache
+   * @brief evict an item in cache
    *
    * @param key
    */
-  void invalidateVertex(const std::string& key);
+  void invalidateItem(const std::string& key);
 
   /**
    * @brief Data may be written in batch. To avoid frequently aquiring and releasing locks, we will
-   * remove keys in batches in this case.
+   * remove items in batches in this case.
    * @param keys: keys to remove from cache
    */
-  void invalidateVertices(const std::vector<std::string>& keys);
+  void invalidateItems(const std::vector<std::string>& keys);
 
   /**
    * @brief get the size of the vertex pool
@@ -127,11 +127,11 @@ class StorageCache {
    *
    * @param spaceId:
    * @param rawKey: key like tag, vertix, edge, etc...
-   * @param vertixKeys: a vector storing the cacheKey to invalidate
+   * @param keysToRemove: a vector storing the cacheKey to invalidate
    */
   void addCacheItemsToDelete(GraphSpaceID spaceId,
                              const folly::StringPiece& rawKey,
-                             std::vector<std::string>& vertexKeys);
+                             std::vector<std::string>& keysToRemove);
 
  private:
   uint32_t capacity_ = 0;  // in MB
