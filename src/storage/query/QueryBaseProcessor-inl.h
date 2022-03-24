@@ -401,9 +401,11 @@ nebula::cpp2::ErrorCode QueryBaseProcessor<REQ, RESP>::checkExp(const Expression
       if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
         return ret;
       }
-      ret = checkExp(predExp->filter(), returned, filtered, updated);
-      if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
-        return ret;
+      if (predExp->filter() != nullptr) {
+        ret = checkExp(predExp->filter(), returned, filtered, updated);
+        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+          return ret;
+        }
       }
       return nebula::cpp2::ErrorCode::SUCCEEDED;
     }

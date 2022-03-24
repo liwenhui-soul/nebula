@@ -228,8 +228,7 @@ Feature: RelationalExpression
       | ("Steve Nash" :player{age: 45, name: "Steve Nash"})             |
     And the execution plan should be:
       | id | name           | dependencies | operator info                                      |
-      | 9  | Project        | 8            |                                                    |
-      | 8  | Filter         | 2            |                                                    |
+      | 9  | Project        | 2            |                                                    |
       | 2  | AppendVertices | 6            |                                                    |
       | 6  | IndexScan      | 0            | {"indexCtx": {"columnHints":{"scanType":"RANGE"}}} |
       | 0  | Start          |              |                                                    |

@@ -1187,7 +1187,40 @@ bool ExpressionUtils::checkExprDepth(const Expression *expr) {
     }
   }
   return true;
-}  // namespace graph
+}
+
+// Transform Label Tag property expression like $-.v.player.name to Tag property like player.name
+// for more friendly to push down
+// \param pool object pool to hold ownership of objects alloacted
+// \param node the name of node, i.e. v in pattern (v)
+// \param expr the filter expression
+/*static*/ Expression *ExpressionUtils::rewriteVertexPropertyFilter(ObjectPool *pool,
+                                                                    const std::string &node,
+                                                                    Expression *expr) {
+  graph::RewriteVisitor::Matcher matcher = [&node](const Expression *e) -> bool {
+    if (e->kind() != Expression::Kind::kLabelTagProperty) {
+      return false;
+    }
+    auto *ltpExpr = static_cast<const LabelTagPropertyExpression *>(e);
+    auto *labelExpr = ltpExpr->label();
+    DCHECK_EQ(labelExpr->kind(), Expression::Kind::kInputProperty);
+    if (labelExpr->kind() != Expression::Kind::kInputProperty) {
+      return false;
+    }
+    auto *inputExpr = static_cast<const InputPropertyExpression *>(labelExpr);
+    if (inputExpr->prop() != node) {
+      return false;
+    }
+    return true;
+  };
+  graph::RewriteVisitor::Rewriter rewriter = [pool](const Expression *e) -> Expression * {
+    DCHECK_EQ(e->kind(), Expression::Kind::kLabelTagProperty);
+    auto *ltpExpr = static_cast<const LabelTagPropertyExpression *>(e);
+    auto *tagPropExpr = TagPropertyExpression::make(pool, ltpExpr->sym(), ltpExpr->prop());
+    return tagPropExpr;
+  };
+  return graph::RewriteVisitor::transform(expr, matcher, rewriter);
+}
 
 }  // namespace graph
 }  // namespace nebula

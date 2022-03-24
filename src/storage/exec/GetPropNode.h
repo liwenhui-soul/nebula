@@ -94,8 +94,16 @@ class GetTagPropNode : public QueryNode<VertexID> {
         return ret;
       }
     }
-    if (filter_ == nullptr || (QueryUtils::vTrue(filter_->eval(*expCtx_)))) {
+    if (filter_ == nullptr) {
       resultDataSet_->rows.emplace_back(std::move(row));
+    } else {
+      auto result = QueryUtils::vTrue(filter_->eval(*expCtx_));
+      if (!result.ok()) {
+        return nebula::cpp2::ErrorCode::E_DATA_TYPE_MISMATCH;
+      }
+      if (result.value()) {
+        resultDataSet_->rows.emplace_back(std::move(row));
+      }
     }
     if (expCtx_ != nullptr) {
       expCtx_->clear();
@@ -172,8 +180,16 @@ class GetEdgePropNode : public QueryNode<cpp2::EdgeKey> {
         return ret;
       }
     }
-    if (filter_ == nullptr || (QueryUtils::vTrue(filter_->eval(*expCtx_)))) {
+    if (filter_ == nullptr) {
       resultDataSet_->rows.emplace_back(std::move(row));
+    } else {
+      auto result = QueryUtils::vTrue(filter_->eval(*expCtx_));
+      if (!result.ok()) {
+        return nebula::cpp2::ErrorCode::E_DATA_TYPE_MISMATCH;
+      }
+      if (result.value()) {
+        resultDataSet_->rows.emplace_back(std::move(row));
+      }
     }
     if (expCtx_ != nullptr) {
       expCtx_->clear();

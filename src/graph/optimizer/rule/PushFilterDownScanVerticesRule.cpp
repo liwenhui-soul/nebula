@@ -45,7 +45,8 @@ StatusOr<OptRule::TransformResult> PushFilterDownScanVerticesRule::transform(
   auto pool = qctx->objPool();
   auto condition = DCHECK_NOTNULL(filter->condition())->clone();
 
-  auto visitor = graph::ExtractFilterExprVisitor::makePushGetVertices(pool);
+  auto visitor =
+      graph::ExtractFilterExprVisitor::makePushGetVertices(pool, sv->space(), qctx->schemaMng());
   condition->accept(&visitor);
   if (!visitor.ok()) {
     return TransformResult::noTransform();

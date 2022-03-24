@@ -55,7 +55,7 @@ StatusOr<OptRule::TransformResult> PushFilterDownGetNbrsRule::transform(
   auto pool = qctx->objPool();
   auto condition = filter->condition()->clone();
 
-  graph::ExtractFilterExprVisitor visitor(pool);
+  graph::ExtractFilterExprVisitor visitor(pool, gn->space(), qctx->schemaMng());
   condition->accept(&visitor);
   if (!visitor.ok()) {
     return TransformResult::noTransform();

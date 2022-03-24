@@ -616,7 +616,7 @@ Feature: Basic match
       """
       MATCH (v:player) where v.player.name return v
       """
-    Then a ExecutionError should be raised at runtime: Wrong type result, the type should be NULL, EMPTY or BOOL
+    Then a ExecutionError should be raised at runtime: Storage Error: The data type does not meet the requirements. Use the correct type of data.
 
   Scenario: Unimplemented features
     When executing query:

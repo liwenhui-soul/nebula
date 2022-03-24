@@ -30,7 +30,20 @@ void ExtractFilterExprVisitor::visit(VersionedVariableExpression *) {
   canBePushed_ = false;
 }
 
-void ExtractFilterExprVisitor::visit(TagPropertyExpression *) {
+void ExtractFilterExprVisitor::visit(TagPropertyExpression *expr) {
+  if (spaceId_ > 0) {
+    // Storage don't support nonexists tag or property
+    auto schema = schemaMng_->getTagSchema(spaceId_, expr->sym());
+    if (schema == nullptr) {
+      canBePushed_ = false;
+      return;
+    }
+    auto field = schema->field(expr->prop());
+    if (field == nullptr && (expr->prop() != kTag && expr->prop() != kVid)) {
+      canBePushed_ = false;
+      return;
+    }
+  }
   switch (pushType_) {
     case PushType::kGetNeighbors:
       canBePushed_ = false;
@@ -44,7 +57,20 @@ void ExtractFilterExprVisitor::visit(TagPropertyExpression *) {
   }
 }
 
-void ExtractFilterExprVisitor::visit(EdgePropertyExpression *) {
+void ExtractFilterExprVisitor::visit(EdgePropertyExpression *expr) {
+  if (spaceId_ > 0) {
+    // Storage don't support nonexists edge or property
+    auto schema = schemaMng_->getEdgeSchema(spaceId_, expr->sym());
+    if (schema == nullptr) {
+      canBePushed_ = false;
+      return;
+    }
+    auto field = schema->field(expr->prop());
+    if (field == nullptr) {
+      canBePushed_ = false;
+      return;
+    }
+  }
   switch (pushType_) {
     case PushType::kGetNeighbors:
     case PushType::kGetEdges:
@@ -74,7 +100,20 @@ void ExtractFilterExprVisitor::visit(DestPropertyExpression *) {
   canBePushed_ = false;
 }
 
-void ExtractFilterExprVisitor::visit(SourcePropertyExpression *) {
+void ExtractFilterExprVisitor::visit(SourcePropertyExpression *expr) {
+  if (spaceId_ > 0) {
+    // Storage don't support nonexists tag or property
+    auto schema = schemaMng_->getTagSchema(spaceId_, expr->sym());
+    if (schema == nullptr) {
+      canBePushed_ = false;
+      return;
+    }
+    auto field = schema->field(expr->prop());
+    if (field == nullptr) {
+      canBePushed_ = false;
+      return;
+    }
+  }
   switch (pushType_) {
     case PushType::kGetNeighbors:
       canBePushed_ = true;
@@ -86,7 +125,15 @@ void ExtractFilterExprVisitor::visit(SourcePropertyExpression *) {
   }
 }
 
-void ExtractFilterExprVisitor::visit(EdgeSrcIdExpression *) {
+void ExtractFilterExprVisitor::visit(EdgeSrcIdExpression *expr) {
+  if (spaceId_ > 0) {
+    // Storage don't support nonexists edge
+    auto schema = schemaMng_->getEdgeSchema(spaceId_, expr->sym());
+    if (schema == nullptr) {
+      canBePushed_ = false;
+      return;
+    }
+  }
   switch (pushType_) {
     case PushType::kGetNeighbors:
     case PushType::kGetEdges:
@@ -98,7 +145,15 @@ void ExtractFilterExprVisitor::visit(EdgeSrcIdExpression *) {
   }
 }
 
-void ExtractFilterExprVisitor::visit(EdgeTypeExpression *) {
+void ExtractFilterExprVisitor::visit(EdgeTypeExpression *expr) {
+  if (spaceId_ > 0) {
+    // Storage don't support nonexists edge
+    auto schema = schemaMng_->getEdgeSchema(spaceId_, expr->sym());
+    if (schema == nullptr) {
+      canBePushed_ = false;
+      return;
+    }
+  }
   switch (pushType_) {
     case PushType::kGetNeighbors:
     case PushType::kGetEdges:
@@ -110,7 +165,15 @@ void ExtractFilterExprVisitor::visit(EdgeTypeExpression *) {
   }
 }
 
-void ExtractFilterExprVisitor::visit(EdgeRankExpression *) {
+void ExtractFilterExprVisitor::visit(EdgeRankExpression *expr) {
+  if (spaceId_ > 0) {
+    // Storage don't support nonexists edge
+    auto schema = schemaMng_->getEdgeSchema(spaceId_, expr->sym());
+    if (schema == nullptr) {
+      canBePushed_ = false;
+      return;
+    }
+  }
   switch (pushType_) {
     case PushType::kGetNeighbors:
     case PushType::kGetEdges:
@@ -122,7 +185,15 @@ void ExtractFilterExprVisitor::visit(EdgeRankExpression *) {
   }
 }
 
-void ExtractFilterExprVisitor::visit(EdgeDstIdExpression *) {
+void ExtractFilterExprVisitor::visit(EdgeDstIdExpression *expr) {
+  if (spaceId_ > 0) {
+    // Storage don't support nonexists edge
+    auto schema = schemaMng_->getEdgeSchema(spaceId_, expr->sym());
+    if (schema == nullptr) {
+      canBePushed_ = false;
+      return;
+    }
+  }
   switch (pushType_) {
     case PushType::kGetNeighbors:
     case PushType::kGetEdges:

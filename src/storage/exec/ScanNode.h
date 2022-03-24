@@ -90,7 +90,10 @@ class ScanVertexPropNode : public QueryNode<Cursor> {
       }
       auto vertexId = NebulaKeyUtils::getVertexId(vIdLen, key);
       if (vertexId != currentVertexId && !currentVertexId.empty()) {
-        collectOneRow(isIntId, vIdLen, currentVertexId);
+        auto result = collectOneRow(isIntId, vIdLen, currentVertexId);
+        if (!result.ok()) {
+          return nebula::cpp2::ErrorCode::E_DATA_TYPE_MISMATCH;
+        }
       }  // collect vertex row
       currentVertexId = vertexId;
       if (static_cast<int64_t>(resultDataSet_->rowSize()) >= rowLimit) {
@@ -100,7 +103,10 @@ class ScanVertexPropNode : public QueryNode<Cursor> {
       tagNodes_[tagIdIndex->second]->doExecute(key.toString(), value.toString());
     }  // iterate key
     if (static_cast<int64_t>(resultDataSet_->rowSize()) < rowLimit) {
-      collectOneRow(isIntId, vIdLen, currentVertexId);
+      auto result = collectOneRow(isIntId, vIdLen, currentVertexId);
+      if (!result.ok()) {
+        return nebula::cpp2::ErrorCode::E_DATA_TYPE_MISMATCH;
+      }
     }
 
     cpp2::ScanCursor c;
@@ -111,7 +117,7 @@ class ScanVertexPropNode : public QueryNode<Cursor> {
     return nebula::cpp2::ErrorCode::SUCCEEDED;
   }
 
-  void collectOneRow(bool isIntId, std::size_t vIdLen, const std::string& currentVertexId) {
+  Status collectOneRow(bool isIntId, std::size_t vIdLen, const std::string& currentVertexId) {
     List row;
     nebula::cpp2::ErrorCode ret = nebula::cpp2::ErrorCode::SUCCEEDED;
     // vertexId is the first column
@@ -163,15 +169,25 @@ class ScanVertexPropNode : public QueryNode<Cursor> {
           break;
         }
       }
-      if (ret == nebula::cpp2::ErrorCode::SUCCEEDED &&
-          (filter_ == nullptr || QueryUtils::vTrue(filter_->eval(*expCtx_)))) {
-        resultDataSet_->rows.emplace_back(std::move(row));
+      if (ret == nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (filter_ == nullptr) {
+          resultDataSet_->rows.emplace_back(std::move(row));
+        } else {
+          auto result = QueryUtils::vTrue(filter_->eval(*expCtx_));
+          if (!result.ok()) {
+            return std::move(result).status();
+          }
+          if (result.value()) {
+            resultDataSet_->rows.emplace_back(std::move(row));
+          }
+        }
       }
       expCtx_->clear();
       for (auto& tagNode : tagNodes_) {
         tagNode->clear();
       }
     }
+    return Status::OK();
   }
 
  private:
@@ -251,7 +267,10 @@ class ScanEdgePropNode : public QueryNode<Cursor> {
       }
       auto value = iter->val();
       edgeNodes_[edgeNodeIndex->second]->doExecute(key.toString(), value.toString());
-      collectOneRow(isIntId, vIdLen);
+      auto result = collectOneRow(isIntId, vIdLen);
+      if (!result.ok()) {
+        return nebula::cpp2::ErrorCode::E_DATA_TYPE_MISMATCH;
+      }
     }
 
     cpp2::ScanCursor c;
@@ -262,7 +281,7 @@ class ScanEdgePropNode : public QueryNode<Cursor> {
     return nebula::cpp2::ErrorCode::SUCCEEDED;
   }
 
-  void collectOneRow(bool isIntId, std::size_t vIdLen) {
+  Status collectOneRow(bool isIntId, std::size_t vIdLen) {
     List row;
     nebula::cpp2::ErrorCode ret = nebula::cpp2::ErrorCode::SUCCEEDED;
     for (auto& edgeNode : edgeNodes_) {
@@ -304,14 +323,24 @@ class ScanEdgePropNode : public QueryNode<Cursor> {
         break;
       }
     }
-    if (ret == nebula::cpp2::ErrorCode::SUCCEEDED &&
-        (filter_ == nullptr || QueryUtils::vTrue(filter_->eval(*expCtx_)))) {
-      resultDataSet_->rows.emplace_back(std::move(row));
+    if (ret == nebula::cpp2::ErrorCode::SUCCEEDED) {
+      if (filter_ == nullptr) {
+        resultDataSet_->rows.emplace_back(std::move(row));
+      } else {
+        auto result = QueryUtils::vTrue(filter_->eval(*expCtx_));
+        if (!result.ok()) {
+          return std::move(result).status();
+        }
+        if (result.value()) {
+          resultDataSet_->rows.emplace_back(std::move(row));
+        }
+      }
     }
     expCtx_->clear();
     for (auto& edgeNode : edgeNodes_) {
       edgeNode->clear();
     }
+    return Status::OK();
   }
 
  private:

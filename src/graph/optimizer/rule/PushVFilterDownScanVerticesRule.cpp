@@ -80,7 +80,8 @@ StatusOr<OptRule::TransformResult> PushVFilterDownScanVerticesRule::transform(
   auto pool = qctx->objPool();
   auto condition = appendVertices->vFilter()->clone();
 
-  auto visitor = graph::ExtractFilterExprVisitor::makePushGetVertices(pool);
+  auto visitor =
+      graph::ExtractFilterExprVisitor::makePushGetVertices(pool, sv->space(), qctx->schemaMng());
   condition->accept(&visitor);
   if (!visitor.ok()) {
     return TransformResult::noTransform();

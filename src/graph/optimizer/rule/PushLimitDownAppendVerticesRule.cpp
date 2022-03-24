@@ -34,7 +34,6 @@ const Pattern &PushLimitDownAppendVerticesRule::pattern() const {
 
 // Limit can't push over filter and VFilter apply after push-down limit, so we check it
 bool PushLimitDownAppendVerticesRule::match(OptContext *ctx, const MatchedResult &matched) const {
-  DLOG(ERROR) << "DEBUG POINT: entry of PushLimitDownAppendVerticesRule::match";
   if (!OptRule::match(ctx, matched)) {
     return false;
   }
