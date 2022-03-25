@@ -36,7 +36,7 @@ using nebula::network::NetworkUtils;
 
 static void signalHandler(int sig);
 static Status setupSignalHandler();
-#if defined(__x86_64__)
+#if defined(ENABLE_BREAKPAD)
 extern Status setupBreakpad();
 #endif
 
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-#if defined(__x86_64__)
+#if defined(ENABLE_BREAKPAD)
   status = setupBreakpad();
   if (!status.ok()) {
     LOG(ERROR) << status;

@@ -13,6 +13,7 @@
 #   -p: Whether to dump the symbols from binary by dump_syms
 #   -f: add EULA license
 #   -c: Whether to enable console building, default ON
+#   -k: Whether to enable breakpad, default OFF
 #
 # usage: ./package.sh -v <version> -n <ON/OFF> -s <TRUE/FALSE> -c <ON/OFF>
 #
@@ -37,8 +38,8 @@ dump_syms_tool_dir=
 system_name=
 install_prefix=/usr/local/nebula
 add_EULA="ON"
-
-while getopts v:n:s:f:b:d:t:r:p:j:c: opt;
+enable_breakpad="OFF"
+while getopts v:n:s:b:d:t:r:p:j:c:f:k: opt;
 do
     case $opt in
         v)
@@ -74,6 +75,9 @@ do
             ;;
         p)
             dump_symbols=$OPTARG
+            ;;
+        k)
+            enable_breakpad=$OPTARG
             ;;
         ?)
             echo "Invalid option, use default arguments"
@@ -135,6 +139,7 @@ function _build_graph {
           -DENABLE_COMPRESSED_DEBUG_INFO=${enable_compressed_debug_info} \
           -DENABLE_PACKAGE_TAR=${package_tar} \
           -DENABLE_EULA=${add_EULA} \
+          -DENABLE_BREAKPAD=${enable_breakpad} \
           ${project_dir}
 
     if ! ( make -j ${jobs} ); then
