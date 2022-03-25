@@ -15,6 +15,7 @@ set(cache_test_deps
     $<TARGET_OBJECTS:time_utils_obj>
     $<TARGET_OBJECTS:datetime_parser_obj>
     $<TARGET_OBJECTS:geo_index_obj>
+    $<TARGET_OBJECTS:ast_match_path_obj>
 )
 
 nebula_add_executable(

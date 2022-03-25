@@ -34,6 +34,7 @@ nebula_add_executable(
       $<TARGET_OBJECTS:meta_client_stats_obj>
       $<TARGET_OBJECTS:expression_obj>
       $<TARGET_OBJECTS:encryption_obj>
+      $<TARGET_OBJECTS:ast_match_path_obj>
     LIBRARIES
       follybenchmark 
       boost_regex
@@ -74,6 +75,7 @@ nebula_add_test(
     $<TARGET_OBJECTS:meta_client_stats_obj>
     $<TARGET_OBJECTS:expression_obj>
     $<TARGET_OBJECTS:encryption_obj>
+    $<TARGET_OBJECTS:ast_match_path_obj>
   LIBRARIES 
     gtest 
     gtest_main

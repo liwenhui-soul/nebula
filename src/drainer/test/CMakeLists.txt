@@ -64,6 +64,7 @@ set(drainer_test_deps
     $<TARGET_OBJECTS:drainer_common_obj>
     $<TARGET_OBJECTS:drainer_server>
     $<TARGET_OBJECTS:geo_index_obj>
+    $<TARGET_OBJECTS:ast_match_path_obj>
 )
 
 if (NOT ENABLE_STANDALONE_VERSION)

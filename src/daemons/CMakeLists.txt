@@ -27,6 +27,7 @@ set(common_deps
     $<TARGET_OBJECTS:base_obj>
     $<TARGET_OBJECTS:memory_obj>
     $<TARGET_OBJECTS:expression_obj>
+    $<TARGET_OBJECTS:ast_match_path_obj>
     $<TARGET_OBJECTS:function_manager_obj>
     $<TARGET_OBJECTS:wkt_wkb_io_obj>
     $<TARGET_OBJECTS:agg_function_manager_obj>
@@ -130,6 +131,7 @@ nebula_add_executable(
         $<TARGET_OBJECTS:graph_session_obj>
         $<TARGET_OBJECTS:query_engine_obj>
         $<TARGET_OBJECTS:parser_obj>
+        $<TARGET_OBJECTS:ast_match_path_obj>
         $<TARGET_OBJECTS:validator_obj>
         $<TARGET_OBJECTS:expr_visitor_obj>
         $<TARGET_OBJECTS:optimizer_obj>
@@ -256,6 +258,7 @@ nebula_add_executable(
         $<TARGET_OBJECTS:graph_session_obj>
         $<TARGET_OBJECTS:query_engine_obj>
         $<TARGET_OBJECTS:parser_obj>
+        $<TARGET_OBJECTS:ast_match_path_obj>
         $<TARGET_OBJECTS:validator_obj>
         $<TARGET_OBJECTS:expr_visitor_obj>
         $<TARGET_OBJECTS:optimizer_obj>
