@@ -1365,8 +1365,6 @@ nebula::cpp2::ErrorCode NebulaStore::restoreFromFiles(GraphSpaceID spaceId,
   }
   auto space = nebula::value(spaceRet);
 
-  DCHECK_EQ(space->engines_.size(), 1);
-
   for (auto& engine : space->engines_) {
     auto ret = engine->ingest(files, true);
     if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
@@ -1377,8 +1375,12 @@ nebula::cpp2::ErrorCode NebulaStore::restoreFromFiles(GraphSpaceID spaceId,
   return nebula::cpp2::ErrorCode::SUCCEEDED;
 }
 
-nebula::cpp2::ErrorCode NebulaStore::multiPutWithoutReplicator(GraphSpaceID spaceId,
-                                                               std::vector<KV> keyValues) {
+std::unique_ptr<WriteBatch> NebulaStore::startBatchWrite() {
+  return std::make_unique<RocksWriteBatch>();
+}
+
+nebula::cpp2::ErrorCode NebulaStore::batchWriteWithoutReplicator(
+    GraphSpaceID spaceId, std::unique_ptr<WriteBatch> batch) {
   auto spaceRet = space(spaceId);
   if (!ok(spaceRet)) {
     LOG(WARNING) << "Get Space " << spaceId << " Failed";
@@ -1386,10 +1388,9 @@ nebula::cpp2::ErrorCode NebulaStore::multiPutWithoutReplicator(GraphSpaceID spac
   }
   auto space = nebula::value(spaceRet);
 
-  DCHECK_EQ(space->engines_.size(), 1);
-
   for (auto& engine : space->engines_) {
-    auto ret = engine->multiPut(keyValues);
+    auto ret = engine->commitBatchWrite(
+        std::move(batch), FLAGS_rocksdb_disable_wal, FLAGS_rocksdb_wal_sync, true);
     if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
       return ret;
     }
