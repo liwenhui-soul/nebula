@@ -189,8 +189,6 @@ class PlanNode {
     kSignInSpaceService,
     kSignOutSpaceService,
     kShowSpaceServiceClients,
-    kDownload,
-    kIngest,
     kShowSessions,
     kUpdateSession,
 

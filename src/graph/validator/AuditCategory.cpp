@@ -113,8 +113,6 @@ std::string auditCategory(Sentence::Kind kind) {
     case Sentence::Kind::kShowServiceClients:
     case Sentence::Kind::kShowFTIndexes:
     case Sentence::Kind::kDescribeSpace:
-    case Sentence::Kind::kDownload:
-    case Sentence::Kind::kIngest:
     case Sentence::Kind::kShowConfigs:
     case Sentence::Kind::kSetConfig:
     case Sentence::Kind::kGetConfig:

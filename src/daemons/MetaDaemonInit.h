@@ -64,8 +64,5 @@ std::unique_ptr<nebula::kvstore::KVStore> initMetaListenerKV(
     nebula::HostAddr& localhost,
     nebula::kvstore::KVOptions& kvOptions);
 
-nebula::Status initWebService(nebula::WebService* svc,
-                              nebula::kvstore::KVStore* kvstore,
-                              nebula::hdfs::HdfsCommandHelper* helper,
-                              nebula::thread::GenericThreadPool* pool);
+nebula::Status initWebService(nebula::WebService* svc, nebula::kvstore::KVStore* kvstore);
 #endif
