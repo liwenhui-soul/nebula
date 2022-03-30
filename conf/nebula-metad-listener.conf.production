@@ -27,19 +27,17 @@
 # Comma separated Meta Server addresses
 --meta_server_addrs=192.168.2.1:9559
 # There is only one host for meta sync listener. If using meta listener, all meta conf must have this option.
---meta_sync_listener=192.168.2.2:9559
+--meta_sync_listener=192.168.2.2:9569
 # Local IP used to identify the nebula-metad process.
 # Change it to an address other than loopback if the service is distributed or
 # will be accessed remotely.
 --local_ip=192.168.2.2
 # Meta daemon listening port
---port=9559
+--port=9569
 # HTTP service ip
 --ws_ip=0.0.0.0
 # HTTP service port
---ws_http_port=19559
-# HTTP2 service port
---ws_h2_port=19560
+--ws_http_port=19569
 
 ########## storage ##########
 # Listener wal directory. only one path is allowed.
