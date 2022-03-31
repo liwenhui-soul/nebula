@@ -131,7 +131,7 @@ void Listener::cleanWal() {
 }
 
 std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Listener::commitLogs(
-    std::unique_ptr<LogIterator> iter, bool) {
+    std::unique_ptr<LogIterator> iter, bool, bool) {
   LogID lastId = kNoCommitLogId;
   TermID lastTerm = kNoCommitLogTerm;
   while (iter->valid()) {

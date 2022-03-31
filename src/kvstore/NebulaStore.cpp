@@ -231,7 +231,7 @@ void NebulaStore::loadPartFromDataPath() {
                     }
 
                     if (raftPeer.status == Peer::Status::kLearner) {
-                      part->addLearner(addr);
+                      part->addLearner(addr, true);
                     }
                   }
                 }
