@@ -9,9 +9,7 @@
 
 DECLARE_uint32(storage_cache_capacity);
 
-DECLARE_uint32(storage_cache_buckets_power);
-
-DECLARE_uint32(storage_cache_locks_power);
+DECLARE_uint32(storage_cache_entries_power);
 
 DECLARE_uint32(vertex_pool_capacity);
 

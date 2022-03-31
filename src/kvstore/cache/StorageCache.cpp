@@ -11,15 +11,10 @@ DEFINE_uint32(storage_cache_capacity,
               100,
               "Total capacity reservered for storage in memory cache in MB");
 
-DEFINE_uint32(storage_cache_buckets_power,
-              10,
-              "Number of buckets in base 2 logarithm. "
-              "E.g., in case of 10, the total number of buckets will be 2^10.");
-
-DEFINE_uint32(storage_cache_locks_power,
-              5,
-              "Number of locks in base 2 logarithm. "
-              "E.g., in case of 5, the total number of locks will be 2^5.");
+DEFINE_uint32(storage_cache_entries_power,
+              20,
+              "Estimated number of cache entries in base 2 logarithm. "
+              "E.g., in case of 20, the estimated number of entries will be 2^20.");
 
 DEFINE_uint32(vertex_pool_capacity, 50, "Vertex pool size in MB");
 DEFINE_uint32(vertex_item_ttl, 300, "TTL for vertex item in the cache");
@@ -36,10 +31,8 @@ namespace kvstore {
 
 StorageCache::StorageCache() {
   capacity_ = FLAGS_storage_cache_capacity;
-  cacheInternal_ = std::make_unique<CacheLibLRU>(kStorageCacheName,
-                                                 capacity_,
-                                                 FLAGS_storage_cache_buckets_power,
-                                                 FLAGS_storage_cache_locks_power);
+  cacheInternal_ = std::make_unique<CacheLibLRU>(
+      kStorageCacheName, capacity_, FLAGS_storage_cache_entries_power);
 }
 
 bool StorageCache::init() {

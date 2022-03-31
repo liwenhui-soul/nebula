@@ -18,11 +18,8 @@ using Cache = facebook::cachelib::LruAllocator;
 
 class CacheLibLRU {
  public:
-  explicit CacheLibLRU(std::string name,
-                       uint32_t capacity,
-                       uint32_t bucketsPower,
-                       uint32_t locksPower)
-      : name_(name), capacity_(capacity), bucketsPower_(bucketsPower), locksPower_(locksPower) {}
+  explicit CacheLibLRU(std::string name, uint32_t capacity, uint32_t cacheEntriesPower)
+      : name_(name), capacity_(capacity), cacheEntriesPower_(cacheEntriesPower) {}
 
   /**
    * @brief Create cache instance. If there is any exception, we will allow the process continue.
@@ -32,12 +29,18 @@ class CacheLibLRU {
    */
   nebula::cpp2::ErrorCode initializeCache() {
     Cache::Config config;
+    if (cacheEntriesPower_ > kMaxCacheEntriesPower) {
+      LOG(WARNING) << "Estimated number of cache entries exceeds the cache limit. Nebula will trim "
+                      "the the maximum allowed: "
+                   << kMaxCacheEntriesPower;
+      cacheEntriesPower_ = kMaxCacheEntriesPower;
+    }
     try {
       config
           // size cannot exceed the maximum cache size (274'877'906'944 bytes)
           .setCacheSize(capacity_ * 1024 * 1024)
           .setCacheName(name_)
-          .setAccessConfig({bucketsPower_, locksPower_})
+          .setAccessConfig(std::pow(2, cacheEntriesPower_))
           .validate();  // will throw if bad config
     } catch (const std::exception& e) {
       // We do not stop the service. Users should refer to the log to determine whether to restart
@@ -179,12 +182,12 @@ class CacheLibLRU {
   }
 
  private:
+  static constexpr uint32_t kMaxCacheEntriesPower = 31;  // the cap by cachelib
   std::unique_ptr<Cache> nebulaCache_ = nullptr;
   std::unordered_map<std::string, facebook::cachelib::PoolId> poolIdMap_;
   std::string name_;
-  uint32_t capacity_ = 0;       // in MB
-  uint32_t bucketsPower_ = 20;  // bucketsPower number of buckets in base 2 logarithm
-  uint32_t locksPower_ = 10;    // locksPower number of locks in base 2 logarithm
+  uint32_t capacity_ = 0;            // in MB
+  uint32_t cacheEntriesPower_ = 20;  // estimated number of cache entries in base 2 logarithm
 
   // CacheLib does not protect data at item level. We need to synchronize the access.
   folly::SharedMutex lock_;
