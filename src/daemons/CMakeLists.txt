@@ -313,7 +313,7 @@ install(
     DESTINATION
         bin
     COMPONENT
-        graph ## StandAlone has only one, use graph
+        standalone
 )
 
 endif()
