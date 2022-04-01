@@ -22,7 +22,7 @@
 set -e
 
 version=""
-package_one=ON
+package_one=OFF
 strip_enable="FALSE"
 usage="Usage: ${0} -v <version> -n <ON/OFF> -s <TRUE/FALSE> -g <ON/OFF> -j <jobs> -t <BUILD TYPE> -a <ON/OFF>"
 project_dir="$(cd "$(dirname "$0")" && pwd)/.."
