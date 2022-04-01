@@ -4,9 +4,11 @@
  */
 #include "common/encryption/License.h"
 
+#include <folly/ScopeGuard.h>
 #include <folly/json.h>
 #include <proxygen/lib/utils/Base64.h>
 #include <proxygen/lib/utils/CryptUtil.h>
+#include <sys/inotify.h>
 
 #include <bitset>
 #include <chrono>
@@ -49,11 +51,14 @@ const char kKeyHeader[] = "----------License Key Start----------";
 const char kKeyFooter[] = "----------License Key End----------";
 
 // Epoch secs
-const std::time_t kSecsInWeek = 604800;
 const std::time_t kSecsInDay = 86400;
 
-// contact info
+// Contact info
 const char contactInfo[] = "Please contact Vesoft.Inc at inquiry@vesoft.com to renew the license.";
+
+// Inotify
+const size_t EVENT_SIZE(sizeof(struct inotify_event));
+const size_t BUF_LEN(1024 * (EVENT_SIZE + 16));
 
 License* License::getInstance() {
   static License instance;
@@ -61,30 +66,39 @@ License* License::getInstance() {
 }
 
 Status License::validateLicense(const std::string& licensePath) {
-  LOG(INFO) << "License validation started";
-  NG_RETURN_IF_ERROR(checkContent(licensePath));
-  auto parseResult = parseLicenseContent(licensePath);
-  NG_RETURN_IF_ERROR(parseResult);
+  LOG(INFO) << "[License] Validation started";
 
-  // Save license content
-  content_ = folly::parseJson(parseResult.value());
+  // Check existence of license file
+  if (!nebula::fs::FileUtils::exist(licensePath)) {
+    return Status::Error("Failed to find the license file: %s", licensePath.c_str());
+  }
+  LOG(INFO) << "[License] File detected";
+
+  // Parse license file to get license content
+  auto contentCheckStatus = parseLicenseContent(licensePath);
+  NG_RETURN_IF_ERROR(contentCheckStatus);
+  auto licenseContent = contentCheckStatus.value();
+
+  // Parse license file to get license key
+  auto parseLicenseKeyStatus = parseLicenseKey(licensePath);
+  NG_RETURN_IF_ERROR(parseLicenseKeyStatus);
+  auto licenseKey = parseLicenseKeyStatus.value();
+
+  // Validate the content
+  NG_RETURN_IF_ERROR(checkContent(licenseContent, licenseKey));
+
+  // Save the content to the instance
+  VLOG(1) << "[License] Loading license into program";
+  rawContent_ = licenseContent;
+  key_ = licenseKey;
+  content_ = folly::parseJson(rawContent_);
   licensePath_ = licensePath;
+  VLOG(1) << "[License] Loading finished";
 
   // Check expiration
-  NG_RETURN_IF_ERROR(checkExpiration(folly::parseJson(parseResult.value())));
-  LOG(INFO) << "License validation succeed";
+  NG_RETURN_IF_ERROR(checkExpiration(folly::parseJson(rawContent_)));
+  LOG(INFO) << "[License] Validation succeed";
   return Status::OK();
-}
-
-void License::threadLicenseCheck() {
-  LOG(INFO) << "-----Periodic License Check-----\n";
-  auto checkStatus = validateLicense(licensePath_);
-  if (!checkStatus.ok()) {
-    LOG(ERROR) << "Periodic License Check failed: " << checkStatus;
-    std::raise(SIGTERM);
-  } else {
-    LOG(INFO) << "-----Periodic License Check Passed-----\n";
-  }
 }
 
 Status License::generateRsaSign(const std::string& digest,
@@ -123,7 +137,7 @@ Status License::VerifyRsaSign(char* rsaSig,
                               uint32_t rsaSigLen,
                               const std::string& pubkey,
                               const std::string& digest) {
-  LOG(INFO) << "RSA Signature validation started";
+  LOG(INFO) << "[License] Signature validation started";
 
   BIO* in = BIO_new_mem_buf(reinterpret_cast<const void*>(pubkey.c_str()), -1);
   if (in == nullptr) {
@@ -146,11 +160,11 @@ Status License::VerifyRsaSign(char* rsaSig,
   RSA_free(rsa);
   if (ret != 1) {
     logErrors();
-    return Status::Error("Failed to verify the RSA signature");
+    return Status::Error("Failed to verify the signature");
   }
 
   CRYPTO_cleanup_all_ex_data();
-  LOG(INFO) << "RSA Signature validation succeed";
+  LOG(INFO) << "[License] Signature validation succeed";
   return Status::OK();
 }
 
@@ -248,27 +262,15 @@ Status License::aes256Decrypt(const unsigned char* key,
   return Status::OK();
 }
 
-Status License::checkContent(const std::string& licensePath) {
-  // Test existence of license file
-  if (!nebula::fs::FileUtils::exist(licensePath)) {
-    return Status::Error("Failed to find the license file: %s", licensePath.c_str());
-  }
-  LOG(INFO) << "License detected";
-
-  // Parse license file to get license content and license key
-  std::string licenseKey = "";
-  auto contentCheckStatus = parseLicenseContent(licensePath);
-  NG_RETURN_IF_ERROR(contentCheckStatus);
-  auto licenseContent = contentCheckStatus.value();
-  NG_RETURN_IF_ERROR(parseLicenseKey(licensePath, licenseKey));
-
-  // Extract AES cipher and RSA signature from licenseKey
+Status License::checkContent(const std::string& licenseContent, const std::string& licenseKey) {
+  // Extract AES cipher from licenseKey
   const size_t licenseKeySize = licenseKey.size();
   std::string aesCipherBase64 = licenseKey.substr(0, licenseKeySize - kSigSize);
   auto aesCipherBase64paddingSz =
       aesCipherBase64.size() - (aesCipherBase64.find_last_not_of('=') + 1);
   auto aesCipherText = proxygen::Base64::decode(aesCipherBase64, aesCipherBase64paddingSz);
 
+  // Extract RSA signature from licenseKey
   std::string rsaSigBase64 = licenseKey.substr(licenseKeySize - kSigSize);
   auto rsaSigBase64paddingSz = rsaSigBase64.size() - (rsaSigBase64.find_last_not_of('=') + 1);
   auto rsaSig = proxygen::Base64::decode(rsaSigBase64, rsaSigBase64paddingSz);
@@ -281,6 +283,7 @@ Status License::checkContent(const std::string& licensePath) {
   const std::string aesIv =
       proxygen::Base64::decode(std::string(kAesIvBase64), kAesIvBase64paddingSz);
   std::string encryptedBody = "";
+
   NG_RETURN_IF_ERROR(aes256Encrypt(reinterpret_cast<const unsigned char*>(aesKey.c_str()),
                                    reinterpret_cast<const unsigned char*>(aesIv.c_str()),
                                    licenseContent,
@@ -302,8 +305,7 @@ Status License::checkContent(const std::string& licensePath) {
                                    rtext));
 
   auto contentJson = folly::parseJson(rtext);
-  LOG(INFO) << "License content JSON: " << folly::toPrettyJson(contentJson);
-  auto expiration = contentJson["expirationDate"];
+  VLOG(1) << "[License] content JSON: " << folly::toPrettyJson(contentJson);
 
   // Clean key string
   OPENSSL_cleanse(reinterpret_cast<void*>(const_cast<char*>(aesKey.c_str())), kKeySize);
@@ -328,23 +330,54 @@ Status License::checkExpiration(const folly::dynamic& content) {
   }
   std::time_t expirationTimestamp = mktime(&t);
 
-  // Warning when it is a week from the expiration
-  // Give the user 3 days of grace period before disable the launch of meta service
-  if (currentTimestamp > expirationTimestamp + 3 * kSecsInDay) {
-    return Status::Error("The license has expired. " + std::string(contactInfo));
-  } else if (currentTimestamp > expirationTimestamp) {
-    LOG(WARNING) << "The license has expired. You can still use Nebula service for 3 days. "
-                 << contactInfo;
-  } else if (currentTimestamp > expirationTimestamp - kSecsInWeek) {
-    LOG(WARNING) << "The license will be expired in a week. " << contactInfo;
+  std::time_t gracePeriod = 0;
+  std::time_t warningAhead = 0;
+  // Check if the license has the attribute "gracePeriod", it is a license from v3.0.0 or earlier
+  // If the license does not contain "gracePeriod", set the grace period to 14 days as the default
+  if (content.find("gracePeriod") == content.items().end()) {
+    gracePeriod = 14 * kSecsInDay;
+    warningAhead = 30 * kSecsInDay;
+  } else {
+    // Determine if the license is a trial license, for trial license, no grace period is given
+    if (content["gracePeriod"].asInt() != 0) {
+      gracePeriod = content["gracePeriod"].asInt() * kSecsInDay;
+      warningAhead = 30 * kSecsInDay;
+    } else {  // Trial license
+      gracePeriod = 0;
+      warningAhead = 7 * kSecsInDay;
+    }
   }
+
+  // Give the user a grace period before disable the launch of meta service
+  // The length of the grace period is specified in the license
+  if (currentTimestamp > expirationTimestamp + gracePeriod) {
+    return Status::Error("The license has expired on %s. %s", expiration.c_str(), contactInfo);
+  } else if (currentTimestamp > expirationTimestamp) {
+    LOG(WARNING) << folly::sformat(
+        "[License] The license has expired on {}. You can still use Nebula service for {} days. {}",
+        expiration.c_str(),
+        gracePeriod,
+        contactInfo);
+
+  } else if (currentTimestamp > expirationTimestamp - warningAhead) {
+    // Warning about the expiration 30 days ahead
+    LOG(WARNING) << folly::sformat(
+        "[License] The license will be expired in {} days. The expiration date is {}. {}",
+        warningAhead,
+        expiration.c_str(),
+        contactInfo);
+  }
+
+  VLOG(2) << "[License] Expiration check passed";
   return Status::OK();
 }
 
 StatusOr<std::string> License::parseLicenseContent(const std::string& licensePath) {
   nebula::fs::FileUtils::FileLineIterator iter(licensePath);
   if (!iter.valid()) {
-    return Status::Error("%s: %s", licensePath.c_str(), ::strerror(errno));
+    return Status::Error("Failed to parse license content, file path: %s, errno: %s",
+                         licensePath.c_str(),
+                         ::strerror(errno));
   }
 
   // Check license header
@@ -372,15 +405,19 @@ StatusOr<std::string> License::parseLicenseContent(const std::string& licensePat
   // side. Delete newline literal at the end
   licenseContent.erase(licenseContent.end() - 1, licenseContent.end());
 
+  VLOG(2) << "[License] Content parsing passed";
   return licenseContent;
 }
 
-Status License::parseLicenseKey(const std::string& licensePath, std::string& licenseKey) {
+StatusOr<std::string> License::parseLicenseKey(const std::string& licensePath) {
   nebula::fs::FileUtils::FileLineIterator iter(licensePath);
   if (!iter.valid()) {
-    return Status::Error("%s: %s", licensePath.c_str(), ::strerror(errno));
+    return Status::Error("Failed to parse license key, file path: %s, errno: %s",
+                         licensePath.c_str(),
+                         ::strerror(errno));
   }
 
+  std::string licenseKey = "";
   bool parsing = false;
   // Parse license key
   while (iter.valid()) {
@@ -400,15 +437,89 @@ Status License::parseLicenseKey(const std::string& licensePath, std::string& lic
   // side. Delete newline literal at the end
   licenseKey.erase(licenseKey.end() - 1, licenseKey.end());
 
-  return Status::OK();
+  VLOG(2) << "[License] Key check passed";
+  return licenseKey;
 }
 
-const folly::dynamic License::getContent() const {
+void License::setLicenseMonitor(const std::string& licensePath, int& inotifyFd) {
+  LOG(INFO) << "[License Monitor] File monitor started";
+
+  int inotifyLength, inotifyI = 0;
+  char inotifyBuffer[BUF_LEN];
+
+  inotifyLength = read(inotifyFd, inotifyBuffer, BUF_LEN);
+
+  if (inotifyLength < 0) {
+    LOG(ERROR) << "read error";
+    return;
+  }
+  VLOG(3) << "inotifyI: " << inotifyI << " inotifyLength: " << inotifyLength;
+  while (inotifyI < inotifyLength) {
+    struct inotify_event* event = reinterpret_cast<struct inotify_event*>(&inotifyBuffer[inotifyI]);
+    VLOG(3) << "Event name: " << event->name;
+
+    // Ignore other file changes
+    if (std::strcmp(event->name, "nebula.license") != 0) {
+      return;
+    }
+
+    // Check event
+    if (event->len) {
+      if (event->mask & IN_CLOSE_WRITE) {
+        if (event->mask & IN_ISDIR) {
+          // Ignore directory change
+        } else {
+          LOG(INFO) << folly::sformat("[License Monitor] The license file {} was modified.",
+                                      event->name);
+          auto ret = validateLicense(licensePath);
+          if (!ret.ok()) {
+            LOG(ERROR) << "Failed to validate license: " << ret;
+          }
+        }
+      }
+    }
+    inotifyI += EVENT_SIZE + event->len;
+  }
+}
+
+const folly::dynamic& License::getContent() const {
+  if (content_.empty()) {
+    LOG(ERROR) << "[License] data was not loaded";
+  }
   return content_;
 }
 
 void License::setContent(const folly::dynamic& content) {
   content_ = content;
+}
+
+const std::string& License::getRawContent() const {
+  if (rawContent_.empty()) {
+    LOG(ERROR) << "[License] data was not loaded";
+  }
+  return rawContent_;
+}
+
+const std::string& License::getkey() const {
+  if (key_.empty()) {
+    LOG(ERROR) << "[License] data was not loaded";
+  }
+  return key_;
+}
+
+const std::string& License::getLicensePath() const {
+  if (licensePath_.empty()) {
+    LOG(ERROR) << "[License] data was not loaded";
+  }
+  return licensePath_;
+}
+
+std::string License::getLicenseDirPath() const {
+  auto licensePath = getLicensePath();
+  auto siz = licensePath.find_last_of('/');
+  auto licenseDirPath = licensePath.substr(0, siz);
+
+  return licenseDirPath;
 }
 
 }  // namespace encryption

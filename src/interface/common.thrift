@@ -526,6 +526,7 @@ enum ErrorCode {
     // 7xxx for nebula enterprise
     // license related
     E_NODE_NUMBER_EXCEED_LIMIT        = -7001,
+    E_PARSING_LICENSE_FAILURE         = -7002,
 
     E_UNKNOWN                         = -8000,
 } (cpp.enum_strict)

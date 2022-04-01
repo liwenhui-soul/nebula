@@ -4,6 +4,7 @@
  */
 
 #include <folly/ssl/Init.h>
+#include <sys/inotify.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include <cerrno>
@@ -219,13 +220,35 @@ int main(int argc, char *argv[]) {
       return;
     }
 
-    // Function used to check the license in seprate thread
-    auto threadCheckLicense = [licenseIns]() { licenseIns->threadLicenseCheck(); };
+    // License Monitor
+    // Create instance of inotify. This part is not warpped as a function because the read() method
+    // in the inotify will block the thread, and requires to be explicitly released.
+    int inotifyFd = inotify_init();
+    if (inotifyFd < 0) {
+      LOG(ERROR) << "inotify_init error";
+      EXIT_FAILURE;
+    }
 
-    // Construct function scheduler to periodically check the license at an interval of 12 hours
+    // Add license directory into the watcher
+    auto licenseDirPath = licenseIns->getLicenseDirPath();
+    int inotifyWd = inotify_add_watch(inotifyFd, licenseDirPath.c_str(), IN_CLOSE_WRITE);
+
+    auto licenseMoniterThreadFunc = [licenseIns, &licensePath, &inotifyFd]() {
+      licenseIns->setLicenseMonitor(licensePath, inotifyFd);
+    };
+
+    // Construct function scheduler to monitor the license file change
+    // The thread will be blocked until a file change is detected
     folly::FunctionScheduler fs;
-    fs.addFunction(threadCheckLicense, std::chrono::hours(12), "LicenseChecker");
+    fs.addFunction(licenseMoniterThreadFunc, std::chrono::seconds(3), "LicenseChecker");
     fs.start();
+
+    // Realease the resources hold by inotify
+    SCOPE_EXIT {
+      fs.cancelAllFunctions();
+      (void)inotify_rm_watch(inotifyFd, inotifyWd);
+      (void)close(inotifyFd);
+    };
 
     nebula::HostAddr syncListener("", 0);
     if (!FLAGS_meta_sync_listener.empty()) {

@@ -22,6 +22,7 @@
 #include "common/base/Base.h"
 #include "common/base/ObjectPool.h"
 #include "common/base/StatusOr.h"
+#include "common/encryption/License.h"
 #include "common/meta/Common.h"
 #include "common/meta/GflagsManager.h"
 #include "common/meta/NebulaSchemaProvider.h"
@@ -749,6 +750,12 @@ class MetaClient : public BaseMetaClient {
     return options_.localHost_.toString();
   }
 
+  // Requests license content
+  StatusOr<cpp2::GetLicenseResp> getLicenseFromMeta();
+
+  // Repeately request and validate the license
+  void licenseCheckThreadFunc();
+
  protected:
   // Return true if load succeeded.
   bool loadData();
@@ -847,9 +854,6 @@ class MetaClient : public BaseMetaClient {
 
   // Verify the version of clients
   Status verifyVersion();
-
-  // Check if the meta service is the enterise version
-  Status verifyMetaEnterprise();
 
  private:
   std::shared_ptr<folly::IOThreadPoolExecutor> ioThreadPool_;

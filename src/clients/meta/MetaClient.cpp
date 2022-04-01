@@ -12,6 +12,7 @@
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
 #include <boost/filesystem.hpp>
+#include <csignal>
 #include <unordered_set>
 
 #include "clients/meta/FileBasedClusterIdMan.h"
@@ -19,6 +20,7 @@
 #include "common/base/Base.h"
 #include "common/base/MurmurHash2.h"
 #include "common/conf/Configuration.h"
+#include "common/encryption/License.h"
 #include "common/http/HttpClient.h"
 #include "common/meta/NebulaSchemaProvider.h"
 #include "common/network/NetworkUtils.h"
@@ -60,9 +62,9 @@ DEFINE_validator(failed_login_attempts, &ValidateFailedLoginAttempts);
 namespace nebula {
 namespace meta {
 
-// The period used to check if the meta service is enterprise version in seconds
-// 10800 secs is 3 hours
-const uint32 kEntMetaCheckPeriodInSecs = 10800;
+// The period used to request enterprise license from the meta service in seconds.
+// 28800 secs is 8 hours.
+const uint32 kLicenseCheckPeriodInSecs = 28800;
 
 Indexes buildIndexes(std::vector<cpp2::IndexItem> indexItemVec);
 
@@ -142,8 +144,9 @@ bool MetaClient::waitForMetadReady(int count, int retryIntervalSecs) {
   CHECK(bgThread_->start());
   LOG(INFO) << "Register time task for heartbeat!";
   size_t delayMS = FLAGS_heartbeat_interval_secs * 1000 + folly::Random::rand32(900);
-  bgThread_->addDelayTask(delayMS, &MetaClient::entMetaCheckThreadFunc, this);
   bgThread_->addDelayTask(delayMS, &MetaClient::heartBeatThreadFunc, this);
+  // Repeately request and check license from meta
+  bgThread_->addDelayTask(delayMS, &MetaClient::licenseCheckThreadFunc, this);
   return ready_;
 }
 
@@ -175,18 +178,6 @@ void MetaClient::heartBeatThreadFunc() {
   // if MetaServer has some changes, refresh the localCache_
   loadData();
   loadCfg();
-}
-
-void MetaClient::entMetaCheckThreadFunc() {
-  SCOPE_EXIT {
-    bgThread_->addDelayTask(
-        kEntMetaCheckPeriodInSecs * 1000, &MetaClient::entMetaCheckThreadFunc, this);
-  };
-  auto ret = verifyMetaEnterprise();
-  if (!ret.ok()) {
-    LOG(ERROR) << "The meta service used in the cluster is not the enterprise version";
-    return;
-  }
 }
 
 bool MetaClient::loadUsersAndRoles() {
@@ -4072,28 +4063,6 @@ Status MetaClient::verifyVersion() {
   return Status::OK();
 }
 
-Status MetaClient::verifyMetaEnterprise() {
-  cpp2::VerifyMetaEnterpriseReq req;
-  folly::Promise<StatusOr<cpp2::VerifyMetaEnterpriseResp>> promise;
-  auto future = promise.getFuture();
-  getResponse(
-      std::move(req),
-      [](auto client, auto request) { return client->future_verifyMetaEnterprise(request); },
-      [](cpp2::VerifyMetaEnterpriseResp&& resp) -> decltype(auto) { return std::move(resp); },
-      std::move(promise));
-
-  auto respStatus = std::move(future).get();
-  if (!respStatus.ok()) {
-    return respStatus.status();
-  }
-  auto resp = std::move(respStatus).value();
-  if (resp.get_code() != nebula::cpp2::ErrorCode::SUCCEEDED) {
-    return Status::Error("Failed to check if Meta service is enterprise: %s",
-                         resp.get_error_msg()->c_str());
-  }
-  return Status::OK();
-}
-
 folly::Future<StatusOr<bool>> MetaClient::syncData(ClusterID cluster,
                                                    GraphSpaceID space,
                                                    std::vector<std::string> data) {
@@ -4132,6 +4101,63 @@ bool MetaClient::currentSpaceReadOnly(GraphSpaceID spaceId) {
   } else {
     return iter->second.getBool();
   }
+}
+
+StatusOr<cpp2::GetLicenseResp> MetaClient::getLicenseFromMeta() {
+  cpp2::GetLicenseReq req;
+  folly::Promise<StatusOr<cpp2::GetLicenseResp>> promise;
+  auto future = promise.getFuture();
+  getResponse(
+      std::move(req),
+      [](auto client, auto request) { return client->future_getLicense(request); },
+      [](cpp2::GetLicenseResp&& resp) -> decltype(auto) { return std::move(resp); },
+      std::move(promise));
+
+  auto respStatus = std::move(future).get();
+  if (!respStatus.ok()) {
+    return respStatus.status();
+  }
+  auto resp = std::move(respStatus).value();
+  if (resp.get_code() != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    return Status::Error("Failed to get enterprise license from Meta service: %s",
+                         resp.get_error_msg()->c_str());
+  }
+
+  return resp;
+}
+
+void MetaClient::licenseCheckThreadFunc() {
+  SCOPE_EXIT {
+    bgThread_->addDelayTask(
+        kLicenseCheckPeriodInSecs * 1000, &MetaClient::licenseCheckThreadFunc, this);
+  };
+
+  LOG(INFO) << "[License] Scheduled license checking started";
+  // Get the license content in string
+  auto ret = getLicenseFromMeta();
+  if (!ret.ok()) {
+    LOG(ERROR) << "Failed to retrive license, status:" << ret.status();
+    return;
+  }
+
+  // Validate license
+  auto licenseContent = ret.value().get_licenseContent();
+  auto licenseKey = ret.value().get_licenseKey();
+  auto checkRes = encryption::License::checkContent(licenseContent, licenseKey);
+  if (!checkRes.ok()) {
+    LOG(ERROR) << "[License] Failed to validate license, status:" << checkRes;
+    std::raise(SIGTERM);
+    return;
+  }
+
+  // Check expiration
+  checkRes = encryption::License::checkExpiration(folly::parseJson(licenseContent));
+  if (!checkRes.ok()) {
+    LOG(ERROR) << "[License] License expiration check failed, status:" << checkRes;
+    std::raise(SIGTERM);
+    return;
+  }
+  LOG(INFO) << "[License] Scheduled license checking passed";
 }
 
 }  // namespace meta

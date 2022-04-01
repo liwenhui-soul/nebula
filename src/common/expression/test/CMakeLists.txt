@@ -29,6 +29,7 @@ set(expression_test_common_libs
     $<TARGET_OBJECTS:storage_thrift_obj>
     $<TARGET_OBJECTS:meta_obj>
     $<TARGET_OBJECTS:meta_client_obj>
+    $<TARGET_OBJECTS:encryption_obj>
     $<TARGET_OBJECTS:conf_obj>
     $<TARGET_OBJECTS:charset_obj>
     $<TARGET_OBJECTS:file_based_cluster_id_man_obj>

@@ -1270,15 +1270,16 @@ struct VerifyClientVersionReq {
 }
 
 // Enterprise exclusive
-// Prevent using interprise graph/storage with open srource meta service
-struct VerifyMetaEnterpriseReq {
+struct GetLicenseReq {
 }
 
-struct VerifyMetaEnterpriseResp {
+struct GetLicenseResp {
     1: common.ErrorCode code,
     // Valid if ret equals E_LEADER_CHANGED.
     2: common.HostAddr  leader,
-    3: optional binary  error_msg,
+    3: binary           licenseContent,
+    4: binary           licenseKey,
+    5: optional binary  error_msg,
 }
 
 struct VariableItem {
@@ -1434,6 +1435,10 @@ service MetaService {
 
     ExecResp reportTaskFinish(1: ReportTaskReq req);
 
+    // Enterprise exclusive
+    // Requests the enterprise license from meta
+    GetLicenseResp getLicense(1: GetLicenseReq req);
+
     // Interfaces for backup and restore
     CreateBackupResp createBackup(1: CreateBackupReq req);
     ExecResp       restoreMeta(1: RestoreMetaReq req);
@@ -1445,10 +1450,6 @@ service MetaService {
     ExecResp          setVariable(1: SetVariableReq req);
     GetVariableResp   getVariable(1: GetVariableReq req);
     ListVariablesResp listVariables(1: ListVariablesReq req);
-
-    // Enterprise exclusive
-    // Check whether the meta service is enterprise version
-    VerifyMetaEnterpriseResp verifyMetaEnterprise(1: VerifyMetaEnterpriseReq req);
 
     GetSegmentIdResp getSegmentId(1: GetSegmentIdReq req);
 }

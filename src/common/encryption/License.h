@@ -31,10 +31,6 @@ class License final {
   // This method is called when the meta process starts
   Status validateLicense(const std::string& licensePath);
 
-  // Validates the license, sends SIGTERM if the validation failed
-  // This is ONLY used to check the license periodically
-  void threadLicenseCheck();
-
   // Signs a RSA signature
   static Status generateRsaSign(const std::string& digest,
                                 const std::string& prikey,
@@ -60,16 +56,18 @@ class License final {
                               std::string& rtext);
 
   // Checks the expiration of the license
+  // For trial license, warn the user 7 days before the expiration and no grace period is given
+  // For official license, warn the user 30 days before the expiration and a grace period is given
   static Status checkExpiration(const folly::dynamic& content);
 
   // Checks the expiration of the license
-  static Status checkContent(const std::string& licensePath);
+  static Status checkContent(const std::string& licenseContent, const std::string& licenseKey);
 
   // Parses license file to get license body as a folly::dynamic object
   static StatusOr<std::string> parseLicenseContent(const std::string& licensePath);
 
   // Parses license file to get license key as a string
-  static Status parseLicenseKey(const std::string& licensePath, std::string& licenseKey);
+  static StatusOr<std::string> parseLicenseKey(const std::string& licensePath);
 
   static void logErrors() {
     char errBuf[1024];
@@ -77,15 +75,35 @@ class License final {
     LOG(ERROR) << errBuf;
   }
 
+  // Sets up license monitor using inotify
+  // This function will be called in metaDaemon with a function scheduler to execute repeatedly
+  void setLicenseMonitor(const std::string& licensePath, int& inotifyFd);
+
   // Sets a dynamic object representing the license info
   void setContent(const folly::dynamic& content);
 
   // Returns a dynamic object representing the license info
-  const folly::dynamic getContent() const;
+  const folly::dynamic& getContent() const;
+
+  // Returns a string representing the license content
+  const std::string& getRawContent() const;
+
+  // Returns a string representing the license key
+  const std::string& getkey() const;
+
+  // Returns a the license path
+  const std::string& getLicensePath() const;
+
+  // Returns a the license dir path
+  std::string getLicenseDirPath() const;
 
  private:
   // Dynamic object representing the license info
-  folly::dynamic content_;
+  folly::dynamic content_ = "";
+  // String representing the license content
+  std::string rawContent_ = "";
+  // String representing the license key
+  std::string key_ = "";
   // The license file path
   std::string licensePath_ = "";
 };

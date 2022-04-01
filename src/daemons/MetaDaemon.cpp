@@ -3,12 +3,11 @@
  * This source code is licensed under Apache 2.0 License.
  */
 
-#include <folly/Function.h>
+#include <folly/ScopeGuard.h>
 #include <folly/experimental/FunctionScheduler.h>
 #include <folly/json.h>
 #include <folly/ssl/Init.h>
-#include <openssl/rsa.h>
-#include <openssl/sha.h>
+#include <sys/inotify.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include <chrono>
@@ -19,9 +18,7 @@
 #include "common/encryption/License.h"
 #include "common/fs/FileUtils.h"
 #include "common/hdfs/HdfsCommandHelper.h"
-#include "common/hdfs/HdfsHelper.h"
 #include "common/meta/ServerBasedSchemaManager.h"
-#include "common/meta/ServiceManager.h"
 #include "common/network/NetworkUtils.h"
 #include "common/process/ProcessUtils.h"
 #include "common/ssl/SSLConfig.h"
@@ -159,8 +156,8 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  // License validation
-  LOG(INFO) << "-----------------Validate license-----------------\n";
+  // *********** Start Up License Validation ***********
+  LOG(INFO) << "[License] Start Up Validate license";
   LOG(INFO) << "License path: " << FLAGS_license_path;
   auto licensePath = FLAGS_license_path;
 
@@ -169,6 +166,8 @@ int main(int argc, char* argv[]) {
   if (!status.ok()) {
     LOG(ERROR) << "Failed to validate license: " << status;
     return EXIT_FAILURE;
+
+    // TODO(Aiee) check hardware info
   }
 
   nebula::HostAddr syncListener("", 0);
@@ -243,15 +242,37 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  // Function used to check the license in seprate thread
-  auto threadCheckLicense = [licenseIns]() { licenseIns->threadLicenseCheck(); };
+  // License monitor
+  // Create instance of inotify. This part is not warpped as a function because the read() method in
+  // the inotify will block the thread, and requires to be explicitly released.
+  int inotifyFd = inotify_init();
+  if (inotifyFd < 0) {
+    LOG(ERROR) << "inotify_init error";
+    EXIT_FAILURE;
+  }
 
-  // Construct function scheduler to periodically check the license at an interval of 12 hours
+  // Add license directory into the watcher
+  auto licenseDirPath = licenseIns->getLicenseDirPath();
+  int inotifyWd = inotify_add_watch(inotifyFd, licenseDirPath.c_str(), IN_CLOSE_WRITE);
+
+  auto licenseMoniterThreadFunc = [licenseIns, &licensePath, &inotifyFd]() {
+    licenseIns->setLicenseMonitor(licensePath, inotifyFd);
+  };
+
+  // Construct function scheduler to monitor the license file change
+  // The thread will be blocked until a file change is detected
   folly::FunctionScheduler fs;
-  fs.addFunction(threadCheckLicense, std::chrono::hours(12), "LicenseChecker");
+  fs.addFunction(licenseMoniterThreadFunc, std::chrono::seconds(3), "LicenseChecker");
   fs.start();
 
-  // load the time zone data
+  // Realease the resources hold by inotify
+  SCOPE_EXIT {
+    fs.cancelAllFunctions();
+    (void)inotify_rm_watch(inotifyFd, inotifyWd);
+    (void)close(inotifyFd);
+  };
+
+  // Load the time zone data
   status = nebula::time::Timezone::init();
   if (!status.ok()) {
     LOG(ERROR) << status;
@@ -278,6 +299,7 @@ int main(int argc, char* argv[]) {
     }
     metaServer->serve();  // Will wait until the server shuts down
     waitForStop();
+    LOG(INFO) << "The meta server stopped";
   } catch (const std::exception& e) {
     LOG(ERROR) << "Exception thrown: " << e.what();
     return EXIT_FAILURE;
@@ -299,6 +321,8 @@ void signalHandler(apache::thrift::ThriftServer* metaServer, int sig) {
     case SIGINT:
     case SIGTERM:
       FLOG_INFO("Signal %d(%s) received, stopping this server", sig, ::strsignal(sig));
+
+      // Stop thrift server
       if (metaServer) {
         metaServer->stop();
       }

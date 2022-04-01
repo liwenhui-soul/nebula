@@ -46,6 +46,7 @@ set(VALIDATOR_TEST_LIBS
     $<TARGET_OBJECTS:graph_thrift_obj>
     $<TARGET_OBJECTS:charset_obj>
     $<TARGET_OBJECTS:meta_client_obj>
+    $<TARGET_OBJECTS:encryption_obj>
     $<TARGET_OBJECTS:file_based_cluster_id_man_obj>
     $<TARGET_OBJECTS:function_manager_obj>
     $<TARGET_OBJECTS:wkt_wkb_io_obj>

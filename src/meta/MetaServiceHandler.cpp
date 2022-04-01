@@ -11,13 +11,13 @@
 #include "meta/processors/admin/CreateBackupProcessor.h"
 #include "meta/processors/admin/CreateSnapshotProcessor.h"
 #include "meta/processors/admin/DropSnapshotProcessor.h"
+#include "meta/processors/admin/GetLicenseProcessor.h"
 #include "meta/processors/admin/GetMetaDirInfoProcessor.h"
 #include "meta/processors/admin/ListClusterInfoProcessor.h"
 #include "meta/processors/admin/ListSnapshotsProcessor.h"
 #include "meta/processors/admin/RestoreProcessor.h"
 #include "meta/processors/admin/VariableProcessor.h"
 #include "meta/processors/admin/VerifyClientVersionProcessor.h"
-#include "meta/processors/admin/VerifyMetaEnterpriseProcessor.h"
 #include "meta/processors/config/GetConfigProcessor.h"
 #include "meta/processors/config/ListConfigsProcessor.h"
 #include "meta/processors/config/RegConfigProcessor.h"
@@ -606,14 +606,6 @@ folly::Future<cpp2::VerifyClientVersionResp> MetaServiceHandler::future_verifyCl
   RETURN_FUTURE(processor);
 }
 
-folly::Future<cpp2::VerifyMetaEnterpriseResp> MetaServiceHandler::future_verifyMetaEnterprise(
-    const cpp2::VerifyMetaEnterpriseReq& req) {
-  auto* processor = VerifyMetaEnterpriseProcessor::instance(kvstore_);
-  auto f = processor->getFuture();
-  processor->process(req);
-  return f;
-}
-
 folly::Future<cpp2::GetVariableResp> MetaServiceHandler::future_getVariable(
     const cpp2::GetVariableReq& req) {
   auto* processor = GetVariableProcessor::instance(kvstore_);
@@ -643,5 +635,12 @@ folly::Future<cpp2::GetSegmentIdResp> MetaServiceHandler::future_getSegmentId(
   auto* processor = GetSegmentIdProcessor::instance(kvstore_);
   RETURN_FUTURE(processor);
 }
+
+folly::Future<cpp2::GetLicenseResp> MetaServiceHandler::future_getLicense(
+    const cpp2::GetLicenseReq& req) {
+  auto* processor = GetLicenseProcessor::instance(kvstore_);
+  RETURN_FUTURE(processor);
+}
+
 }  // namespace meta
 }  // namespace nebula
