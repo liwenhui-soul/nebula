@@ -478,11 +478,22 @@ void NebulaStore::removeSpace(GraphSpaceID spaceId, bool isListener) {
   if (!isListener) {
     auto spaceIt = this->spaces_.find(spaceId);
     if (spaceIt != this->spaces_.end()) {
-      for (auto& [partId, part] : spaceIt->second->parts_) {
+      for (auto partIt = spaceIt->second->parts_.begin();
+           partIt != spaceIt->second->parts_.end();) {
         // before calling removeSpace, meta client would call removePart to remove all parts in
         // meta cache, which do not contain learners, so we remove them here
-        if (part->isLearner()) {
-          removePart(spaceId, partId, false);
+        if (partIt->second->isLearner()) {
+          PartitionID partId = partIt->first;
+          auto& part = partIt->second;
+          auto* e = part->engine();
+          CHECK_NOTNULL(e);
+          raftService_->removePartition(part);
+          diskMan_->removePartFromPath(spaceId, partId, e->getDataRoot());
+          part->resetPart();
+          partIt = spaceIt->second->parts_.erase(partIt);
+          e->removePart(partId);
+        } else {
+          partIt++;
         }
       }
       auto& engines = spaceIt->second->engines_;
