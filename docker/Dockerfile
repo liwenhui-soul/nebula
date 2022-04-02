@@ -6,7 +6,7 @@ ARG VERSION=
 COPY . /home/nebula/BUILD
 
 RUN cd /home/nebula/BUILD/package \
-  && ./package.sh -n OFF -v "${VERSION}" -b ${BRANCH} -t RelWithDebInfo -s TRUE -c OFF -k ON
+  && ./package.sh -n OFF -v "${VERSION}" -b ${BRANCH} -t RelWithDebInfo -s TRUE -c OFF -k ON -f OFF
 
 FROM centos:7 as graphd
 
