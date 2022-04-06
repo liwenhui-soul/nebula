@@ -76,6 +76,11 @@ class Host final : public std::enable_shared_from_this<Host> {
    */
   void stop() {
     std::lock_guard<std::mutex> g(lock_);
+    try {
+      snapshotFuture_.cancel();
+    } catch (folly::FutureInvalid& e) {
+      LOG(INFO) << this->idStr_ << ", " << e.what();
+    }
     stopped_ = true;
   }
 
@@ -262,6 +267,8 @@ class Host final : public std::enable_shared_from_this<Host> {
 
   // CommittedLogId of follower
   LogID followerCommittedLogId_{0};
+
+  folly::Future<folly::Unit> snapshotFuture_;
 };
 
 }  // namespace raftex

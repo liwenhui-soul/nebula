@@ -86,7 +86,7 @@ bool NebulaStore::init() {
   bgWorkers_->start(FLAGS_num_workers, "nebula-bgworkers");
   storeWorker_ = std::make_shared<thread::GenericWorker>();
   CHECK(storeWorker_->start());
-  snapshot_.reset(new NebulaSnapshotManager(this));
+  snapshot_.reset(new NebulaSnapshotManager);
   raftService_ = raftex::RaftexService::createService(ioPool_, workers_, raftAddr_.port);
   if (raftService_ == nullptr) {
     LOG(ERROR) << "Start the raft service failed";

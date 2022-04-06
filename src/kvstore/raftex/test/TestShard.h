@@ -154,10 +154,10 @@ class NebulaSnapshotManager : public SnapshotManager {
     LOG(INFO) << "~NebulaSnapshotManager()";
   }
 
-  void accessAllRowsInSnapshot(GraphSpaceID spaceId,
-                               PartitionID partId,
+  void accessAllRowsInSnapshot(std::shared_ptr<raftex::RaftPart> partPtr,
                                SnapshotCallback cb) override {
-    auto part = std::dynamic_pointer_cast<TestShard>(service_->findPart(spaceId, partId));
+    auto part = std::dynamic_pointer_cast<TestShard>(
+        service_->findPart(partPtr->spaceId(), partPtr->partitionId()));
     CHECK(!!part);
     int64_t totalCount = 0;
     int64_t totalSize = 0;

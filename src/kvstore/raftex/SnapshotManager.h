@@ -19,10 +19,33 @@
 namespace nebula {
 namespace raftex {
 
+class RaftPart;
+
 enum SnapshotStatus {
   IN_PROGRESS,
   DONE,
   FAILED,
+};
+
+class SnapshotManager;
+
+struct SnapshotTask {
+  SnapshotTask(SnapshotManager* snapshotManager,
+               std::shared_ptr<RaftPart> part,
+               const HostAddr& dst);
+  struct State {
+    std::mutex lock_;
+    std::atomic<bool> ifStop_{false};
+    bool ifFinished_{false};
+  };
+
+  void operator()();
+
+  SnapshotManager* snapshotManager_;
+  std::shared_ptr<RaftPart> part_;
+  HostAddr dst_;
+  std::shared_ptr<State> state_;
+  std::unique_ptr<folly::Promise<StatusOr<std::pair<LogID, TermID>>>> promise_;
 };
 
 // Return false if send snapshot failed, will not send the rest of it.
@@ -32,9 +55,10 @@ using SnapshotCallback = folly::Function<bool(LogID commitLogID,
                                               int64_t totalCount,
                                               int64_t totalSize,
                                               SnapshotStatus status)>;
-class RaftPart;
 
 class SnapshotManager {
+  friend struct SnapshotTask;
+
  public:
   SnapshotManager();
   virtual ~SnapshotManager() = default;
@@ -86,9 +110,7 @@ class SnapshotManager {
    * @param partId
    * @param cb Callback to send data
    */
-  virtual void accessAllRowsInSnapshot(GraphSpaceID spaceId,
-                                       PartitionID partId,
-                                       SnapshotCallback cb) = 0;
+  virtual void accessAllRowsInSnapshot(std::shared_ptr<RaftPart> part, SnapshotCallback cb) = 0;
 
  private:
   std::unique_ptr<folly::IOThreadPoolExecutor> executor_;

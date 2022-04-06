@@ -18,7 +18,7 @@ namespace kvstore {
 
 class NebulaSnapshotManager : public raftex::SnapshotManager {
  public:
-  explicit NebulaSnapshotManager(NebulaStore* kv);
+  NebulaSnapshotManager();
 
   /**
    * @brief Scan all data and trigger callback to send to peer
@@ -27,8 +27,7 @@ class NebulaSnapshotManager : public raftex::SnapshotManager {
    * @param partId
    * @param cb Callback when scan some amount of data
    */
-  void accessAllRowsInSnapshot(GraphSpaceID spaceId,
-                               PartitionID partId,
+  void accessAllRowsInSnapshot(std::shared_ptr<raftex::RaftPart> part,
                                raftex::SnapshotCallback cb) override;
 
  private:
@@ -45,8 +44,7 @@ class NebulaSnapshotManager : public raftex::SnapshotManager {
    * @param rateLimiter Rate limiter to restrict sending speed
    * @return True if succeed. False if failed.
    */
-  bool accessTable(GraphSpaceID spaceId,
-                   PartitionID partId,
+  bool accessTable(Part* part,
                    const void* snapshot,
                    const std::string& prefix,
                    raftex::SnapshotCallback& cb,
@@ -57,7 +55,10 @@ class NebulaSnapshotManager : public raftex::SnapshotManager {
                    int64_t& totalSize,
                    kvstore::RateLimiter* rateLimiter);
 
-  NebulaStore* store_;
+  nebula::cpp2::ErrorCode prefixScan(Part* part,
+                                     const std::string& prefix,
+                                     std::unique_ptr<KVIterator>* iter,
+                                     const void* snapshot);
 };
 
 }  // namespace kvstore

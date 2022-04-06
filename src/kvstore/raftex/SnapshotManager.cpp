@@ -26,76 +26,111 @@ SnapshotManager::SnapshotManager() {
       std::make_shared<folly::NamedThreadFactory>("snapshot-ioexecutor")));
 }
 
+SnapshotTask::SnapshotTask(SnapshotManager* snapshotManager,
+                           std::shared_ptr<RaftPart> part,
+                           const HostAddr& dst)
+    : snapshotManager_(snapshotManager),
+      part_(part),
+      dst_(dst),
+      state_(new State),
+      promise_(new folly::Promise<StatusOr<std::pair<LogID, TermID>>>) {
+  promise_->setInterruptHandler([state = state_, pro = promise_.get(), idStr = part_->idStr_](
+                                    const folly::exception_wrapper&) {
+    state->ifStop_.store(true, std::memory_order_release);
+    std::lock_guard lg(state->lock_);
+    VLOG(1) << idStr << " Host stopped, cancel sending snapshot";
+    if (!state->ifFinished_) {
+      pro->setValue(Status::Error("Host stop"));
+    }
+  });
+}
+
+void SnapshotTask::operator()() {
+  state_->lock_.lock();
+  SCOPE_EXIT {
+    state_->ifFinished_ = true;
+    state_->lock_.unlock();
+  };
+  if (state_->ifStop_.load(std::memory_order_acquire)) {
+    VLOG(1) << part_->idStr_ << "Host stopped, skip sending snapshot";
+    if (!promise_->isFulfilled()) {
+      promise_->setValue(Status::Error("Host stop"));
+    }
+    return;
+  }
+  auto spaceId = part_->spaceId_;
+  auto partId = part_->partId_;
+  auto termId = part_->term_;
+  const auto& localhost = part_->address();
+  snapshotManager_->accessAllRowsInSnapshot(
+      part_,
+      [&, snapshotManager = this->snapshotManager_, p = std::move(promise_)](
+          LogID commitLogId,
+          TermID commitLogTerm,
+          const std::vector<std::string>& data,
+          int64_t totalCount,
+          int64_t totalSize,
+          SnapshotStatus status) mutable -> bool {
+        if (status == SnapshotStatus::FAILED) {
+          VLOG(1) << part_->idStr_ << "Snapshot send failed, the leader changed?";
+          p->setValue(Status::Error("Send snapshot failed!"));
+          return false;
+        }
+        int retry = FLAGS_snapshot_send_retry_times;
+        while (retry-- > 0) {
+          if (state_->ifStop_.load(std::memory_order_acquire)) {
+            VLOG(1) << part_->idStr_ << "Host stopped, stop sending snapshot";
+            return false;
+          }
+          auto f = snapshotManager->send(spaceId,
+                                         partId,
+                                         termId,
+                                         commitLogId,
+                                         commitLogTerm,
+                                         localhost,
+                                         data,
+                                         totalSize,
+                                         totalCount,
+                                         dst_,
+                                         status == SnapshotStatus::DONE);
+          // TODO(heng): we send request one by one to avoid too large memory
+          // occupied.
+          try {
+            auto resp = std::move(f).get();
+            if (resp.get_error_code() == nebula::cpp2::ErrorCode::SUCCEEDED) {
+              VLOG(3) << part_->idStr_ << "has sended count " << totalCount;
+              if (status == SnapshotStatus::DONE) {
+                VLOG(1) << part_->idStr_ << "Finished, totalCount " << totalCount << ", totalSize "
+                        << totalSize;
+                p->setValue(std::make_pair(commitLogId, commitLogTerm));
+              }
+              return true;
+            } else {
+              VLOG(2) << part_->idStr_ << "Sending snapshot failed, we don't retry anymore! "
+                      << "The error code is "
+                      << apache::thrift::util::enumNameSafe(resp.get_error_code());
+              return false;
+            }
+          } catch (const std::exception& e) {
+            VLOG(3) << part_->idStr_ << "Send snapshot failed, exception " << e.what() << ", retry "
+                    << retry << " times";
+            sleep(1);
+            continue;
+          }
+        }
+        VLOG(2) << part_->idStr_ << "Send snapshot failed!";
+        return false;
+      });
+}
+
 folly::Future<StatusOr<std::pair<LogID, TermID>>> SnapshotManager::sendSnapshot(
     std::shared_ptr<RaftPart> part, const HostAddr& dst) {
-  folly::Promise<StatusOr<std::pair<LogID, TermID>>> p;
+  SnapshotTask task(this, part, dst);
   // if use getFuture(), the future's executor is InlineExecutor, and if the promise setValue first,
   // the future's callback will be called directly in thenValue in the same thread, the Host::lock_
   // would be locked twice in one thread, this will cause deadlock
-  auto fut = p.getSemiFuture().via(executor_.get());
-  executor_->add([this, p = std::move(p), part, dst]() mutable {
-    auto spaceId = part->spaceId_;
-    auto partId = part->partId_;
-    auto termId = part->term_;
-    const auto& localhost = part->address();
-    accessAllRowsInSnapshot(
-        spaceId,
-        partId,
-        [&, this, p = std::move(p)](LogID commitLogId,
-                                    TermID commitLogTerm,
-                                    const std::vector<std::string>& data,
-                                    int64_t totalCount,
-                                    int64_t totalSize,
-                                    SnapshotStatus status) mutable -> bool {
-          if (status == SnapshotStatus::FAILED) {
-            VLOG(1) << part->idStr_ << "Snapshot send failed, the leader changed?";
-            p.setValue(Status::Error("Send snapshot failed!"));
-            return false;
-          }
-          int retry = FLAGS_snapshot_send_retry_times;
-          while (retry-- > 0) {
-            auto f = send(spaceId,
-                          partId,
-                          termId,
-                          commitLogId,
-                          commitLogTerm,
-                          localhost,
-                          data,
-                          totalSize,
-                          totalCount,
-                          dst,
-                          status == SnapshotStatus::DONE);
-            // TODO(heng): we send request one by one to avoid too large memory
-            // occupied.
-            try {
-              auto resp = std::move(f).get();
-              if (resp.get_error_code() == nebula::cpp2::ErrorCode::SUCCEEDED) {
-                VLOG(3) << part->idStr_ << "has sended count " << totalCount;
-                if (status == SnapshotStatus::DONE) {
-                  VLOG(1) << part->idStr_ << "Finished, totalCount " << totalCount << ", totalSize "
-                          << totalSize;
-                  p.setValue(std::make_pair(commitLogId, commitLogTerm));
-                }
-                return true;
-              } else {
-                VLOG(2) << part->idStr_ << "Sending snapshot failed, we don't retry anymore! "
-                        << "The error code is "
-                        << apache::thrift::util::enumNameSafe(resp.get_error_code());
-                p.setValue(Status::Error("Send snapshot failed!"));
-                return false;
-              }
-            } catch (const std::exception& e) {
-              VLOG(3) << part->idStr_ << "Send snapshot failed, exception " << e.what()
-                      << ", retry " << retry << " times";
-              sleep(1);
-              continue;
-            }
-          }
-          VLOG(2) << part->idStr_ << "Send snapshot failed!";
-          p.setValue(Status::Error("Send snapshot failed!"));
-          return false;
-        });
-  });
+  auto fut = task.promise_->getSemiFuture().via(executor_.get());
+  executor_->add(std::move(task));
   return fut;
 }
 

@@ -42,7 +42,7 @@ void Host::waitForStop() {
   std::unique_lock<std::mutex> g(lock_);
 
   CHECK(stopped_);
-  noMoreRequestCV_.wait(g, [this] { return !requestOnGoing_; });
+  noMoreRequestCV_.wait(g, [this] { return !requestOnGoing_ && !sendingSnapshot_; });
   VLOG(1) << idStr_ << "The host has been stopped!";
 }
 
@@ -340,24 +340,25 @@ nebula::cpp2::ErrorCode Host::startSendSnapshot() {
             << ", lastLogId in wal = " << part_->wal()->lastLogId();
     sendingSnapshot_ = true;
     stats::StatsManager::addValue(kNumSendSnapshot);
-    part_->snapshot_->sendSnapshot(part_, addr_)
-        .thenValue([self = shared_from_this()](auto&& status) {
-          std::lock_guard<std::mutex> g(self->lock_);
-          if (status.ok()) {
-            auto commitLogIdAndTerm = status.value();
-            self->lastLogIdSent_ = commitLogIdAndTerm.first;
-            self->lastLogTermSent_ = commitLogIdAndTerm.second;
-            self->followerCommittedLogId_ = commitLogIdAndTerm.first;
-            VLOG(1) << self->idStr_ << "Send snapshot succeeded!"
-                    << " commitLogId = " << commitLogIdAndTerm.first
-                    << " commitLogTerm = " << commitLogIdAndTerm.second;
-          } else {
-            VLOG(1) << self->idStr_ << "Send snapshot failed!";
-            // TODO(heng): we should tell the follower i am failed.
-          }
-          self->sendingSnapshot_ = false;
-          self->noMoreRequestCV_.notify_all();
-        });
+    snapshotFuture_ = part_->snapshot_->sendSnapshot(part_, addr_)
+                          .thenValue([self = shared_from_this()](auto&& status) {
+                            std::lock_guard<std::mutex> g(self->lock_);
+                            if (status.ok()) {
+                              auto commitLogIdAndTerm = status.value();
+                              self->lastLogIdSent_ = commitLogIdAndTerm.first;
+                              self->lastLogTermSent_ = commitLogIdAndTerm.second;
+                              self->followerCommittedLogId_ = commitLogIdAndTerm.first;
+                              VLOG(1) << self->idStr_ << "Send snapshot succeeded!"
+                                      << " commitLogId = " << commitLogIdAndTerm.first
+                                      << " commitLogTerm = " << commitLogIdAndTerm.second;
+                            } else {
+                              VLOG(1) << self->idStr_ << "Send snapshot failed!";
+                              // TODO(heng): we should tell the follower i am failed.
+                            }
+                            self->snapshotFuture_ = self->snapshotFuture_.makeEmpty();
+                            self->sendingSnapshot_ = false;
+                            self->noMoreRequestCV_.notify_all();
+                          });
   } else {
     VLOG_EVERY_N(2, 1000) << idStr_ << "The snapshot req is in queue, please wait for a moment";
   }

@@ -19,42 +19,34 @@ namespace kvstore {
 
 const int32_t kReserveNum = 1024 * 4;
 
-NebulaSnapshotManager::NebulaSnapshotManager(NebulaStore* kv) : store_(kv) {
+NebulaSnapshotManager::NebulaSnapshotManager() {
   // Snapshot rate is limited to FLAGS_snapshot_worker_threads * FLAGS_snapshot_part_rate_limit.
   // So by default, the total send rate is limited to 4 * 10Mb = 40Mb.
   LOG(INFO) << "Send snapshot is rate limited to " << FLAGS_snapshot_part_rate_limit
             << " for each part by default";
 }
 
-void NebulaSnapshotManager::accessAllRowsInSnapshot(GraphSpaceID spaceId,
-                                                    PartitionID partId,
+void NebulaSnapshotManager::accessAllRowsInSnapshot(std::shared_ptr<raftex::RaftPart> part,
                                                     raftex::SnapshotCallback cb) {
   static constexpr LogID kInvalidLogId = -1;
   static constexpr TermID kInvalidLogTerm = -1;
   std::vector<std::string> data;
   int64_t totalSize = 0;
   int64_t totalCount = 0;
-  CHECK_NOTNULL(store_);
-  auto partRet = store_->part(spaceId, partId);
-  if (!ok(partRet)) {
-    LOG(INFO) << folly::sformat("Failed to find space {} part {]", spaceId, partId);
-    cb(kInvalidLogId, kInvalidLogTerm, data, totalCount, totalSize, raftex::SnapshotStatus::FAILED);
-    return;
-  }
+  auto partPtr = dynamic_cast<Part*>(part.get());
   // Create a rocksdb snapshot
-  auto snapshot = store_->GetSnapshot(spaceId, partId);
+  auto snapshot = partPtr->engine()->GetSnapshot();
   SCOPE_EXIT {
-    if (snapshot != nullptr) {
-      store_->ReleaseSnapshot(spaceId, partId, snapshot);
-    }
+    partPtr->engine()->ReleaseSnapshot(snapshot);
   };
-  auto part = nebula::value(partRet);
   // Get the commit log id and commit log term of specified partition
   std::string val;
-  auto commitRet = part->engine()->get(NebulaKeyUtils::systemCommitKey(partId), &val, snapshot);
+  auto commitRet =
+      partPtr->engine()->get(NebulaKeyUtils::systemCommitKey(part->partitionId()), &val, snapshot);
   if (commitRet != nebula::cpp2::ErrorCode::SUCCEEDED) {
-    LOG(INFO) << folly::sformat(
-        "Cannot fetch the commit log id and term of space {} part {}", spaceId, partId);
+    LOG(INFO) << folly::sformat("Cannot fetch the commit log id and term of space {} part {}",
+                                partPtr->spaceId(),
+                                partPtr->partitionId());
     cb(kInvalidLogId, kInvalidLogTerm, data, totalCount, totalSize, raftex::SnapshotStatus::FAILED);
     return;
   }
@@ -67,18 +59,17 @@ void NebulaSnapshotManager::accessAllRowsInSnapshot(GraphSpaceID spaceId,
   LOG(INFO) << folly::sformat(
       "Space {} Part {} start send snapshot of commitLogId {} commitLogTerm {}, rate limited to "
       "{}, batch size is {}",
-      spaceId,
-      partId,
+      partPtr->spaceId(),
+      partPtr->partitionId(),
       commitLogId,
       commitLogTerm,
       FLAGS_snapshot_part_rate_limit,
       FLAGS_snapshot_batch_size);
 
   auto rateLimiter = std::make_unique<kvstore::RateLimiter>();
-  auto tables = NebulaKeyUtils::snapshotPrefix(partId);
+  auto tables = NebulaKeyUtils::snapshotPrefix(part->partitionId());
   for (const auto& prefix : tables) {
-    if (!accessTable(spaceId,
-                     partId,
+    if (!accessTable(partPtr,
                      snapshot,
                      prefix,
                      cb,
@@ -88,16 +79,28 @@ void NebulaSnapshotManager::accessAllRowsInSnapshot(GraphSpaceID spaceId,
                      totalCount,
                      totalSize,
                      rateLimiter.get())) {
+      cb(commitLogId, commitLogTerm, data, totalCount, totalSize, raftex::SnapshotStatus::FAILED);
       return;
     }
   }
-  cb(commitLogId, commitLogTerm, data, totalCount, totalSize, raftex::SnapshotStatus::DONE);
+  if (!cb(commitLogId, commitLogTerm, data, totalCount, totalSize, raftex::SnapshotStatus::DONE)) {
+    cb(commitLogId, commitLogTerm, data, totalCount, totalSize, raftex::SnapshotStatus::FAILED);
+  }
+}
+
+nebula::cpp2::ErrorCode NebulaSnapshotManager::prefixScan(Part* part,
+                                                          const std::string& prefix,
+                                                          std::unique_ptr<KVIterator>* iter,
+                                                          const void* snapshot) {
+  if (!part->isLeader() || !part->leaseValid()) {
+    return nebula::cpp2::ErrorCode::E_LEADER_CHANGED;
+  }
+  return part->engine()->prefix(prefix, iter, snapshot);
 }
 
 // Promise is set in callback. Access part of the data, and try to send to
 // peers. If send failed, will return false.
-bool NebulaSnapshotManager::accessTable(GraphSpaceID spaceId,
-                                        PartitionID partId,
+bool NebulaSnapshotManager::accessTable(Part* part,
                                         const void* snapshot,
                                         const std::string& prefix,
                                         raftex::SnapshotCallback& cb,
@@ -108,11 +111,13 @@ bool NebulaSnapshotManager::accessTable(GraphSpaceID spaceId,
                                         int64_t& totalSize,
                                         kvstore::RateLimiter* rateLimiter) {
   std::unique_ptr<KVIterator> iter;
-  auto ret = store_->prefix(spaceId, partId, prefix, &iter, false, snapshot);
+
+  auto ret = prefixScan(part, prefix, &iter, snapshot);
   if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
-    VLOG(2) << "[spaceId:" << spaceId << ", partId:" << partId << "] access prefix failed"
+    VLOG(2) << "[spaceId:" << part->spaceId() << ", partId:" << part->partitionId()
+            << "] access prefix failed"
             << ", error code:" << static_cast<int32_t>(ret);
-    cb(commitLogId, commitLogTerm, data, totalCount, totalSize, raftex::SnapshotStatus::FAILED);
+    iter.reset(nullptr);
     return false;
   }
   data.reserve(kReserveNum);
@@ -131,7 +136,9 @@ bool NebulaSnapshotManager::accessTable(GraphSpaceID spaceId,
         data.clear();
         batchSize = 0;
       } else {
-        VLOG(2) << "[spaceId:" << spaceId << ", partId:" << partId << "] send snapshot failed";
+        VLOG(2) << "[spaceId:" << part->spaceId() << ", partId:" << part->partitionId()
+                << "] send snapshot failed";
+        iter.reset(nullptr);
         return false;
       }
     }

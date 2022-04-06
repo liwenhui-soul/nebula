@@ -71,6 +71,7 @@ class RaftPart : public std::enable_shared_from_this<RaftPart> {
   friend class AppendLogsIterator;
   friend class Host;
   friend class SnapshotManager;
+  friend struct SnapshotTask;
   FRIEND_TEST(MemberChangeTest, AddRemovePeerTest);
   FRIEND_TEST(MemberChangeTest, RemoveLeaderTest);
 
