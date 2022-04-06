@@ -152,6 +152,10 @@ jobs:
         run: |
           [ -d build/ ] && rm -rf build/* || mkdir -p build
           make init -C tests
+      - name: Decrypt License
+        run: sh ./.github/workflows/decrypt_secret.sh
+        env:
+          SECRET_PASSPHRASE: ${{ secrets.LICENSE_PASSWORD }}
       - name: CMake
         id: cmake
         run: |
