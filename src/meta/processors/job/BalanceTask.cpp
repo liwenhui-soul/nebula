@@ -9,6 +9,10 @@
 
 #include "meta/processors/Common.h"
 
+DEFINE_int32(catch_up_retry, 30, "retry count when catch up failed.");
+
+DEFINE_int32(catch_up_interval_in_secs, 10, "interval between two requests for catching up state");
+
 namespace nebula {
 namespace meta {
 
@@ -122,15 +126,18 @@ void BalanceTask::invoke() {
     case BalanceTaskStatus::CATCH_UP_DATA: {
       LOG(INFO) << taskIdStr_ + "," + commandStr_ << " Waiting for the data catch up.";
       SAVE_STATE();
-      client_->waitingForCatchUpData(spaceId_, partId_, dst_).thenValue([this](auto&& resp) {
-        if (!resp.ok()) {
-          LOG(INFO) << taskIdStr_ + "," + commandStr_ << " Catchup data failed, status " << resp;
-          ret_ = BalanceTaskResult::FAILED;
-        } else {
+      int32_t retry = FLAGS_catch_up_retry;
+      folly::Promise<bool> promise;
+      promise.getFuture().thenValue([this](bool res) {
+        if (res) {
           status_ = BalanceTaskStatus::MEMBER_CHANGE_ADD;
+        } else {
+          LOG(INFO) << taskIdStr_ + "," + commandStr_ << " catch up failed";
+          ret_ = BalanceTaskResult::FAILED;
         }
         invoke();
       });
+      checkCatchUpData(retry, std::move(promise));
       break;
     }
     case BalanceTaskStatus::MEMBER_CHANGE_ADD: {
@@ -257,6 +264,70 @@ bool BalanceTask::saveInStore() {
     LOG(INFO) << taskIdStr_ + "," + commandStr_ << " save task: " << static_cast<int32_t>(status_)
               << " " << static_cast<int32_t>(ret_);
   return ret;
+}
+
+void BalanceTask::checkCatchUpData(int32_t retry, folly::Promise<bool> promise) {
+  auto retryFunc = [this, retry](bool ifError,
+                                 folly::Promise<bool> pro,
+                                 const std::string& messageLog = "") mutable {
+    if (ifError) {
+      if (!messageLog.empty()) {
+        LOG(INFO) << taskIdStr_ + "," + commandStr_ + " " << messageLog << ", retry "
+                  << FLAGS_catch_up_retry - retry + 1 << " time, limit: " << FLAGS_catch_up_retry;
+      }
+      if (retry) {
+        sleep(FLAGS_catch_up_interval_in_secs);
+        checkCatchUpData(--retry, std::move(pro));
+      } else {
+        pro.setValue(false);
+      }
+    } else {
+      if (!messageLog.empty()) {
+        LOG(INFO) << taskIdStr_ + "," + commandStr_ + " " << messageLog;
+      }
+      sleep(FLAGS_catch_up_interval_in_secs);
+      checkCatchUpData(retry, std::move(pro));
+    }
+  };
+  client_->waitingForCatchUpData(spaceId_, partId_, dst_)
+      .thenValue([this, retryFunc = std::move(retryFunc), promise = std::move(promise)](
+                     auto&& statusOrResp) mutable {
+        if (!statusOrResp.ok()) {
+          Status status = statusOrResp.status();
+          retryFunc(true, std::move(promise), status.message());
+          return;
+        }
+        auto resp = statusOrResp.value();
+        auto status = resp.get_status();
+        if (status == nebula::storage::cpp2::CatchUpStatus::CAUGHT_UP) {
+          LOG(INFO) << taskIdStr_ + "," + commandStr_ << " has already caught up";
+          promise.setValue(true);
+        } else if (status == nebula::storage::cpp2::CatchUpStatus::WAITING_FOR_SNAPSHOT) {
+          int64_t snapshotRows = resp.get_snapshotRows();
+          if (snapshotRows > lastSnapshotRows_) {
+            lastSnapshotRows_ = snapshotRows;
+            retryFunc(false, std::move(promise), "snapshotRows increasing, continue waiting...");
+          } else if (snapshotRows == lastSnapshotRows_) {
+            retryFunc(true, std::move(promise), "snapshotRows did not increase");
+          } else if (snapshotRows < lastSnapshotRows_) {
+            lastSnapshotRows_ = snapshotRows;
+            retryFunc(
+                true, std::move(promise), "snapshotRows has been reset, maybe leader changed");
+          }
+        } else if (status == nebula::storage::cpp2::CatchUpStatus::STARTING) {
+          retryFunc(true, std::move(promise), "the part is starting");
+        } else if (status == nebula::storage::cpp2::CatchUpStatus::RUNNING) {
+          int64_t logId = resp.get_commitLogId();
+          if (logId > 0) {
+            LOG(INFO) << taskIdStr_ + "," + commandStr_ << " logId > 0 means it has caught up";
+            promise.setValue(true);
+          } else {
+            retryFunc(true, std::move(promise), "not receive data yet");
+          }
+        } else {
+          retryFunc(true, std::move(promise), "unknown condition");
+        }
+      });
 }
 
 }  // namespace meta

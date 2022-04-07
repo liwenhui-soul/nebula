@@ -287,11 +287,13 @@ class RaftPart : public std::enable_shared_from_this<RaftPart> {
   /**
    * @brief Check if the peer has catched up data from leader. If leader is sending the
    * snapshot, the method will return false.
-   *
-   * @param peer The peer to check if it has catched up
-   * @return nebula::cpp2::ErrorCode
+   * @return std::tuple<nebula::cpp2::ErrorCode, cpp2::Status, int64_t, LogID>
+   * nebula::cpp2::ErrorCode: E_RAFT_CAUGHT_UP if the part is not a learner
+   * cpp2::Status: RUNNING or WAITING_FOR_SNAPSHOT
+   * int64_t: how much snapshot data have been received
+   * LogID: current commit log id
    */
-  nebula::cpp2::ErrorCode isCatchedUp(const HostAddr& peer);
+  std::tuple<nebula::cpp2::ErrorCode, cpp2::Status, int64_t, LogID> catchedUpState();
 
   /**
    * @brief Hard link the wal files to a new path

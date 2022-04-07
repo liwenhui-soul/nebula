@@ -33,8 +33,8 @@ void HBProcessor::process(const cpp2::HBReq& req) {
   HostAddr host((*req.host_ref()).host, (*req.host_ref()).port);
 
   auto role = req.get_role();
-  LOG(INFO) << "Receive heartbeat from " << host
-            << ", role = " << apache::thrift::util::enumNameSafe(role);
+  VLOG(2) << "Receive heartbeat from " << host
+          << ", role = " << apache::thrift::util::enumNameSafe(role);
 
   // Check current node number
   auto ret = checkNodeNumber(role, host);

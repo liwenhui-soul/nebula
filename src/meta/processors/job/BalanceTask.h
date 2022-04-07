@@ -106,6 +106,8 @@ class BalanceTask {
         "%s:%d->%s:%d", src_.host.c_str(), src_.port, dst_.host.c_str(), dst_.port);
   }
 
+  void checkCatchUpData(int32_t retry, folly::Promise<bool> pro);
+
   /**
    * @brief Save this task into kvStore
    *
@@ -137,6 +139,7 @@ class BalanceTask {
   int64_t endTimeMs_ = 0;
   std::function<void()> onFinished_;
   std::function<void()> onError_;
+  int64_t lastSnapshotRows_ = 0;
 };
 
 }  // namespace meta

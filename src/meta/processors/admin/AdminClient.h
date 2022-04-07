@@ -30,7 +30,8 @@ class AdminClient {
   AdminClient() = default;
 
   explicit AdminClient(kvstore::KVStore* kv) : kv_(kv) {
-    ioThreadPool_ = std::make_unique<folly::IOThreadPoolExecutor>(10);
+    ioThreadPool_ = std::make_unique<folly::IOThreadPoolExecutor>(
+        10, std::make_shared<folly::NamedThreadFactory>("AdminClient_executor"));
     clientsMan_ = std::make_unique<
         thrift::ThriftClientManager<storage::cpp2::StorageAdminServiceAsyncClient>>(
         FLAGS_enable_ssl);
@@ -95,9 +96,8 @@ class AdminClient {
    * @param target partition peer address
    * @return folly::Future<Status>
    */
-  virtual folly::Future<Status> waitingForCatchUpData(GraphSpaceID spaceId,
-                                                      PartitionID partId,
-                                                      const HostAddr& target);
+  virtual folly::Future<StatusOr<nebula::storage::cpp2::CatchUpResp>> waitingForCatchUpData(
+      GraphSpaceID spaceId, PartitionID partId, const HostAddr& target);
 
   /**
    * @brief Add/Remove one peer for partition (spaceId, partId). The rpc will be sent to the

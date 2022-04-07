@@ -131,6 +131,7 @@ void BalancePlan::invoke() {
   uint32 bucketSize = buckets_.size();
   int32_t concurrency = std::min(FLAGS_task_concurrency, bucketSize);
   curIndex_.store(concurrency, std::memory_order_relaxed);
+  LOG(INFO) << "bucketSize: " << bucketSize << ", concurrency: " << concurrency;
   for (int32_t i = 0; i < concurrency; i++) {
     if (!buckets_[i].empty()) {
       tasks_[buckets_[i][0]].invoke();
@@ -236,6 +237,7 @@ ErrorOr<nebula::cpp2::ErrorCode, std::vector<BalanceTask>> BalancePlan::getBalan
         // Resume the failed or invalid task, skip the in-progress tasks
         if (task.ret_ == BalanceTaskResult::FAILED || task.ret_ == BalanceTaskResult::INVALID) {
           task.ret_ = BalanceTaskResult::IN_PROGRESS;
+          task.status_ = BalanceTaskStatus::START;
         }
         auto activeHostRet = ActiveHostsMan::isLived(kv, task.dst_);
         if (!nebula::ok(activeHostRet)) {

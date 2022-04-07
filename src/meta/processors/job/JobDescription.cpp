@@ -49,7 +49,7 @@ ErrorOr<nebula::cpp2::ErrorCode, JobDescription> JobDescription::makeJobDescript
     auto type = std::get<0>(tup);
     auto paras = std::get<1>(tup);
     for (auto p : paras) {
-      LOG(INFO) << "p = " << p;
+      VLOG(2) << "p = " << p;
     }
     auto status = std::get<2>(tup);
     auto startTime = std::get<3>(tup);
