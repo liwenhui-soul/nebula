@@ -155,6 +155,7 @@ nebula_add_executable(
     LIBRARIES
         ${PROXYGEN_LIBRARIES}
         ${THRIFT_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         ${Ldap_LIBRARIES}
         wangle
 )

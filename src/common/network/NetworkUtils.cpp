@@ -7,9 +7,15 @@
 
 #include <arpa/inet.h>
 #include <ifaddrs.h>
+#include <net/if.h>
+#include <net/if_arp.h>
 #include <netdb.h>
+#include <sys/ioctl.h>
+
+#include <cstdio>
 
 #include "common/base/Base.h"
+#include "common/base/Logging.h"
 #include "common/fs/FileUtils.h"
 
 namespace nebula {
@@ -344,5 +350,89 @@ Status NetworkUtils::validateHostOrIp(const std::string& hostOrIp) {
   }
   return Status::OK();
 }
+
+std::string NetworkUtils::GetIPv4MacAddr() {
+  // Get all ipv4 devices
+  auto result = listDeviceAndIPv4s();
+  if (!result.ok()) {
+    LOG(WARNING) << "Failed to collect system info: " << result;
+    return "";
+  }
+
+  // Collect all device names
+  auto getval = [](const auto& entry) { return entry.first; };
+  std::vector<std::string> ipv4Devices;
+  ipv4Devices.resize(result.value().size());
+  std::transform(result.value().begin(), result.value().end(), ipv4Devices.begin(), getval);
+
+  std::vector<std::string> macList;
+  // Iterate divices and retrive mac addresses
+  for (auto& if_name : ipv4Devices) {
+    auto if_nameStr = std::string(if_name);
+
+    // Skip virtual network adapter
+    if (if_nameStr.find("docker") != std::string::npos || if_nameStr.rfind("veth", 0) == 0) {
+      continue;
+    }
+
+    struct ifreq ifr;
+    size_t if_name_len = strlen(if_name.c_str());
+    if (if_name_len < sizeof(ifr.ifr_name)) {
+      memcpy(ifr.ifr_name, if_name.c_str(), if_name_len);
+      ifr.ifr_name[if_name_len] = 0;
+    } else {
+      // Interface name is too long, ignore
+      DLOG(WARNING) << "The interface name is too long";
+      continue;
+    }
+
+    int fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    // Failed to create socket using protocal
+    if (fd == -1) {
+      DLOG(WARNING) << "Failed to create socket using protocal, error: " << strerror(errno);
+      continue;
+    }
+
+    // Failed to collect hardware info of the device, ignore
+    if (ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
+      DLOG(WARNING) << "Failed to collect hardware info of the device";
+      close(fd);
+      continue;
+    }
+    close(fd);
+
+    // The interface is not an Ethernet interface, ignore
+    if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
+      DLOG(WARNING) << "The interface is not an Ethernet interface";
+      continue;
+    }
+
+    const unsigned char* mac = reinterpret_cast<unsigned char*>(ifr.ifr_hwaddr.sa_data);
+
+    char buff[20];
+    snprintf(buff,
+             sizeof(buff),
+             "%02X:%02X:%02X:%02X:%02X:%02X",
+             mac[0],
+             mac[1],
+             mac[2],
+             mac[3],
+             mac[4],
+             mac[5]);
+    std::string buffAsStdStr = buff;
+
+    // Skip virtual network adapter
+    if (buffAsStdStr == "00:00:00:00:00:00") {
+      continue;
+    }
+    // append all mac address
+    macList.emplace_back(buffAsStdStr);
+  }
+  // Use ',' as the delimeter to separate multiple mac addresses
+  auto code = folly::join(",", macList);
+
+  return code;
+}
+
 }  // namespace network
 }  // namespace nebula

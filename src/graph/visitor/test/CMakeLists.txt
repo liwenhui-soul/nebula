@@ -81,4 +81,5 @@ nebula_add_test(
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
         ${Ldap_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
 )

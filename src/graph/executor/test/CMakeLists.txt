@@ -59,6 +59,8 @@ SET(EXEC_QUERY_TEST_OBJS
     $<TARGET_OBJECTS:graph_stats_obj>
     $<TARGET_OBJECTS:meta_client_stats_obj>
     $<TARGET_OBJECTS:storage_client_stats_obj>
+    $<TARGET_OBJECTS:storage_client_stats_obj>
+    $<TARGET_OBJECTS:network_obj>
 )
 
 if(ENABLE_STANDALONE_VERSION)
@@ -81,6 +83,7 @@ SET(EXEC_QUERY_TEST_LIBS
     wangle
     ${PROXYGEN_LIBRARIES}
     ${Ldap_LIBRARIES}
+    ${ROCKSDB_LIBRARIES}
 )
 
 nebula_add_test(

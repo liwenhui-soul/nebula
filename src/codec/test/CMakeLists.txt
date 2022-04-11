@@ -14,9 +14,6 @@ set(CODEC_TEST_LIBS
     $<TARGET_OBJECTS:raftex_thrift_obj>
     $<TARGET_OBJECTS:drainer_thrift_obj>
     $<TARGET_OBJECTS:meta_client_obj>
-    $<TARGET_OBJECTS:ws_obj>
-    $<TARGET_OBJECTS:encryption_obj>
-    $<TARGET_OBJECTS:ws_common_obj>
     $<TARGET_OBJECTS:http_client_obj>
     $<TARGET_OBJECTS:file_based_cluster_id_man_obj>
     $<TARGET_OBJECTS:base_obj>
@@ -40,6 +37,7 @@ set(CODEC_TEST_LIBS
     $<TARGET_OBJECTS:datetime_parser_obj>
     $<TARGET_OBJECTS:version_obj>
     $<TARGET_OBJECTS:ssl_obj>
+    $<TARGET_OBJECTS:encryption_obj>
 )
 
 
@@ -50,6 +48,7 @@ nebula_add_test(
     LIBRARIES
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         wangle
         gtest
 )
@@ -62,6 +61,7 @@ nebula_add_test(
     LIBRARIES
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         wangle
         gtest
 )
@@ -74,6 +74,7 @@ nebula_add_test(
     LIBRARIES
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         wangle
         gtest
 )
@@ -88,6 +89,7 @@ nebula_add_test(
     LIBRARIES
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         follybenchmark
         wangle
         boost_regex
@@ -104,6 +106,7 @@ nebula_add_executable(
     LIBRARIES
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         follybenchmark
         wangle
         boost_regex

@@ -15,6 +15,7 @@ set(ws_test_deps
     $<TARGET_OBJECTS:version_obj>
     $<TARGET_OBJECTS:wkt_wkb_io_obj>
     $<TARGET_OBJECTS:encryption_obj>
+    $<TARGET_OBJECTS:network_obj>
 )
 
 nebula_add_test(
@@ -26,6 +27,7 @@ nebula_add_test(
         ${ws_test_deps}
     LIBRARIES
         ${PROXYGEN_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         gtest
 )
 
@@ -39,6 +41,7 @@ nebula_add_test(
         ${ws_test_deps}
     LIBRARIES
         ${PROXYGEN_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         gtest
 )
 
@@ -52,6 +55,7 @@ nebula_add_test(
         ${ws_test_deps}
     LIBRARIES
         ${PROXYGEN_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         gtest
 )
 
@@ -64,6 +68,7 @@ nebula_add_test(
         ${ws_test_deps}
     LIBRARIES
         ${PROXYGEN_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         gtest
 )
 
@@ -76,5 +81,6 @@ nebula_add_test(
         ${ws_test_deps}
     LIBRARIES
         ${PROXYGEN_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         gtest
 )

@@ -20,6 +20,7 @@ SET(CONTEXT_TEST_LIBS
     $<TARGET_OBJECTS:meta_client_obj>
     $<TARGET_OBJECTS:meta_thrift_obj>
     $<TARGET_OBJECTS:encryption_obj>
+    $<TARGET_OBJECTS:network_obj>
     $<TARGET_OBJECTS:drainer_thrift_obj>
     $<TARGET_OBJECTS:thrift_obj>
     $<TARGET_OBJECTS:common_thrift_obj>
@@ -72,6 +73,7 @@ nebula_add_test(
         wangle
         ${PROXYGEN_LIBRARIES}
         ${Ldap_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
 )
 
 nebula_add_executable(
@@ -88,4 +90,5 @@ nebula_add_executable(
         wangle
         ${PROXYGEN_LIBRARIES}
         ${Ldap_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
 )

@@ -41,6 +41,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:ws_obj>
         $<TARGET_OBJECTS:encryption_obj>
         $<TARGET_OBJECTS:ws_common_obj>
+        $<TARGET_OBJECTS:network_obj>
         $<TARGET_OBJECTS:thread_obj>
         $<TARGET_OBJECTS:time_obj>
         $<TARGET_OBJECTS:fs_obj>
@@ -70,4 +71,5 @@ nebula_add_test(
         gtest
         ${PROXYGEN_LIBRARIES}
         ${THRIFT_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
 )

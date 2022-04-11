@@ -6,8 +6,10 @@
 #pragma once
 
 #include <folly/dynamic.h>
+#include <gtest/gtest_prod.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
+#include <rocksdb/filter_policy.h>
 
 #include "common/base/Base.h"
 #include "common/base/Status.h"
@@ -17,6 +19,9 @@ namespace nebula {
 namespace encryption {
 
 class License final {
+  FRIEND_TEST(LicenseGeneratorTool, BloomFilterTest);
+  FRIEND_TEST(LicenseGeneratorTool, HardwareCheckTest);
+
  private:
   License() = default;
   ~License() = default;
@@ -34,7 +39,7 @@ class License final {
   // Signs a RSA signature
   static Status generateRsaSign(const std::string& digest,
                                 const std::string& prikey,
-                                std::vector<char>& outBuf);
+                                std::string& outBuf);
 
   // Verifies RSA signature
   static Status VerifyRsaSign(char* rsaSig,
@@ -75,9 +80,11 @@ class License final {
     LOG(ERROR) << errBuf;
   }
 
-  // Sets up license monitor using inotify
-  // This function will be called in metaDaemon with a function scheduler to execute repeatedly
-  void setLicenseMonitor(const std::string& licensePath, int& inotifyFd);
+  // Get the default ase key
+  static std::string getAesKey();
+
+  // Get the default ase IV
+  static std::string getAesIV();
 
   // Sets a dynamic object representing the license info
   void setContent(const folly::dynamic& content);
@@ -96,6 +103,37 @@ class License final {
 
   // Returns a the license dir path
   std::string getLicenseDirPath() const;
+
+  // **************** File Monitor ****************
+  // Sets up license monitor using inotify
+  // This function will be called in metaDaemon with a function scheduler to execute repeatedly
+  void setLicenseMonitor(const std::string& licensePath, int& inotifyFd);
+
+  // **************** Hardware Registration ****************
+  // Generates a string as an unique id of the machine, return an empty string on failure.
+  static std::string genMachineCode();
+
+  // Generates a string as an unique id of the CLUSTER, return an empty string on failure.
+  // The input is a vector of strings representing machine codes.
+  static std::string genClusterCode(const std::vector<std::string>& keyVec);
+
+  // Validates the machine code of the current machine with license
+  static Status checkMachineCode(const std::string& machineCode, const std::string& clusterCode);
+
+  // Checks if the machine is regirsted in the license or not.
+  // This check should only be executed once when the meta service launches.
+  Status checkHardware();
+
+ private:
+  // Generates a bit vector for all elements in the keyVec using a bloom filter.
+  static std::string genBloomFilter(const std::vector<std::string>& keyVec);
+
+  // Checks if the given key is in the bit vector.
+  // We can use this method to determin if the machine is in the cluster.
+  static bool lookupKey(const std::string& key, const std::string& bitVec);
+
+  // Checks the field of the license to determine if the license is valid or not.
+  Status checkFields();
 
  private:
   // Dynamic object representing the license info

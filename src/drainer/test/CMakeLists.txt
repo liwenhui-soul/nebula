@@ -10,7 +10,6 @@ set(drainer_test_deps
     $<TARGET_OBJECTS:drainer_thrift_obj>
     $<TARGET_OBJECTS:common_thrift_obj>
     $<TARGET_OBJECTS:ws_obj>
-    $<TARGET_OBJECTS:encryption_obj>
     $<TARGET_OBJECTS:ws_common_obj>
     $<TARGET_OBJECTS:process_obj>
     $<TARGET_OBJECTS:stats_obj>
@@ -64,6 +63,7 @@ set(drainer_test_deps
     $<TARGET_OBJECTS:drainer_server>
     $<TARGET_OBJECTS:geo_index_obj>
     $<TARGET_OBJECTS:ast_match_path_obj>
+    $<TARGET_OBJECTS:encryption_obj>
 )
 
 if (NOT ENABLE_STANDALONE_VERSION)

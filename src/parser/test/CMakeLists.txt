@@ -68,6 +68,7 @@ nebula_add_test(
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
         ${Ldap_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
 )
 
 nebula_add_test(
@@ -81,6 +82,7 @@ nebula_add_test(
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
         ${Ldap_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
 )
 
 nebula_add_executable(
@@ -94,6 +96,7 @@ nebula_add_executable(
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
         ${Ldap_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
 )
 
 nebula_add_test(
@@ -107,6 +110,7 @@ nebula_add_test(
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
         ${Ldap_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
 )
 
 if(ENABLE_FUZZ_TEST)

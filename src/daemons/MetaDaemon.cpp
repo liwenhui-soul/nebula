@@ -164,10 +164,15 @@ int main(int argc, char* argv[]) {
   auto licenseIns = License::getInstance();
   status = licenseIns->validateLicense(licensePath);
   if (!status.ok()) {
-    LOG(ERROR) << "Failed to validate license: " << status;
+    LOG(ERROR) << "[License] Failed to validate license: " << status;
     return EXIT_FAILURE;
+  }
 
-    // TODO(Aiee) check hardware info
+  // Check hardware info
+  status = licenseIns->checkHardware();
+  if (!status.ok()) {
+    LOG(ERROR) << "[License] Failed to validate hardware infomation: " << status;
+    return EXIT_FAILURE;
   }
 
   nebula::HostAddr syncListener("", 0);

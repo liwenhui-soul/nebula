@@ -8,18 +8,20 @@
 #include <folly/json.h>
 #include <proxygen/lib/utils/Base64.h>
 #include <proxygen/lib/utils/CryptUtil.h>
+#include <rocksdb/filter_policy.h>
 #include <sys/inotify.h>
 
 #include <bitset>
 #include <chrono>
 #include <csignal>
 #include <iomanip>
+#include <memory>
 #include <string>
 #include <string_view>
 
 #include "common/base/Status.h"
 #include "common/base/StatusOr.h"
-#include "common/time/TimeUtils.h"
+#include "common/network/NetworkUtils.h"
 
 namespace nebula {
 namespace encryption {
@@ -95,6 +97,9 @@ Status License::validateLicense(const std::string& licensePath) {
   licensePath_ = licensePath;
   VLOG(1) << "[License] Loading finished";
 
+  // Check license fields
+  NG_RETURN_IF_ERROR(checkFields());
+
   // Check expiration
   NG_RETURN_IF_ERROR(checkExpiration(folly::parseJson(rawContent_)));
   LOG(INFO) << "[License] Validation succeed";
@@ -103,7 +108,7 @@ Status License::validateLicense(const std::string& licensePath) {
 
 Status License::generateRsaSign(const std::string& digest,
                                 const std::string& prikey,
-                                std::vector<char>& outBuf) {
+                                std::string& outBuf) {
   BIO* in = BIO_new_mem_buf(reinterpret_cast<const void*>(prikey.c_str()), -1);
   if (in == nullptr) {
     return Status::Error("BIO_new_mem_buf failed");
@@ -129,7 +134,7 @@ Status License::generateRsaSign(const std::string& digest,
   if (ret != 1) {
     return Status::Error("RSA_sign failed");
   }
-  outBuf = sign;
+  outBuf = std::string(sign.begin(), sign.end());
   return Status::OK();
 }
 
@@ -276,12 +281,8 @@ Status License::checkContent(const std::string& licenseContent, const std::strin
   auto rsaSig = proxygen::Base64::decode(rsaSigBase64, rsaSigBase64paddingSz);
 
   // Calculate message digest of AES256 encrypted license content
-  auto kAesKeyBase64paddingSz = kAesKeyBase64.size() - (kAesKeyBase64.find_last_not_of('=') + 1);
-  const std::string aesKey =
-      proxygen::Base64::decode(std::string(kAesKeyBase64), kAesKeyBase64paddingSz);
-  auto kAesIvBase64paddingSz = kAesIvBase64.size() - (kAesIvBase64.find_last_not_of('=') + 1);
-  const std::string aesIv =
-      proxygen::Base64::decode(std::string(kAesIvBase64), kAesIvBase64paddingSz);
+  const std::string aesKey = getAesKey();
+  const std::string aesIv = getAesIV();
   std::string encryptedBody = "";
 
   NG_RETURN_IF_ERROR(aes256Encrypt(reinterpret_cast<const unsigned char*>(aesKey.c_str()),
@@ -332,20 +333,14 @@ Status License::checkExpiration(const folly::dynamic& content) {
 
   std::time_t gracePeriod = 0;
   std::time_t warningAhead = 0;
-  // Check if the license has the attribute "gracePeriod", it is a license from v3.0.0 or earlier
-  // If the license does not contain "gracePeriod", set the grace period to 14 days as the default
-  if (content.find("gracePeriod") == content.items().end()) {
-    gracePeriod = 14 * kSecsInDay;
+
+  // Determine if the license is a trial license, for trial license, no grace period is given
+  if (content["gracePeriod"].asInt() != 0) {
+    gracePeriod = content["gracePeriod"].asInt() * kSecsInDay;
     warningAhead = 30 * kSecsInDay;
-  } else {
-    // Determine if the license is a trial license, for trial license, no grace period is given
-    if (content["gracePeriod"].asInt() != 0) {
-      gracePeriod = content["gracePeriod"].asInt() * kSecsInDay;
-      warningAhead = 30 * kSecsInDay;
-    } else {  // Trial license
-      gracePeriod = 0;
-      warningAhead = 7 * kSecsInDay;
-    }
+  } else {  // Trial license
+    gracePeriod = 0;
+    warningAhead = 7 * kSecsInDay;
   }
 
   // Give the user a grace period before disable the launch of meta service
@@ -356,14 +351,14 @@ Status License::checkExpiration(const folly::dynamic& content) {
     LOG(WARNING) << folly::sformat(
         "[License] The license has expired on {}. You can still use Nebula service for {} days. {}",
         expiration.c_str(),
-        gracePeriod,
+        gracePeriod / kSecsInDay,
         contactInfo);
 
   } else if (currentTimestamp > expirationTimestamp - warningAhead) {
     // Warning about the expiration 30 days ahead
     LOG(WARNING) << folly::sformat(
         "[License] The license will be expired in {} days. The expiration date is {}. {}",
-        warningAhead,
+        warningAhead / kSecsInDay,
         expiration.c_str(),
         contactInfo);
   }
@@ -489,6 +484,20 @@ const folly::dynamic& License::getContent() const {
   return content_;
 }
 
+std::string License::getAesKey() {
+  auto kAesKeyBase64paddingSz = kAesKeyBase64.size() - (kAesKeyBase64.find_last_not_of('=') + 1);
+  std::string aesKey = proxygen::Base64::decode(std::string(kAesKeyBase64), kAesKeyBase64paddingSz);
+
+  return aesKey;
+}
+
+std::string License::getAesIV() {
+  auto kAesIvBase64paddingSz = kAesIvBase64.size() - (kAesIvBase64.find_last_not_of('=') + 1);
+  std::string aesIv = proxygen::Base64::decode(std::string(kAesIvBase64), kAesIvBase64paddingSz);
+
+  return aesIv;
+}
+
 void License::setContent(const folly::dynamic& content) {
   content_ = content;
 }
@@ -520,6 +529,108 @@ std::string License::getLicenseDirPath() const {
   auto licenseDirPath = licensePath.substr(0, siz);
 
   return licenseDirPath;
+}
+
+std::string License::genBloomFilter(const std::vector<std::string>& keyVec) {
+  auto filter = std::unique_ptr<const rocksdb::FilterPolicy>(rocksdb::NewBloomFilterPolicy(10));
+  std::string dst;
+  std::vector<rocksdb::Slice> keys;
+  keys.reserve(keyVec.size());
+
+  // Load keys
+  LOG(INFO) << "Loading Machine codes......";
+  for (const auto& key : keyVec) {
+    keys.emplace_back(key);
+  }
+  // Construct bloom filter
+  filter->CreateFilter(&keys[0], keys.size(), &dst);
+
+  return dst;
+}
+
+bool License::lookupKey(const std::string& key, const std::string& bitVec) {
+  auto filter = std::unique_ptr<const rocksdb::FilterPolicy>(rocksdb::NewBloomFilterPolicy(10));
+  return filter->KeyMayMatch(key, bitVec);
+}
+
+std::string License::genMachineCode() {
+  auto code = network::NetworkUtils::GetIPv4MacAddr();
+  // Check result
+  if (code.empty()) {
+    DLOG(WARNING) << ("Failed to generate the Machine Code");
+    return "";
+  }
+
+  // Encrypt machine code
+  std::string aes256MachineCode = "";
+  const std::string aesKey = License::getAesKey();
+  const std::string aesIv = License::getAesIV();
+  License::aes256Encrypt(reinterpret_cast<const unsigned char*>(aesKey.c_str()),
+                         reinterpret_cast<const unsigned char*>(aesIv.c_str()),
+                         code,
+                         aes256MachineCode);
+  // Encode with base64
+  auto machineCode64 = proxygen::base64Encode(folly::StringPiece(aes256MachineCode));
+  return machineCode64;
+}
+
+Status License::checkMachineCode(const std::string& machineCode, const std::string& clusterCode) {
+  // Decode clusterCode with base64
+  auto addingSz = clusterCode.size() - (clusterCode.find_last_not_of('=') + 1);
+  auto plainClusterCode = proxygen::Base64::decode(clusterCode, addingSz);
+
+  if (!lookupKey(machineCode, plainClusterCode)) {
+    return Status::Error(
+        "Failed to valid the hardware infomation, the current machine is not registered.");
+  }
+  return Status::OK();
+}
+
+std::string License::genClusterCode(const std::vector<std::string>& keyVec) {
+  auto bitVec = genBloomFilter(keyVec);
+  if (bitVec.empty()) {
+    return "";
+  }
+  auto clusterCode = proxygen::base64Encode(folly::StringPiece((bitVec)));
+  return clusterCode;
+}
+
+Status License::checkHardware() {
+  // If the gracePeriod is 0, the license is a trial license, skip the hardware check.
+  if (content_["gracePeriod"].asInt() == 0) {
+    LOG(INFO) << "[License] Trial license detected, hardware checking is skipped.";
+    return Status::OK();
+  }
+
+  // Check the machine code
+  auto curMachineCode = genMachineCode();
+  auto clusterCode = content_["clusterCode"].asString();
+  NG_RETURN_IF_ERROR(checkMachineCode(curMachineCode, clusterCode));
+
+  LOG(INFO) << "[License] Hardware checking passed, the current machine is registered.";
+
+  return Status::OK();
+}
+
+Status License::checkFields() {
+  // Check license version
+  // If 'gracePeriod' cannot be found in the license content, the license is released
+  // prior to v3.1
+  if (content_.find("gracePeriod") == content_.items().end()) {
+    return Status::Error(
+        "The attributes 'gracePeriod' is missing in the enterprise license, "
+        "license is not valid for the Nebula service running.");
+  }
+
+  // If the 'gracePeriod' is not 0, there must be a 'clusterCode' filed
+  if (content_["gracePeriod"].asInt() != 0 &&
+      content_.find("clusterCode") == content_.items().end()) {
+    return Status::Error(
+        "The attributes 'clusterCode' is missing in the enterprise license, "
+        "the license information is not complete.");
+  }
+
+  return Status::OK();
 }
 
 }  // namespace encryption

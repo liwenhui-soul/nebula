@@ -11,6 +11,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:http_client_obj>
         $<TARGET_OBJECTS:ws_obj>
         $<TARGET_OBJECTS:encryption_obj>
+        $<TARGET_OBJECTS:network_obj>
         $<TARGET_OBJECTS:ws_common_obj>
         $<TARGET_OBJECTS:process_obj>
         $<TARGET_OBJECTS:fs_obj>
@@ -22,6 +23,7 @@ nebula_add_test(
         $<TARGET_OBJECTS:wkt_wkb_io_obj>
     LIBRARIES
         ${PROXYGEN_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
         gtest
         gtest_main
 )

@@ -7,6 +7,7 @@
 #define COMMON_NETWORK_NETWORKUTILS_H_
 
 #include "common/base/Base.h"
+#include "common/base/Status.h"
 #include "common/base/StatusOr.h"
 #include "common/datatypes/HostAddr.h"
 
@@ -53,6 +54,11 @@ class NetworkUtils final {
   static Status validateIP(const std::string& ip);
 
   static Status validateHostOrIp(const std::string& HostOrIp);
+
+  // Gets all mac addresses of IPv4 network interfaces, returns an empty string if failed to find
+  // any.
+  // This is used to generate a machine code
+  static std::string GetIPv4MacAddr();
 
  private:
 };
