@@ -92,9 +92,9 @@ nebula::cpp2::ErrorCode NebulaSnapshotManager::prefixScan(Part* part,
                                                           const std::string& prefix,
                                                           std::unique_ptr<KVIterator>* iter,
                                                           const void* snapshot) {
-  if (!part->isLeader() || !part->leaseValid()) {
-    return nebula::cpp2::ErrorCode::E_LEADER_CHANGED;
-  }
+  // Use kv-engine directly to avoid acquire lock in kvstore, and we **DO NOT** check leader lease:
+  // 1. To avoid lots of snapshot impact leader stability
+  // 2. The snapshot of state machine could be applied to other nodes even if leader has changed
   return part->engine()->prefix(prefix, iter, snapshot);
 }
 
