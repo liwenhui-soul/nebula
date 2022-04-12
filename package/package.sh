@@ -122,6 +122,8 @@ if [[ -z $version ]]; then
     exit 1
 fi
 
+# add `ent` in enterprise package.
+version=ent-$version
 
 if [[ $strip_enable != TRUE ]] && [[ $strip_enable != FALSE ]]; then
     echo "strip enable is wrong, exit"
