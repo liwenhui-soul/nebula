@@ -26,8 +26,7 @@ Feature: Push Limit down append vertices rule
       | 2  | IndexScan      | 0            |                |
       | 0  | Start          |              |                |
 
-  @skip
-  Scenario: push limit down to AppendVertices unimplemented
+  Scenario: with limit push down
     # Require https://github.com/vesoft-inc/nebula/issues/3826
     # One Project node don't release symbols, and still read result of AppendVertices
     # in symbol table, so check data flow failed and lead to optimize failed.
@@ -48,6 +47,9 @@ Feature: Push Limit down append vertices rule
       | 11 | AppendVertices | 2            | {"limit": "3"} |
       | 2  | ScanVertices   | 0            |                |
       | 0  | Start          |              |                |
+
+  @skip
+  Scenario: push limit down to AppendVertices unimplemented
     # due to vertex filter is not null, it's already filtered by IndexScan, we could eliminate it.
     When profiling query:
       """

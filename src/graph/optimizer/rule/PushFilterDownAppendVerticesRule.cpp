@@ -55,13 +55,14 @@ StatusOr<OptRule::TransformResult> PushFilterDownAppendVerticesRule::transform(
 
   auto remainedExpr = std::move(visitor).remainedExpr();
   OptGroupNode *newFilterGroupNode = nullptr;
+  PlanNode *newFilter = nullptr;
   if (remainedExpr != nullptr) {
     auto *found = graph::ExpressionUtils::findAny(remainedExpr, {Expression::Kind::kTagProperty});
     if (found != nullptr) {  // Some tag property expression don't push down
       // TODO(shylock): we could push down a part.
       return TransformResult::noTransform();
     }
-    auto newFilter = Filter::make(qctx, nullptr, remainedExpr);
+    newFilter = Filter::make(qctx, nullptr, remainedExpr);
     newFilter->setOutputVar(filter->outputVar());
     newFilter->setInputVar(filter->inputVar());
     newFilterGroupNode = OptGroupNode::create(ctx, newFilter, filterGroupNode->group());
@@ -89,6 +90,7 @@ StatusOr<OptRule::TransformResult> PushFilterDownAppendVerticesRule::transform(
     auto newGroup = OptGroup::create(ctx);
     newAppendVerticesGroupNode = newGroup->makeGroupNode(newAppendVertices);
     newFilterGroupNode->dependsOn(newGroup);
+    newFilter->setInputVar(newAppendVertices->outputVar());
   } else {
     // Filter(A)<-AppendVertices(C) => AppendVertices(A&&C)
     newAppendVerticesGroupNode =

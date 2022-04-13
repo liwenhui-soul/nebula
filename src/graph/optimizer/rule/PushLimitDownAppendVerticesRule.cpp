@@ -58,14 +58,17 @@ StatusOr<OptRule::TransformResult> PushLimitDownAppendVerticesRule::transform(
   }
 
   auto newLimit = static_cast<Limit *>(limit->clone());
+  newLimit->setOutputVar(limit->outputVar());
   auto newLimitGroupNode = OptGroupNode::create(octx, newLimit, limitGroupNode->group());
 
   auto newAppendVertices = static_cast<AppendVertices *>(appendVertices->clone());
   newAppendVertices->setLimit(limitRows);
+  // newAppendVertices->regenerateOutputVar();
   auto newAppendVerticesGroup = OptGroup::create(octx);
   auto newAppendVerticesGroupNode = newAppendVerticesGroup->makeGroupNode(newAppendVertices);
 
   newLimitGroupNode->dependsOn(newAppendVerticesGroup);
+  newLimit->setInputVar(newAppendVertices->outputVar());
   for (auto dep : appendVerticesGroupNode->dependencies()) {
     newAppendVerticesGroupNode->dependsOn(dep);
   }

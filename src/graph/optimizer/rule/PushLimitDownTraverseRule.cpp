@@ -84,6 +84,7 @@ StatusOr<OptRule::TransformResult> PushLimitDownTraverseRule::transform(
   const auto traverse = static_cast<const Traverse *>(traverseGroupNode->node());
 
   auto newAppendVertices = static_cast<AppendVertices *>(appendVertices->clone());
+  newAppendVertices->setOutputVar(appendVertices->outputVar());
   auto newAppendVerticesGroupNode =
       OptGroupNode::create(octx, newAppendVertices, appendVerticesGroupNode->group());
 
@@ -93,6 +94,7 @@ StatusOr<OptRule::TransformResult> PushLimitDownTraverseRule::transform(
   auto newTraverseGroupNode = newTraverseGroup->makeGroupNode(newTraverse);
 
   newAppendVerticesGroupNode->dependsOn(newTraverseGroup);
+  newAppendVertices->setInputVar(newTraverse->outputVar());
   for (auto dep : traverseGroupNode->dependencies()) {
     newTraverseGroupNode->dependsOn(dep);
   }
