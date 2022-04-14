@@ -101,7 +101,7 @@ nebula_add_subdirectory(scripts)
 include(CPackage)
 package(
   ${ENABLE_PACK_ONE}
-  "nebula-graph"
+  "nebula-graph-ent"
   "https://github.com/vesoft-inc/nebula/releases"
   ${CMAKE_SOURCE_DIR}/package
 )

@@ -30,7 +30,7 @@ std::string versionString(bool verbose) {
 
 std::string getOriginVersion() {
 #if defined(NEBULA_BUILD_VERSION)
-  return "@NEBULA_BUILD_VERSION@";
+  return "@NEBULA_BUILD_VERSION@-ent";
 #else
   return "";
 #endif

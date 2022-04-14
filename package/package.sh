@@ -56,7 +56,7 @@ function _extra_release_variables {
         enable_compressed_debug_info="ON"
         dump_symbols="OFF"
         add_EULA="OFF"
-    fi 
+    fi
 }
 
 _default_release_variables
@@ -123,7 +123,7 @@ if [[ -z $version ]]; then
 fi
 
 # add `ent` in enterprise package.
-version=ent-$version
+version=$version
 
 if [[ $strip_enable != TRUE ]] && [[ $strip_enable != FALSE ]]; then
     echo "strip enable is wrong, exit"
