@@ -163,7 +163,6 @@ void GraphService::signout(int64_t sessionId) {
     auditExit(auditCtx);
   }
   sessionManager_->removeSession(sessionId);
-  stats::StatsManager::decValue(kNumActiveSessions);
 }
 
 folly::Future<ExecutionResponse> GraphService::future_executeWithParameter(
