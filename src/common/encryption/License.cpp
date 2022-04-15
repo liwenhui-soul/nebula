@@ -613,6 +613,13 @@ Status License::checkHardware() {
 }
 
 Status License::checkFields() {
+  // Check the product type
+  auto productType = content_["product"].asString();
+  if (productType != "nebula_graph") {
+    return Status::Error("The product type %s is incompatible with Nebula service.",
+                         productType.c_str());
+  }
+
   // Check license version
   // If 'gracePeriod' cannot be found in the license content, the license is released
   // prior to v3.1

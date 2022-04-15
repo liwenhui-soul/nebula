@@ -133,6 +133,7 @@ class License final {
   static bool lookupKey(const std::string& key, const std::string& bitVec);
 
   // Checks the field of the license to determine if the license is valid or not.
+  // This check includes product type check and license version check.
   Status checkFields();
 
  private:
