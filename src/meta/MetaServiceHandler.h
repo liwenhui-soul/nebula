@@ -262,6 +262,9 @@ class MetaServiceHandler final : public cpp2::MetaServiceSvIf {
   folly::Future<cpp2::VerifyClientVersionResp> future_verifyClientVersion(
       const cpp2::VerifyClientVersionReq& req) override;
 
+  folly::Future<cpp2::SaveGraphVersionResp> future_saveGraphVersion(
+      const cpp2::SaveGraphVersionReq& req) override;
+
   // Enterprise exclusive
   // Requests license from meta
   folly::Future<cpp2::GetLicenseResp> future_getLicense(const cpp2::GetLicenseReq& req) override;
