@@ -1203,11 +1203,13 @@ bool ExpressionUtils::checkExprDepth(const Expression *expr) {
     }
     auto *ltpExpr = static_cast<const LabelTagPropertyExpression *>(e);
     auto *labelExpr = ltpExpr->label();
-    DCHECK_EQ(labelExpr->kind(), Expression::Kind::kInputProperty);
-    if (labelExpr->kind() != Expression::Kind::kInputProperty) {
+    DCHECK(labelExpr->kind() == Expression::Kind::kInputProperty ||
+           labelExpr->kind() == Expression::Kind::kVarProperty);
+    if (labelExpr->kind() != Expression::Kind::kInputProperty &&
+        labelExpr->kind() != Expression::Kind::kVarProperty) {
       return false;
     }
-    auto *inputExpr = static_cast<const InputPropertyExpression *>(labelExpr);
+    auto *inputExpr = static_cast<const PropertyExpression *>(labelExpr);
     if (inputExpr->prop() != node) {
       return false;
     }
