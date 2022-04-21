@@ -422,7 +422,7 @@ class NebulaStore : public KVStore, public Handler {
    */
   void asyncAtomicOp(GraphSpaceID spaceId,
                      PartitionID partId,
-                     raftex::AtomicOp op,
+                     MergeableAtomicOp op,
                      KVCallback cb) override;
 
   /**

@@ -643,7 +643,7 @@ TEST(NebulaStoreTest, TransLeaderTest) {
     part->asyncTransferLeader(targetAddr, [&](nebula::cpp2::ErrorCode) { baton.post(); });
     baton.wait();
   }
-  sleep(FLAGS_raft_heartbeat_interval_secs);
+  sleep(FLAGS_raft_heartbeat_interval_secs * 2);
   {
     nebula::meta::ActiveHostsMan::AllLeaders leaderIds;
     ASSERT_EQ(3, stores[0]->allLeader(leaderIds));
@@ -663,7 +663,7 @@ TEST(NebulaStoreTest, TransLeaderTest) {
     part->asyncTransferLeader(targetAddr, [&](nebula::cpp2::ErrorCode) { baton.post(); });
     baton.wait();
   }
-  sleep(FLAGS_raft_heartbeat_interval_secs);
+  sleep(FLAGS_raft_heartbeat_interval_secs * 2);
   for (int i = 0; i < replicas; i++) {
     nebula::meta::ActiveHostsMan::AllLeaders leaderIds;
     ASSERT_EQ(1UL, stores[i]->allLeader(leaderIds));
@@ -973,7 +973,9 @@ TEST(NebulaStoreTest, ReadSnapshotTest) {
   // put kv
   {
     std::vector<std::pair<std::string, std::string>> expected, result;
-    auto atomic = [&]() -> std::string {
+
+    auto atomic = [&] {
+      kvstore::MergeableAtomicOpResult ret;
       std::unique_ptr<kvstore::BatchHolder> batchHolder = std::make_unique<kvstore::BatchHolder>();
       for (auto i = 0; i < 20; i++) {
         auto key = folly::stringPrintf("key_%d", i);
@@ -981,7 +983,9 @@ TEST(NebulaStoreTest, ReadSnapshotTest) {
         batchHolder->put(key.data(), val.data());
         expected.emplace_back(std::move(key), std::move(val));
       }
-      return encodeBatchValue(batchHolder->getBatch());
+      ret.code = nebula::cpp2::ErrorCode::SUCCEEDED;
+      ret.batch = encodeBatchValue(batchHolder->getBatch());
+      return ret;
     };
 
     folly::Baton<true, std::atomic> baton;
@@ -1045,7 +1049,9 @@ TEST(NebulaStoreTest, AtomicOpBatchTest) {
   // put kv
   {
     std::vector<std::pair<std::string, std::string>> expected, result;
-    auto atomic = [&]() -> std::string {
+
+    auto atomic = [&] {
+      kvstore::MergeableAtomicOpResult ret;
       std::unique_ptr<kvstore::BatchHolder> batchHolder = std::make_unique<kvstore::BatchHolder>();
       for (auto i = 0; i < 20; i++) {
         auto key = folly::stringPrintf("key_%d", i);
@@ -1053,7 +1059,9 @@ TEST(NebulaStoreTest, AtomicOpBatchTest) {
         batchHolder->put(key.data(), val.data());
         expected.emplace_back(std::move(key), std::move(val));
       }
-      return encodeBatchValue(batchHolder->getBatch());
+      ret.code = nebula::cpp2::ErrorCode::SUCCEEDED;
+      ret.batch = encodeBatchValue(batchHolder->getBatch());
+      return ret;
     };
 
     folly::Baton<true, std::atomic> baton;
@@ -1077,7 +1085,9 @@ TEST(NebulaStoreTest, AtomicOpBatchTest) {
   // put and remove
   {
     std::vector<std::pair<std::string, std::string>> expected, result;
-    auto atomic = [&]() -> std::string {
+
+    auto atomic = [&] {
+      kvstore::MergeableAtomicOpResult ret;
       std::unique_ptr<kvstore::BatchHolder> batchHolder = std::make_unique<kvstore::BatchHolder>();
       for (auto i = 0; i < 20; i++) {
         auto key = folly::stringPrintf("key_%d", i);
@@ -1090,9 +1100,10 @@ TEST(NebulaStoreTest, AtomicOpBatchTest) {
       for (auto i = 0; i < 20; i = i + 5) {
         batchHolder->remove(folly::stringPrintf("key_%d", i));
       }
-      return encodeBatchValue(batchHolder->getBatch());
+      ret.code = nebula::cpp2::ErrorCode::SUCCEEDED;
+      ret.batch = encodeBatchValue(batchHolder->getBatch());
+      return ret;
     };
-
     folly::Baton<true, std::atomic> baton;
     auto callback = [&](nebula::cpp2::ErrorCode code) {
       EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
