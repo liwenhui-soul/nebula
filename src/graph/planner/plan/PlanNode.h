@@ -228,6 +228,10 @@ class PlanNode {
     return numDeps() == 1U;
   }
 
+  bool isBiInput() const {
+    return numDeps() == 2U;
+  }
+
   void setOutputVar(const std::string& var);
 
   const std::string& outputVar() const {
