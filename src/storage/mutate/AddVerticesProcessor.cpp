@@ -204,7 +204,13 @@ void AddVerticesProcessor::doProcessWithIndex(const cpp2::AddVerticesRequest& re
       };
 
       auto cb = [partId, this](nebula::cpp2::ErrorCode ec) { handleAsync(spaceId_, partId, ec); };
-      env_->kvstore_->asyncAtomicOp(spaceId_, partId, std::move(atomicOp), std::move(cb));
+      if (env_->kvstore_->hasVertexCache()) {
+        // write need to acquire the lock from read to avoid cache incoherence
+        folly::SharedMutex::WriteHolder wHolder(env_->cacheLock_);
+        env_->kvstore_->asyncAtomicOp(spaceId_, partId, std::move(atomicOp), std::move(cb));
+      } else {
+        env_->kvstore_->asyncAtomicOp(spaceId_, partId, std::move(atomicOp), std::move(cb));
+      }
     }
   }
 }
