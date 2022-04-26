@@ -31,8 +31,9 @@ jobs:
             -i ${{ secrets.OSS_ID }} \
             -k ${{ secrets.OSS_SECRET }} \
             -e ${{ secrets.OSS_ENDPOINT }} \
-            oss://nebula-graph-ent/general/nebula-graph/rc/${{ steps.tag.outputs.tagnum }} \
+            oss://nebula-graph-ent/general/nebula-graph/rc/${{ steps.tag.outputs.tagnum }}/ \
             oss://nebula-graph-ent/general/nebula-graph/${{ steps.tag.outputs.tagnum }}
+
 
   docker_build:
     name: docker-build
