@@ -94,14 +94,40 @@ nebula::cpp2::ErrorCode ListHostsProcessor::allMetaHostsStatus() {
   for (auto& metaHost : metaPeers) {
     metaHost = Utils::getStoreAddrFromRaftAddr(metaHost);
   }
+
+  // remove meta listener
+  std::vector<HostAddr> metaListener;
+  const auto& hostPrefix = MetaKeyUtils::hostPrefix();
+  auto ret = doPrefix(hostPrefix);
+  if (!nebula::ok(ret)) {
+    auto retCode = nebula::error(ret);
+    if (retCode != nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
+      retCode = nebula::cpp2::ErrorCode::E_NO_HOSTS;
+    }
+    LOG(INFO) << "List Hosts Failed, error: " << apache::thrift::util::enumNameSafe(retCode);
+    return retCode;
+  }
+
+  for (auto iter = nebula::value(ret).get(); iter->valid(); iter->next()) {
+    HostInfo info = HostInfo::decode(iter->val());
+    if (info.role_ != cpp2::HostRole::META_LISTENER) {
+      continue;
+    }
+    auto host = MetaKeyUtils::parseHostKey(iter->key());
+    metaListener.emplace_back(host);
+  }
+
   for (auto& host : metaPeers) {
-    cpp2::HostItem item;
-    item.hostAddr_ref() = std::move(host);
-    item.role_ref() = cpp2::HostRole::META;
-    item.git_info_sha_ref() = gitInfoSha();
-    item.status_ref() = cpp2::HostStatus::ONLINE;
-    item.version_ref() = getOriginVersion();
-    hostItems_.emplace_back(item);
+    auto it = std::find(metaListener.begin(), metaListener.end(), host);
+    if (it == metaListener.end()) {
+      cpp2::HostItem item;
+      item.hostAddr_ref() = std::move(host);
+      item.role_ref() = cpp2::HostRole::META;
+      item.git_info_sha_ref() = gitInfoSha();
+      item.status_ref() = cpp2::HostStatus::ONLINE;
+      item.version_ref() = getOriginVersion();
+      hostItems_.emplace_back(item);
+    }
   }
   return nebula::cpp2::ErrorCode::SUCCEEDED;
 }
