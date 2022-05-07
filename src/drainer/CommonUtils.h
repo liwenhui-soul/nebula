@@ -89,6 +89,9 @@ class DrainerEnv {
 
   // <slave cluster toSpaceId, fromPartId> -> send.log fd
   folly::ConcurrentHashMap<std::pair<GraphSpaceID, PartitionID>, int32_t> sendLogIdFd_;
+
+  // <slave cluster toSpaceId, fromPartId> -> logInterval
+  folly::ConcurrentHashMap<std::pair<GraphSpaceID, PartitionID>, LogID> logIntervals_;
 };
 
 class DrainerCommon final {

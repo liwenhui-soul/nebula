@@ -196,11 +196,6 @@ class MetaSyncListener : public SyncListener {
   // Do nothing for MetaSyncListener
   void init() override{};
 
-  // Do nothing for MetaSyncListener
-  bool apply(const std::vector<KV>&) override {
-    return true;
-  };
-
   /**
    * @brief Process meta info log, and then send data to drainer. The main work is as follows:
    *
@@ -210,6 +205,11 @@ class MetaSyncListener : public SyncListener {
    *    After the meta data of each space are sent, update the last_apply_log.
    */
   void processLogs() override;
+
+  // Do nothing for MetaSyncListener
+  bool apply(const std::vector<KV>&) override {
+    return true;
+  };
 
   /**
    * @brief Apply wal log format meta data of one space.
@@ -376,14 +376,21 @@ class StorageSyncListener : public SyncListener {
    */
   void processLogs() override;
 
+  // Do nothing
+  bool apply(const std::vector<KV>&) override {
+    return true;
+  };
+
   /**
    * @brief Apply the logs to drainer, when sending snapshots.
    * when sending snapshots, snapshot batch size is snapshot_batch_size.
    *
    * @param data
+   * @param finished
+   * @param committedLogId
    * @return True if apply succesfully.
    */
-  bool apply(const std::vector<KV>& data) override;
+  bool apply(const std::vector<KV>& data, bool finished, LogID committedLogId);
 
   /**
    * @brief Send wal log format data to drainer and handle AppendLogResponse.
@@ -393,13 +400,19 @@ class StorageSyncListener : public SyncListener {
    * @param logTermToSend
    * @param lastApplyLogId
    * @param cleanupData
+   * @param snapshotData
+   * @param finished
+   * @param committedLogId
    * @return True if apply succesfully.
    */
   bool apply(const std::vector<nebula::cpp2::LogEntry>& data,
              LogID logIdToSend,
              TermID logTermToSend,
              LogID lastApplyLogId,
-             bool cleanupData = false);
+             bool cleanupData = false,
+             bool snapshotData = false,
+             bool finished = false,
+             LogID committedLogId = 0);
 
   /**
    * @brief Handling the situation where the storage replica sends a snapshot.
@@ -438,7 +451,10 @@ class StorageSyncListener : public SyncListener {
       const std::vector<nebula::cpp2::LogEntry>& data,
       HostAddr& drainerClient,
       std::string& tospaceName,
-      bool cleanupData);
+      bool cleanupData,
+      bool snapshotData,
+      bool finished,
+      LogID committedLogId);
 };
 
 }  // namespace kvstore

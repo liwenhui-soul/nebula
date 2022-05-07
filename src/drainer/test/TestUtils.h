@@ -187,7 +187,8 @@ StatusOr<cpp2::AppendLogRequest> mockAppendLogReq(meta::SchemaManager* schemaMan
   req.part_ref() = partId;
   req.last_log_id_sent_ref() = 0;
   req.log_term_ref() = 1;
-  req.cleanup_data_ref() = false;
+  req.need_cleanup_ref() = false;
+  req.is_snapshot_ref() = false;
   req.to_space_name_ref() = spaceName;
 
   auto verticesPart = mock::MockData::mockVerticesofPart(partNum);
@@ -246,7 +247,7 @@ StatusOr<cpp2::AppendLogRequest> mockAppendLogWithMetaClientReq(meta::SchemaMana
   req.part_ref() = partId;
   req.last_log_id_sent_ref() = 0;
   req.log_term_ref() = 1;
-  req.cleanup_data_ref() = false;
+  req.need_cleanup_ref() = false;
   req.to_space_name_ref() = spaceName;
 
   auto verticesPart = mock::MockData::mockVerticesofPart(partNum);
@@ -311,6 +312,27 @@ StatusOr<LogID> readRecvLogFile(const std::string& recvLogFile) {
   close(fd);
 
   return lastLogIdRecv;
+}
+
+// recv.log(last_log_id_recv)
+StatusOr<LogID> readInterverLogFile(const std::string& intervalLogFile) {
+  if (access(intervalLogFile.c_str(), 0) != 0) {
+    // file not exists
+    return Status::Error("%s file not exists.", intervalLogFile.c_str());
+  }
+  int32_t fd = open(intervalLogFile.c_str(), O_RDONLY);
+  if (fd < 0) {
+    LOG(ERROR) << "Failed to open the file " << intervalLogFile << " error(" << errno
+               << "): " << strerror(errno);
+    return Status::Error("Open %s failed.", intervalLogFile.c_str());
+  }
+
+  LogID logInterval;
+  CHECK_EQ(pread(fd, reinterpret_cast<char*>(&logInterval), sizeof(LogID), 0),
+           static_cast<ssize_t>(sizeof(LogID)));
+  close(fd);
+
+  return logInterval;
 }
 
 }  // namespace drainer

@@ -32,6 +32,9 @@ extern ProcessorCounters kAppendLogCounters;
  * |----------wal
  * |----------recv.log(last_log_id_recv)
  * |----------send.log(last_log_id_sent)  // If no data has sent, it may not exist.
+ * |----------interval.log(interval) // logId in Drainer - logId in syncListener of the same data
+ * |-------------------------------  // The file does not exist when no data is received from
+ * snapshot
  * |--------partId2
  */
 class AppendLogProcessor : public BaseProcessor<cpp2::AppendLogRequest, cpp2::AppendLogResponse> {
@@ -117,11 +120,26 @@ class AppendLogProcessor : public BaseProcessor<cpp2::AppendLogRequest, cpp2::Ap
   bool updateSendLog(LogID lastLogIdSend);
 
   /**
+   * @brief Update log interval in interval.log
+   *
+   * @param interval
+   * @return True if update successful.
+   */
+  bool updateLogInterval(LogID interval);
+
+  /**
    * @brief Get lastLogRecv and check
    *
    * @return nebula::cpp2::ErrorCode
    */
-  nebula::cpp2::ErrorCode checkLastRecvLogId();
+  nebula::cpp2::ErrorCode checkLastRecvLogIdForWal();
+
+  /**
+   * @brief Get lastLogRecv and check
+   *
+   * @return nebula::cpp2::ErrorCode
+   */
+  nebula::cpp2::ErrorCode checkLastRecvLogIdFromSnapshot();
 
   /**
    * @brief For the continuity of logId, do nothing
@@ -163,9 +181,6 @@ class AppendLogProcessor : public BaseProcessor<cpp2::AppendLogRequest, cpp2::Ap
   TermID term_;
   std::vector<nebula::cpp2::LogEntry> logStrs_;
 
-  // Whether to clear data before receiving snapshot data
-  bool cleanupData_;
-
   // Format: master_clusterId, master_spaceId, slave_clusterId, slave_spaceId
   std::string clusterSpaceIdFile_;
   // wal directory
@@ -177,10 +192,34 @@ class AppendLogProcessor : public BaseProcessor<cpp2::AppendLogRequest, cpp2::Ap
   // Format: last_log_id_send
   std::string sendLogFile_;
 
+  // Format: interval
+  std::string intervalLogFile_;
+
+  // 1) If don't read data from snapshot and receive data directly from wal,
+  // logInterval_ is always 0
+  // 2) If the data is read from the snapshot first, after reading the snapshot,
+  // logInterval_ is the lastLogId of the wal minus the commitlogId
+  LogID logInterval_ = 0;
+
   // The result of the response, next time hope to receive logId is (nextLastLogIdRecv_ + 1)
   LogID nextLastLogIdRecv_{0};
 
   std::shared_ptr<wal::FileBasedWal> wal_;
+
+  /*************************************/
+  // The following parameters are used when receiving snapshot data from synclistner
+  // Whether to clear data before receiving snapshot data
+  bool needCleanup_;
+
+  // Whether snapshot data is being sent
+  bool isSnapshot_;
+
+  // Whether it is the last batch of snapshot data
+  bool snapshotFinished_;
+
+  // After sending the snapshot. The first logId read from listener wal is commitLogId_ + 1.
+  // Used to calculate the logInterval_.
+  LogID snapshotCommitLogId_;
 };
 
 }  // namespace drainer

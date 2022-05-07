@@ -47,11 +47,16 @@ void AppendLogProcessor::process(const cpp2::AppendLogRequest& req) {
   }
 
   fromPartNum_ = req.get_part_num();
+
+  // When receiving a snapshot data, lastLogIdRecv_, lastLogId_, term_ are 0
   lastLogIdRecv_ = req.get_last_log_id_sent();
   lastLogId_ = req.get_last_log_id_to_send();
   term_ = req.get_log_term();
   logStrs_ = req.get_log_str_list();
-  cleanupData_ = req.get_cleanup_data();
+  needCleanup_ = req.get_need_cleanup();
+  isSnapshot_ = req.get_is_snapshot();
+  snapshotFinished_ = req.get_snapshot_finished();
+  snapshotCommitLogId_ = req.get_snapshot_commitLogId();
 
   // The sender also ensures that only one request is being sent
   // at a time for the same part of the same space
@@ -179,32 +184,43 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkAndBuildContexts(
   recvLogFile_ = folly::stringPrintf("%s/%d/recv.log", datapath.c_str(), fromPartId_);
   wal();
 
-  if (cleanupData_) {
-    // TODO(pandasheep) clear the data in the space under slave cluster.
-    // Clear wal, clear the recvLogFile, sendLogFile file
-    wal_->reset();
-    result = updateRecvLog(0);
-    if (!result) {
-      return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
-    }
-    sendLogFile_ = folly::stringPrintf("%s/%d/send.log", datapath.c_str(), fromPartId_);
-    if (access(sendLogFile_.c_str(), 0) == 0) {
-      result = updateSendLog(0);
+  intervalLogFile_ = folly::stringPrintf("%s/%d/interval.log", datapath.c_str(), fromPartId_);
+  if (isSnapshot_) {
+    if (needCleanup_) {
+      // TODO(pandasheep) clear the data in the space under slave cluster.
+      // Clear wal, clear the recvLogFile, reset interval, clear sendLogFile file
+      wal_->reset();
+      result = updateRecvLog(0);
       if (!result) {
         return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
       }
+
+      // reset interval value, create the interval.log if it does not exist
+      result = updateLogInterval(0);
+      if (!result) {
+        return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+      }
+
+      // reset send.log
+      sendLogFile_ = folly::stringPrintf("%s/%d/send.log", datapath.c_str(), fromPartId_);
+      if (access(sendLogFile_.c_str(), 0) == 0) {
+        result = updateSendLog(0);
+        if (!result) {
+          return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+        }
+      }
     }
-  } else {
-    // file exists and need check
-    retCode = checkLastRecvLogId();
+    // recv.log, interval.log, send.log file exist
+    retCode = checkLastRecvLogIdFromSnapshot();
     if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
       return retCode;
     }
-  }
-
-  // Checks whether the drainer's wal lastlogId matches the stored lastLogIdRecv
-  if (wal_->lastLogId() > lastLogIdRecv_) {
-    wal_->rollbackToLog(lastLogIdRecv_);
+  } else {
+    // file exists and need check
+    retCode = checkLastRecvLogIdForWal();
+    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+      return retCode;
+    }
   }
 
   return nebula::cpp2::ErrorCode::SUCCEEDED;
@@ -359,6 +375,42 @@ bool AppendLogProcessor::updateRecvLog(LogID lastLogIdRecv) {
   return true;
 }
 
+bool AppendLogProcessor::updateLogInterval(LogID interval) {
+  auto key = std::make_pair(toSpaceId_, fromPartId_);
+  int32_t fd = open(intervalLogFile_.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
+  if (fd < 0) {
+    LOG(ERROR) << "Failed to open file " << intervalLogFile_ << "errno(" << errno
+               << "): " << strerror(errno);
+    env_->logIntervals_.erase(key);
+    return false;
+  }
+  if (lseek(fd, 0, SEEK_SET) < 0) {
+    LOG(ERROR) << "Failed to seek the interval.log, space " << toSpaceId_ << " part " << fromPartId_
+               << "error: " << strerror(errno);
+    close(fd);
+    env_->logIntervals_.erase(key);
+    return false;
+  }
+
+  std::string val;
+  val.reserve(sizeof(LogID));
+  val.append(reinterpret_cast<const char*>(&interval), sizeof(LogID));
+  ssize_t written = write(fd, val.c_str(), val.size());
+  if (written != (ssize_t)val.size()) {
+    LOG(ERROR) << "Bytes written:" << written << ", expected:" << val.size()
+               << ", error:" << strerror(errno);
+    close(fd);
+    env_->logIntervals_.erase(key);
+    return false;
+  }
+
+  env_->logIntervals_.insert_or_assign(key, interval);
+
+  fsync(fd);
+  close(fd);
+  return true;
+}
+
 bool AppendLogProcessor::updateSendLog(LogID lastLogIdSend) {
   auto key = std::make_pair(toSpaceId_, fromPartId_);
   auto sendLogFdIter = env_->sendLogIdFd_.find(key);
@@ -405,13 +457,48 @@ bool AppendLogProcessor::updateSendLog(LogID lastLogIdSend) {
   return true;
 }
 
-nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogId() {
-  // By checking the existence of the recv.Log file to determine
-  // whether it is the first time to receive data, or the first time to receive data after the
-  // snapshot. Normally, before sending data for the first time, the recv.log file does not exist.
+nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogIdFromSnapshot() {
+  // The lastLogIdRecv_ is always 0 during the process of receiving the snapshot
+  if (lastLogIdRecv_ != 0) {
+    // There is a gap in the wal log data
+    VLOG(2) << "Sync data from snapshot of listener, lastLogIdRecv_ " << lastLogIdRecv_;
+    nextLastLogIdRecv_ = 0;
+    return nebula::cpp2::ErrorCode::E_LOG_GAP;
+  }
+  return nebula::cpp2::ErrorCode::SUCCEEDED;
+}
+
+nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogIdForWal() {
+  auto key = std::make_pair(toSpaceId_, fromPartId_);
+  // Indicates that interval.log has been read
+  if (env_->logIntervals_.find(key) != env_->logIntervals_.end()) {
+    logInterval_ = env_->logIntervals_.at(key);
+  } else {
+    // Check if the interval.log file exists. Read if it exists.
+    if (access(intervalLogFile_.c_str(), 0) == 0) {
+      int32_t fd = open(intervalLogFile_.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
+      if (fd < 0) {
+        VLOG(2) << "Failed to open file " << intervalLogFile_ << "errno(" << errno
+                << "): " << strerror(errno);
+        return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+      }
+      LogID logInterval;
+      auto ret = pread(fd, reinterpret_cast<char*>(&logInterval), sizeof(LogID), 0);
+      if (ret != static_cast<ssize_t>(sizeof(LogID))) {
+        VLOG(2) << "Failed to read the file " << intervalLogFile_ << " (errno: " << errno
+                << "): " << strerror(errno);
+        close(fd);
+        return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+      }
+      close(fd);
+      env_->logIntervals_.insert_or_assign(key, logInterval);
+      logInterval_ = env_->logIntervals_.at(key);
+    }
+  }
+
+  // Normally, before sending data for the first time, the recv.log file does not exist.
   // When sending snapshot data, the recv.log file exists, and 0 is written in it
   if (access(recvLogFile_.c_str(), 0) == 0) {
-    auto key = std::make_pair(toSpaceId_, fromPartId_);
     auto recvLogFdIter = env_->recvLogIdFd_.find(key);
     if (recvLogFdIter == env_->recvLogIdFd_.end()) {
       int32_t fd = open(recvLogFile_.c_str(), O_CREAT | O_RDWR | O_CLOEXEC | O_LARGEFILE, 0644);
@@ -443,30 +530,30 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogId() {
       return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
     }
 
-    // the wal log data sent has expired
-    // logId is continuous. But the term is not necessarily continuous
-    if (lastLogIdRecv > lastLogIdRecv_) {
+    // The wal log sent has expired.
+    // LogId is continuous. But the term is not necessarily continuous
+    CHECK_GE(lastLogIdRecv_ + logInterval_, 0);
+    CHECK_GE(lastLogIdRecv - logInterval_, 0);
+    if (lastLogIdRecv > lastLogIdRecv_ + logInterval_) {
       VLOG(2) << "Sync data expired! lastLogIdRecv from Listener: " << lastLogIdRecv_
+              << " logInterval is " << logInterval_
               << ", lastLogIdRecv from drainer: " << lastLogIdRecv;
       // Maybe needs more detailed processing
-      nextLastLogIdRecv_ = lastLogIdRecv;
+      nextLastLogIdRecv_ = lastLogIdRecv - logInterval_;
       return nebula::cpp2::ErrorCode::E_LOG_STALE;
-    } else if (lastLogIdRecv < lastLogIdRecv_) {
-      // When sending snapshot data, the lastLogIdRecv in the request and in the file are both 0
+    } else if (lastLogIdRecv < lastLogIdRecv_ + logInterval_) {
       // When the wal data is sent for the first time after the snapshot,
       // the lastLogIdRecv in the request is committedLogId, and the lastLogIdRecv in the drainer
-      // file is 0
       if (lastLogIdRecv != 0) {
         // There is a gap in the wal log data
         VLOG(2) << "Sync data has a gap! lastLogIdRecv from listener: " << lastLogIdRecv_
                 << ", lastLogIdRecv from drainer: " << lastLogIdRecv;
-        nextLastLogIdRecv_ = lastLogIdRecv;
+        nextLastLogIdRecv_ = lastLogIdRecv - logInterval_;
         return nebula::cpp2::ErrorCode::E_LOG_GAP;
       }
     }
   } else {
-    // Regardless of receiving snapshot or receiving wal, when receiving for the first time, it
-    // should be 0
+    // When receiving data for the first time from wal, it should be 0
     if (lastLogIdRecv_ != 0) {
       // There is a gap in the wal log data
       VLOG(2) << "Sync data has a gap! lastLogIdRecv from listener: " << lastLogIdRecv_
@@ -474,6 +561,10 @@ nebula::cpp2::ErrorCode AppendLogProcessor::checkLastRecvLogId() {
       nextLastLogIdRecv_ = 0;
       return nebula::cpp2::ErrorCode::E_LOG_GAP;
     }
+  }
+  // Checks whether the drainer's wal lastlogId matches the stored lastLogIdRecv
+  if (wal_->lastLogId() > lastLogIdRecv_ + logInterval_) {
+    wal_->rollbackToLog(lastLogIdRecv_ + logInterval_);
   }
   return nebula::cpp2::ErrorCode::SUCCEEDED;
 }
@@ -487,30 +578,72 @@ bool AppendLogProcessor::preProcessLog(LogID, TermID, ClusterID, const std::stri
 nebula::cpp2::ErrorCode AppendLogProcessor::appendWalData() {
   // Append new logs
   size_t numLogs = logStrs_.size();
-  LogID firstId = lastLogIdRecv_ + 1;
 
-  VLOG(2) << "Writing log [" << firstId << ", " << firstId + numLogs - 1 << "] to WAL";
+  if (isSnapshot_) {
+    // When receiving a snapshot, lastLogIdRecv_ and lastLogId_ are both 0
+    // Use wal lastLogId directly
+    LogID walLastLogId = wal_->lastLogId();
+    LogID firstId = walLastLogId + 1;
 
-  LogStrListIterator iter(firstId, term_, logStrs_);
+    VLOG(2) << "Writing snapshot data [" << firstId << ", " << firstId + numLogs - 1 << "] to WAL";
 
-  if (wal_->appendLogs(iter)) {
-    if (numLogs != 0) {
-      CHECK_EQ(firstId + numLogs - 1, wal_->lastLogId()) << "First Id is " << firstId;
+    LogStrListIterator iter(firstId, term_, logStrs_);
+    if (wal_->appendLogs(iter)) {
+      auto lastLogId = wal_->lastLogId();
+      if (numLogs != 0) {
+        CHECK_EQ(firstId + numLogs - 1, lastLogId) << "First Id is " << firstId;
+      }
+
+      // If the snapshot is sent, calculate the interval logId
+      if (snapshotFinished_) {
+        auto logInterval = lastLogId - snapshotCommitLogId_;
+        // set logInterval value
+        auto result = updateLogInterval(logInterval);
+        if (!result) {
+          return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+        }
+
+        // Set recv.log when snapshot has finished to send
+        result = updateRecvLog(lastLogId);
+        if (!result) {
+          return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+        }
+        LOG(INFO) << "Receive snapshot data completed!";
+      }
+      // In the process of receiving snapshots, recv.log is always 0
+      nextLastLogIdRecv_ = 0;
+    } else {
+      VLOG(1) << "Failed to append snapshot data to WAL";
+      return nebula::cpp2::ErrorCode::E_LOG_STALE;
     }
-
-    // write recvLogFile_
-    nextLastLogIdRecv_ = wal_->lastLogId();
-
-    // When drainer writes wal successfully.But persistence failed, wal logs are to be rolled back.
-    auto result = updateRecvLog(nextLastLogIdRecv_);
-    if (!result) {
-      return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
-    }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
   } else {
-    VLOG(1) << "Failed to append logs to WAL";
-    return nebula::cpp2::ErrorCode::E_LOG_STALE;
+    LogID firstId = lastLogIdRecv_ + logInterval_ + 1;
+
+    VLOG(2) << "Writing log [" << firstId << ", " << firstId + numLogs - 1 << "] to WAL";
+
+    LogStrListIterator iter(firstId, term_, logStrs_);
+
+    if (wal_->appendLogs(iter)) {
+      auto lastLogId = wal_->lastLogId();
+      if (numLogs != 0) {
+        CHECK_EQ(firstId + numLogs - 1, lastLogId) << "First Id is " << firstId;
+      }
+
+      // write recvLogFile_
+      nextLastLogIdRecv_ = lastLogId - logInterval_;
+
+      // When drainer writes wal successfully.But persistence failed, wal logs are to be rolled
+      // back.
+      auto result = updateRecvLog(lastLogId);
+      if (!result) {
+        return nebula::cpp2::ErrorCode::E_INVALID_DRAINER_STORE;
+      }
+    } else {
+      VLOG(1) << "Failed to append logs to WAL";
+      return nebula::cpp2::ErrorCode::E_LOG_STALE;
+    }
   }
+  return nebula::cpp2::ErrorCode::SUCCEEDED;
 }
 
 void AppendLogProcessor::onProcessFinished() {

@@ -24,11 +24,14 @@ struct AppendLogRequest {
     7: common.TermID                  log_term;            // Log term in log_str_list, all logs in the log_str_list must belong to the same term
     8: list<common.LogEntry>          log_str_list;        // Log id is in the range [last_log_id_sent + 1, last_log_id_to_send].
                                                            // First log id in log_str_list is last_log_id_sent + 1
-    9: bool                           cleanup_data;        // Whether to cleanup data
-    10: binary                        to_space_name;       // The space name of the slave cluster to be sync
-    11: bool                          sync_meta;           // Whether is it meta data
-    12: optional common.PropertyType  space_vid_type;      // Master cluster space vid type
-    13: optional i16                  space_vid_len;       // Master cluster space vid length
+    9: bool                           need_cleanup;        // Whether to cleanup data, before reveiving snapshot
+    10: bool                          is_snapshot;         // Whether to send snapshot data
+    11: bool                          snapshot_finished;   // Whether the snapshot is sent
+    12: common.LogID                  snapshot_commitLogId;// commitlogId after the snapshot is sent，used for snapshot
+    13: binary                        to_space_name;       // The space name of the slave cluster to be sync
+    14: bool                          sync_meta;           // Whether is it meta data
+    15: optional common.PropertyType  space_vid_type;      // Master cluster space vid type
+    16: optional i16                  space_vid_len;       // Master cluster space vid length
 }
 
 struct AppendLogResponse {

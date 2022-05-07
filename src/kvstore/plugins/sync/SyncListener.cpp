@@ -728,7 +728,7 @@ folly::Future<nebula::drainer::cpp2::AppendLogResponse> MetaSyncListener::send(
   req.last_log_id_sent_ref() = lastLogIdSent;
   req.log_term_ref() = lastLogTermToSend;
   req.log_str_list_ref() = data;
-  req.cleanup_data_ref() = cleanupData;
+  req.need_cleanup_ref() = cleanupData;
   req.to_space_name_ref() = tospaceName;
 
   auto* evb = ioThreadPool_->getEventBase();
@@ -883,7 +883,7 @@ std::tuple<cpp2::ErrorCode, int64_t, int64_t> StorageSyncListener::commitSnapsho
     auto kv = decodeKV(row);
     data.emplace_back(kv.first, kv.second);
   }
-  if (!apply(data)) {
+  if (!apply(data, finished, committedLogId)) {
     VLOG(3) << idStr_ << "Failed to apply data to draier while committing snapshot.";
     requestOnGoing_.store(false);
     return {cpp2::ErrorCode::E_RAFT_PERSIST_SNAPSHOT_FAILED, kNoSnapshotCount, kNoSnapshotSize};
@@ -906,7 +906,7 @@ std::tuple<cpp2::ErrorCode, int64_t, int64_t> StorageSyncListener::commitSnapsho
   return {cpp2::ErrorCode::SUCCEEDED, count, size};
 }
 
-bool StorageSyncListener::apply(const std::vector<KV>& data) {
+bool StorageSyncListener::apply(const std::vector<KV>& data, bool finished, LogID committedLogId) {
   CHECK(!raftLock_.try_lock());
   std::string log = encodeMultiValues(OP_MULTI_PUT, data);
 
@@ -918,14 +918,17 @@ bool StorageSyncListener::apply(const std::vector<KV>& data) {
 
   // Only the first time the snapshot sends data, then cleanup data
   bool cleanupData = lastTotalCount_ == 0;
-  return apply(logs, 0, 0, 0, cleanupData);
+  return apply(logs, 0, 0, 0, cleanupData, true, finished, committedLogId);
 }
 
 bool StorageSyncListener::apply(const std::vector<nebula::cpp2::LogEntry>& data,
                                 LogID logIdToSend,
                                 TermID logTermToSend,
                                 LogID lastApplyLogId,
-                                bool cleanupData) {
+                                bool cleanupData,
+                                bool snapshotData,
+                                bool finished,
+                                LogID committedLogId) {
   auto retryCnt = FLAGS_request_to_drainer_retry_times;
   // Before sending data, check the current space listener connection status again.
   auto syncStatusRet = serviceMan_->checkListenerCanSync(spaceId_);
@@ -943,7 +946,10 @@ bool StorageSyncListener::apply(const std::vector<nebula::cpp2::LogEntry>& data,
                   data,
                   drainerClient_,
                   toSpaceName_,
-                  cleanupData);
+                  cleanupData,
+                  snapshotData,
+                  finished,
+                  committedLogId);
     try {
       auto resp = std::move(f).get();
       auto retCode = resp.get_error_code();
@@ -990,11 +996,18 @@ folly::Future<nebula::drainer::cpp2::AppendLogResponse> StorageSyncListener::sen
     const std::vector<nebula::cpp2::LogEntry>& data,
     HostAddr& drainerClient,
     std::string& tospaceName,
-    bool cleanupData) {
+    bool needCleanup,
+    bool isSnapshot,
+    bool snapshotFinished,
+    LogID snapshotCommittedLogId) {
   VLOG(3) << idStr_ << "send append log request to drainer " << drainerClient_ << ", space id "
           << spaceId << ", part id " << partId << ", lastLogIdToSend " << lastLogIdToSend
           << ", lastLogTermToSend " << lastLogTermToSend << ", lastLogIdSent" << lastLogIdSent
-          << ", cleanupData " << cleanupData;
+          << ", needCleanup " << needCleanup << ", isSnapshot " << isSnapshot
+          << ", snapshotFinished " << snapshotFinished;
+  if (snapshotFinished) {
+    VLOG(3) << "snapshotCommittedLogId " << snapshotCommittedLogId;
+  }
 
   nebula::drainer::cpp2::AppendLogRequest req;
   req.clusterId_ref() = clusterId_;
@@ -1009,7 +1022,10 @@ folly::Future<nebula::drainer::cpp2::AppendLogResponse> StorageSyncListener::sen
   req.last_log_id_sent_ref() = lastLogIdSent;
   req.log_term_ref() = lastLogTermToSend;
   req.log_str_list_ref() = data;
-  req.cleanup_data_ref() = cleanupData;
+  req.need_cleanup_ref() = needCleanup;
+  req.is_snapshot_ref() = isSnapshot;
+  req.snapshot_finished_ref() = snapshotFinished;
+  req.snapshot_commitLogId_ref() = snapshotCommittedLogId;
   req.to_space_name_ref() = tospaceName;
 
   auto* evb = ioThreadPool_->getEventBase();

@@ -92,7 +92,7 @@ nebula_add_test(
     OBJECTS
         ${drainer_test_deps}
     LIBRARIES
-        ${CACHELIB_LIBRARIES}    
+        ${CACHELIB_LIBRARIES}
         ${ROCKSDB_LIBRARIES}
         ${THRIFT_LIBRARIES}
         ${PROXYGEN_LIBRARIES}
