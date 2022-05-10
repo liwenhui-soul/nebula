@@ -798,7 +798,7 @@ ErrorOr<nebula::cpp2::ErrorCode, uint32_t> JobManager::recoverJob(
                               "for the type of stopped job";
                 findRest = true;
                 break;
-              } else if (destJobStatus == cpp2::JobStatus::FINISHED) {
+              } else {
                 // Compare the start time of the job
                 if (destJobStartTime > jobStartTime) {
                   findRest = true;
